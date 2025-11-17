@@ -116,7 +116,7 @@ const Servicos = () => {
                 />
               </div>
               
-              <div className="grid grid-cols-3 gap-4">
+              <div className="grid grid-cols-2 gap-4">
                 <div>
                   <Label>Duração (min) *</Label>
                   <Input
@@ -137,16 +137,7 @@ const Servicos = () => {
                     value={formData.valor}
                     onChange={(e) => setFormData({ ...formData, valor: e.target.value })}
                     required
-                    placeholder="150"
-                  />
-                </div>
-                <div>
-                  <Label>Categoria</Label>
-                  <Input
-                    data-testid="input-categoria"
-                    value={formData.categoria}
-                    onChange={(e) => setFormData({ ...formData, categoria: e.target.value })}
-                    placeholder="Estética"
+                    placeholder="150.00"
                   />
                 </div>
               </div>
