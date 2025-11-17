@@ -91,9 +91,16 @@ const SortableAgendamento = ({ agendamento, onEdit, onDelete }) => {
           <p className="text-xs mt-1" style={{ color: '#292726' }}>
             {agendamento.profissional?.nome || 'Profissional'}
           </p>
-          <div className="flex items-center mt-2 text-xs" style={{ color: '#292726' }}>
-            <Clock className="w-3 h-3 mr-1" />
-            {/* Hor\u00e1rio aqui */}
+          <div className="flex items-center mt-2 text-sm font-medium" style={{ color: '#2C7464' }}>
+            <Clock className="w-4 h-4 mr-1" />
+            {(() => {
+              const intervalo = agendamento.intervalo || '';
+              const match = intervalo.match(/(\d{2}):(\d{2}):(\d{2})/);
+              if (match) {
+                return `${match[1]}:${match[2]}`;
+              }
+              return '--:--';
+            })()}
           </div>
         </div>
         <div className="flex flex-col space-y-2">
