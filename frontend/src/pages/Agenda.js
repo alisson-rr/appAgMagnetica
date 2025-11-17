@@ -234,7 +234,19 @@ const Agenda = () => {
 
     try {
       if (modalType === 'consulta') {
+        // Validar campos obrigatórios
+        if (!formData.id_cliente || !formData.id_profissional || !formData.id_procedimento || !formData.data_inicio || !formData.hora_inicio) {
+          toast.error('Preencha todos os campos obrigatórios');
+          return;
+        }
+
         const procedimento = procedimentos.find(p => p.id === parseInt(formData.id_procedimento));
+        
+        if (!procedimento) {
+          toast.error('Procedimento não encontrado');
+          return;
+        }
+
         const dataHora = new Date(`${formData.data_inicio}T${formData.hora_inicio}`);
         
         const payload = {
@@ -242,7 +254,7 @@ const Agenda = () => {
           id_profissional: parseInt(formData.id_profissional),
           id_procedimento: parseInt(formData.id_procedimento),
           data_inicio: dataHora.toISOString(),
-          duracao_minutos: procedimento?.duracao_minutos || 60,
+          duracao_minutos: procedimento.duracao_minutos || 60,
           status: formData.status
         };
 
