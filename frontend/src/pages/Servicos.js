@@ -196,14 +196,6 @@ const Servicos = () => {
                   <h3 className="text-lg font-bold" style={{ color: '#2C7464' }}>
                     {proc.nome}
                   </h3>
-                  {proc.categoria && (
-                    <span
-                      className="inline-block px-3 py-1 text-xs font-medium rounded-full mt-2"
-                      style={{ backgroundColor: '#FEA5A4', color: 'white' }}
-                    >
-                      {proc.categoria}
-                    </span>
-                  )}
                 </div>
                 <div className="flex space-x-2">
                   <button
