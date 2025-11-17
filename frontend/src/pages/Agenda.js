@@ -211,7 +211,6 @@ const Agenda = () => {
         id_procedimento: item.id_procedimento || '',
         data_inicio: format(selectedDate, 'yyyy-MM-dd'),
         hora_inicio: '',
-        observacoes: item.observacoes || '',
         status: item.status || 'pendente',
         motivo: item.motivo || ''
       });
