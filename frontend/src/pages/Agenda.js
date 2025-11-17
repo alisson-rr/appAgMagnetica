@@ -150,7 +150,6 @@ const Agenda = () => {
     id_procedimento: '',
     data_inicio: '',
     hora_inicio: '',
-    observacoes: '',
     status: 'pendente',
     motivo: '' // para bloqueio
   });
