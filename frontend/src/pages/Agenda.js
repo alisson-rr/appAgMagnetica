@@ -426,16 +426,6 @@ const Agenda = () => {
                       </SelectContent>
                     </Select>
                   </div>
-
-                  <div>
-                    <Label>Observa\u00e7\u00f5es</Label>
-                    <Textarea
-                      data-testid="input-observacoes"
-                      value={formData.observacoes}
-                      onChange={(e) => setFormData({ ...formData, observacoes: e.target.value })}
-                      placeholder="Observa\u00e7\u00f5es adicionais..."
-                    />
-                  </div>
                 </>
               ) : (
                 <>
