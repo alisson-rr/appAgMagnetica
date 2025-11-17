@@ -149,9 +149,90 @@ const Profissionais = () => {
           </DialogContent>
         </Dialog>
       </div>
-      <div className="relative"><Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5" style={{ color: '#2C7464' }} /><Input data-testid="search-profissionais" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} placeholder="Buscar..." className="pl-10" /></div>
-      {loading ? (<div className="flex items-center justify-center py-12"><div className="animate-spin rounded-full h-12 w-12 border-b-2" style={{ borderColor: '#2C7464' }} /></div></div>) : (<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">{filteredProfissionais.map((prof) => (<Card key={prof.id} data-testid={`profissional-card-${prof.id}`} className="p-6 rounded-2xl shadow-lg" style={{ backgroundColor: 'white' }}><div className="flex items-start justify-between mb-4"><div className="flex-1"><h3 className="text-lg font-bold" style={{ color: '#2C7464' }}>{prof.nome}</h3>{prof.area_atuacao && (<p className="text-sm mt-1" style={{ color: '#292726' }}>{prof.area_atuacao.nome}</p>)}<span className="inline-block px-3 py-1 text-xs font-medium rounded-full mt-2" style={{ backgroundColor: prof.ativo ? '#2C7464' : '#ccc', color: 'white' }}>{prof.ativo ? 'Ativo' : 'Inativo'}</span></div><div className="flex space-x-2"><button onClick={() => openModal(prof)} data-testid={`edit-profissional-${prof.id}`} className="p-2 rounded-lg hover:bg-gray-100"><Edit className="w-4 h-4" style={{ color: '#2C7464' }} /></button><button onClick={() => handleDelete(prof.id)} data-testid={`delete-profissional-${prof.id}`} className="p-2 rounded-lg hover:bg-gray-100"><Trash2 className="w-4 h-4" style={{ color: '#FEA5A4' }} /></button></div></div><div className="space-y-2">{prof.email && (<p className="text-sm" style={{ color: '#292726' }}><span className="font-medium">Email:</span> {prof.email}</p>)}{prof.comissao_percentual && (<p className="text-sm" style={{ color: '#292726' }}><span className="font-medium">Comissão:</span> {prof.comissao_percentual}%</p>)}</div></Card>))}</div>)}
-      {!loading && filteredProfissionais.length === 0 && (<p className="text-center py-12" style={{ color: '#292726' }}>Nenhum profissional encontrado</p>)}
+      <div className="relative">
+        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5" style={{ color: '#2C7464' }} />
+        <Input
+          data-testid="search-profissionais"
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          placeholder="Buscar..."
+          className="pl-10"
+        />
+      </div>
+
+      {loading ? (
+        <div className="flex items-center justify-center py-12">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2" style={{ borderColor: '#2C7464' }} />
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {filteredProfissionais.map((prof) => (
+            <Card
+              key={prof.id}
+              data-testid={`profissional-card-${prof.id}`}
+              className="p-6 rounded-2xl shadow-lg"
+              style={{ backgroundColor: 'white' }}
+            >
+              <div className="flex items-start justify-between mb-4">
+                <div className="flex-1">
+                  <h3 className="text-lg font-bold" style={{ color: '#2C7464' }}>
+                    {prof.nome}
+                  </h3>
+                  {prof.area_atuacao && (
+                    <p className="text-sm mt-1" style={{ color: '#292726' }}>
+                      {prof.area_atuacao.nome}
+                    </p>
+                  )}
+                  <span
+                    className="inline-block px-3 py-1 text-xs font-medium rounded-full mt-2"
+                    style={{
+                      backgroundColor: prof.ativo ? '#2C7464' : '#ccc',
+                      color: 'white'
+                    }}
+                  >
+                    {prof.ativo ? 'Ativo' : 'Inativo'}
+                  </span>
+                </div>
+                <div className="flex space-x-2">
+                  <button
+                    onClick={() => openModal(prof)}
+                    data-testid={`edit-profissional-${prof.id}`}
+                    className="p-2 rounded-lg hover:bg-gray-100"
+                  >
+                    <Edit className="w-4 h-4" style={{ color: '#2C7464' }} />
+                  </button>
+                  <button
+                    onClick={() => handleDelete(prof.id)}
+                    data-testid={`delete-profissional-${prof.id}`}
+                    className="p-2 rounded-lg hover:bg-gray-100"
+                  >
+                    <Trash2 className="w-4 h-4" style={{ color: '#FEA5A4' }} />
+                  </button>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                {prof.email && (
+                  <p className="text-sm" style={{ color: '#292726' }}>
+                    <span className="font-medium">Email:</span> {prof.email}
+                  </p>
+                )}
+                {prof.comissao_percentual && (
+                  <p className="text-sm" style={{ color: '#292726' }}>
+                    <span className="font-medium">Comissão:</span> {prof.comissao_percentual}%
+                  </p>
+                )}
+              </div>
+            </Card>
+          ))}
+        </div>
+      )}
+
+      {!loading && filteredProfissionais.length === 0 && (
+        <p className="text-center py-12" style={{ color: '#292726' }}>
+          Nenhum profissional encontrado
+        </p>
+      )}
     </div>
   );
 };
