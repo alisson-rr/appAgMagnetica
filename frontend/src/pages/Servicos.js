@@ -81,7 +81,15 @@ const Servicos = () => {
         </div>
         <Dialog open={modalOpen} onOpenChange={setModalOpen}>
           <DialogTrigger asChild>
-            <Button data-testid="novo-servico-button" onClick={() => openModal()} className="rounded-full px-6 py-6 text-white" style={{ backgroundColor: '#2C7464' }}><Plus className="w-5 h-5 mr-2" />Novo Serviço</Button>
+            <Button
+              data-testid="novo-servico-button"
+              onClick={() => openModal()}
+              className="rounded-full px-6 py-6 text-white"
+              style={{ backgroundColor: '#2C7464' }}
+            >
+              <Plus className="w-5 h-5 mr-2" />
+              Novo Serviço
+            </Button>
           </DialogTrigger>
           <DialogContent className="max-w-2xl">
             <DialogHeader><DialogTitle>{editingProcedimento ? 'Editar' : 'Novo'} Serviço</DialogTitle></DialogHeader>
