@@ -376,10 +376,10 @@ const Agenda = () => {
                       <SelectTrigger data-testid="select-procedimento">
                         <SelectValue placeholder="Selecione o procedimento" />
                       </SelectTrigger>
-                      <SelectContent>
+                      <SelectContent className="max-h-[300px] overflow-y-auto">
                         {procedimentos.map((proc) => (
                           <SelectItem key={proc.id} value={proc.id.toString()}>
-                            {proc.nome} - {proc.duracao_minutos}min - R$ {proc.valor}
+                            {proc.nome} - {proc.duracao_minutos}min - R$ {proc.valor?.toFixed(2)}
                           </SelectItem>
                         ))}
                       </SelectContent>
