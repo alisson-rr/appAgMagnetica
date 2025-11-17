@@ -455,9 +455,9 @@ const Agenda = () => {
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="pendente">Pendente</SelectItem>
-                        <SelectItem value="confirmado">Confirmado</SelectItem>
+                        <SelectItem value="agendado">Agendado</SelectItem>
                         <SelectItem value="cancelado">Cancelado</SelectItem>
-                        <SelectItem value="pago">Pago</SelectItem>
+                        <SelectItem value="concluido">Concluído</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
