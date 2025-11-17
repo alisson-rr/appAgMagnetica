@@ -73,8 +73,6 @@ class ProfissionalCreate(BaseModel):
     id_area_atuacao: Optional[int] = None
     whats: Optional[str] = None
     email: Optional[str] = None
-    foto_url: Optional[str] = None
-    comissao_percentual: Optional[float] = None
 
 class ProfissionalUpdate(BaseModel):
     nome: Optional[str] = None
@@ -83,8 +81,6 @@ class ProfissionalUpdate(BaseModel):
     id_area_atuacao: Optional[int] = None
     whats: Optional[str] = None
     email: Optional[str] = None
-    foto_url: Optional[str] = None
-    comissao_percentual: Optional[float] = None
 
 # Procedimento
 class ProcedimentoCreate(BaseModel):
