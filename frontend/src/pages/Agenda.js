@@ -107,7 +107,7 @@ const SortableAgendamento = ({ agendamento, onEdit, onDelete }) => {
           <button
             onClick={(e) => {
               e.stopPropagation();
-              onEdit(agendamento);
+              onEdit('consulta', agendamento);
             }}
             data-testid={`edit-agendamento-${agendamento.id}`}
             className="p-2 rounded-lg hover:bg-gray-100"
