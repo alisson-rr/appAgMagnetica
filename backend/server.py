@@ -89,7 +89,6 @@ class ProcedimentoCreate(BaseModel):
     duracao_minutos: int
     valor: float
     orientacoes: Optional[str] = None
-    categoria: Optional[str] = None
 
 class ProcedimentoUpdate(BaseModel):
     nome: Optional[str] = None
@@ -97,7 +96,6 @@ class ProcedimentoUpdate(BaseModel):
     duracao_minutos: Optional[int] = None
     valor: Optional[float] = None
     orientacoes: Optional[str] = None
-    categoria: Optional[str] = None
 
 # Consulta
 class ConsultaCreate(BaseModel):
