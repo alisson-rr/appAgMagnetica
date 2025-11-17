@@ -53,13 +53,13 @@ const SortableAgendamento = ({ agendamento, onEdit, onDelete }) => {
 
   const getStatusColor = (status) => {
     switch (status) {
-      case 'confirmado':
+      case 'agendado':
         return '#2C7464';
       case 'pendente':
         return '#FEA5A4';
       case 'cancelado':
         return '#ccc';
-      case 'pago':
+      case 'concluido':
         return '#2C7464';
       default:
         return '#FEA5A4';
