@@ -176,9 +176,88 @@ const Servicos = () => {
           </DialogContent>
         </Dialog>
       </div>
-      <div className="relative"><Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5" style={{ color: '#2C7464' }} /><Input data-testid="search-servicos" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} placeholder="Buscar..." className="pl-10" /></div>
-      {loading ? (<div className="flex items-center justify-center py-12"><div className="animate-spin rounded-full h-12 w-12 border-b-2" style={{ borderColor: '#2C7464' }} /></div></div>) : (<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">{filteredProcedimentos.map((proc) => (<Card key={proc.id} data-testid={`servico-card-${proc.id}`} className="p-6 rounded-2xl shadow-lg" style={{ backgroundColor: 'white' }}><div className="flex items-start justify-between mb-4"><div className="flex-1"><h3 className="text-lg font-bold" style={{ color: '#2C7464' }}>{proc.nome}</h3>{proc.categoria && (<span className="inline-block px-3 py-1 text-xs font-medium rounded-full mt-2" style={{ backgroundColor: '#FEA5A4', color: 'white' }}>{proc.categoria}</span>)}</div><div className="flex space-x-2"><button onClick={() => openModal(proc)} data-testid={`edit-servico-${proc.id}`} className="p-2 rounded-lg hover:bg-gray-100"><Edit className="w-4 h-4" style={{ color: '#2C7464' }} /></button><button onClick={() => handleDelete(proc.id)} data-testid={`delete-servico-${proc.id}`} className="p-2 rounded-lg hover:bg-gray-100"><Trash2 className="w-4 h-4" style={{ color: '#FEA5A4' }} /></button></div></div>{proc.descricao && (<p className="text-sm mb-4" style={{ color: '#292726' }}>{proc.descricao}</p>)}<div className="flex items-center justify-between pt-4 border-t" style={{ borderColor: '#F7F1EB' }}><div className="flex items-center text-sm" style={{ color: '#292726' }}><Clock className="w-4 h-4 mr-1" style={{ color: '#2C7464' }} />{proc.duracao_minutos} min</div><div className="flex items-center text-lg font-bold" style={{ color: '#2C7464' }}><DollarSign className="w-5 h-5" />{ proc.valor?.toFixed(2)}</div></div></Card>))}</div>)}
-      {!loading && filteredProcedimentos.length === 0 && (<p className="text-center py-12" style={{ color: '#292726' }}>Nenhum serviço encontrado</p>)}
+      <div className="relative">
+        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5" style={{ color: '#2C7464' }} />
+        <Input
+          data-testid="search-servicos"
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          placeholder="Buscar..."
+          className="pl-10"
+        />
+      </div>
+
+      {loading ? (
+        <div className="flex items-center justify-center py-12">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2" style={{ borderColor: '#2C7464' }} />
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {filteredProcedimentos.map((proc) => (
+            <Card
+              key={proc.id}
+              data-testid={`servico-card-${proc.id}`}
+              className="p-6 rounded-2xl shadow-lg"
+              style={{ backgroundColor: 'white' }}
+            >
+              <div className="flex items-start justify-between mb-4">
+                <div className="flex-1">
+                  <h3 className="text-lg font-bold" style={{ color: '#2C7464' }}>
+                    {proc.nome}
+                  </h3>
+                  {proc.categoria && (
+                    <span
+                      className="inline-block px-3 py-1 text-xs font-medium rounded-full mt-2"
+                      style={{ backgroundColor: '#FEA5A4', color: 'white' }}
+                    >
+                      {proc.categoria}
+                    </span>
+                  )}
+                </div>
+                <div className="flex space-x-2">
+                  <button
+                    onClick={() => openModal(proc)}
+                    data-testid={`edit-servico-${proc.id}`}
+                    className="p-2 rounded-lg hover:bg-gray-100"
+                  >
+                    <Edit className="w-4 h-4" style={{ color: '#2C7464' }} />
+                  </button>
+                  <button
+                    onClick={() => handleDelete(proc.id)}
+                    data-testid={`delete-servico-${proc.id}`}
+                    className="p-2 rounded-lg hover:bg-gray-100"
+                  >
+                    <Trash2 className="w-4 h-4" style={{ color: '#FEA5A4' }} />
+                  </button>
+                </div>
+              </div>
+
+              {proc.descricao && (
+                <p className="text-sm mb-4" style={{ color: '#292726' }}>
+                  {proc.descricao}
+                </p>
+              )}
+
+              <div className="flex items-center justify-between pt-4 border-t" style={{ borderColor: '#F7F1EB' }}>
+                <div className="flex items-center text-sm" style={{ color: '#292726' }}>
+                  <Clock className="w-4 h-4 mr-1" style={{ color: '#2C7464' }} />
+                  {proc.duracao_minutos} min
+                </div>
+                <div className="flex items-center text-lg font-bold" style={{ color: '#2C7464' }}>
+                  <DollarSign className="w-5 h-5" />
+                  {proc.valor?.toFixed(2)}
+                </div>
+              </div>
+            </Card>
+          ))}
+        </div>
+      )}
+
+      {!loading && filteredProcedimentos.length === 0 && (
+        <p className="text-center py-12" style={{ color: '#292726' }}>
+          Nenhum serviço encontrado
+        </p>
+      )}
     </div>
   );
 };
