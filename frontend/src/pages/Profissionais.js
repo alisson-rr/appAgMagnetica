@@ -159,35 +159,23 @@ const Profissionais = () => {
                 </div>
               </div>
               
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label>Área</Label>
-                  <Select
-                    value={formData.id_area_atuacao}
-                    onValueChange={(value) => setFormData({ ...formData, id_area_atuacao: value })}
-                  >
-                    <SelectTrigger data-testid="select-area">
-                      <SelectValue placeholder="Selecione" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {areas.map((area) => (
-                        <SelectItem key={area.id} value={area.id.toString()}>
-                          {area.nome}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div>
-                  <Label>Comissão (%)</Label>
-                  <Input
-                    data-testid="input-comissao"
-                    type="number"
-                    step="0.01"
-                    value={formData.comissao_percentual}
-                    onChange={(e) => setFormData({ ...formData, comissao_percentual: e.target.value })}
-                  />
-                </div>
+              <div>
+                <Label>Área de Atuação</Label>
+                <Select
+                  value={formData.id_area_atuacao}
+                  onValueChange={(value) => setFormData({ ...formData, id_area_atuacao: value })}
+                >
+                  <SelectTrigger data-testid="select-area">
+                    <SelectValue placeholder="Selecione" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {areas.map((area) => (
+                      <SelectItem key={area.id} value={area.id.toString()}>
+                        {area.nome}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
               
               <div className="flex items-center space-x-2">
