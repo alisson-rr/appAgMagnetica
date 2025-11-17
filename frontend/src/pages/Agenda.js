@@ -243,8 +243,7 @@ const Agenda = () => {
           id_procedimento: parseInt(formData.id_procedimento),
           data_inicio: dataHora.toISOString(),
           duracao_minutos: procedimento?.duracao_minutos || 60,
-          status: formData.status,
-          observacoes: formData.observacoes
+          status: formData.status
         };
 
         if (editingItem) {
