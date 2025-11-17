@@ -393,15 +393,27 @@ async def delete_procedimento(proc_id: int, current_user: dict = Depends(verify_
 @api_router.get("/consultas")
 async def get_consultas(data_inicio: Optional[str] = None, data_fim: Optional[str] = None, current_user: dict = Depends(verify_token)):
     try:
-        query = supabase.table('consulta').select('*, cliente(*), profissional(*), procedimento(*)')
+        # Buscar todas as consultas (simplificado por enquanto)
+        result = supabase.table('consulta').select('*, cliente(*), profissional(*), procedimento(*)').execute()
         
-        if data_inicio:
-            query = query.gte('intervalo', f'[{data_inicio},)')
-        if data_fim:
-            query = query.lte('intervalo', f'(,{data_fim}]')
+        consultas = result.data or []
         
-        result = query.order('intervalo').execute()
-        return result.data
+        # Se tiver filtro de data, filtrar manualmente
+        if data_inicio and consultas:
+            import re
+            filtered = []
+            for consulta in consultas:
+                intervalo_str = consulta.get('intervalo', '')
+                # Extrair a data do intervalo [\"2025-11-17 14:00:00+00\",\"2025-11-17 15:00:00+00\")
+                if intervalo_str:
+                    match = re.search(r'(\d{4}-\d{2}-\d{2})', intervalo_str)
+                    if match:
+                        consulta_data = match.group(1)
+                        if consulta_data == data_inicio:
+                            filtered.append(consulta)
+            return filtered
+        
+        return consultas
     except Exception as e:
         logging.error(f"Erro ao buscar consultas: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
