@@ -15,7 +15,7 @@ const Servicos = () => {
   const [loading, setLoading] = useState(true);
   const [modalOpen, setModalOpen] = useState(false);
   const [editingProcedimento, setEditingProcedimento] = useState(null);
-  const [formData, setFormData] = useState({ nome: '', descricao: '', duracao_minutos: '', valor: '', categoria: '', orientacoes: '' });
+  const [formData, setFormData] = useState({ nome: '', descricao: '', duracao_minutos: '', valor: '', orientacoes: '' });
 
   useEffect(() => { fetchProcedimentos(); }, []);
 
