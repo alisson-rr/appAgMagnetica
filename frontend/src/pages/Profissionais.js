@@ -280,9 +280,9 @@ const Profissionais = () => {
                     <span className="font-medium">Email:</span> {prof.email}
                   </p>
                 )}
-                {prof.comissao_percentual && (
+                {prof.whats && (
                   <p className="text-sm" style={{ color: '#292726' }}>
-                    <span className="font-medium">Comissão:</span> {prof.comissao_percentual}%
+                    <span className="font-medium">WhatsApp:</span> {prof.whats}
                   </p>
                 )}
               </div>
