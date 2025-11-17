@@ -336,7 +336,7 @@ const Agenda = () => {
                       <SelectTrigger data-testid="select-cliente">
                         <SelectValue placeholder="Selecione o cliente" />
                       </SelectTrigger>
-                      <SelectContent>
+                      <SelectContent className="max-h-[300px] overflow-y-auto">
                         {clientes.map((cliente) => (
                           <SelectItem key={cliente.id} value={cliente.id.toString()}>
                             {cliente.nome}
@@ -356,7 +356,7 @@ const Agenda = () => {
                       <SelectTrigger data-testid="select-profissional">
                         <SelectValue placeholder="Selecione o profissional" />
                       </SelectTrigger>
-                      <SelectContent>
+                      <SelectContent className="max-h-[300px] overflow-y-auto">
                         {profissionais.map((prof) => (
                           <SelectItem key={prof.id} value={prof.id.toString()}>
                             {prof.nome}
