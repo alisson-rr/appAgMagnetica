@@ -92,17 +92,86 @@ const Servicos = () => {
             </Button>
           </DialogTrigger>
           <DialogContent className="max-w-2xl">
-            <DialogHeader><DialogTitle>{editingProcedimento ? 'Editar' : 'Novo'} Serviço</DialogTitle></DialogHeader>
+            <DialogHeader>
+              <DialogTitle>{editingProcedimento ? 'Editar' : 'Novo'} Serviço</DialogTitle>
+            </DialogHeader>
             <form onSubmit={handleSubmit} className="space-y-4">
-              <div><Label>Nome *</Label><Input data-testid="input-nome" value={formData.nome} onChange={(e) => setFormData({ ...formData, nome: e.target.value })} required placeholder="Limpeza de Pele" /></div>
-              <div><Label>Descrição</Label><Textarea data-testid="input-descricao" value={formData.descricao} onChange={(e) => setFormData({ ...formData, descricao: e.target.value })} /></div>
-              <div className="grid grid-cols-3 gap-4">
-                <div><Label>Duração (min) *</Label><Input data-testid="input-duracao" type="number" value={formData.duracao_minutos} onChange={(e) => setFormData({ ...formData, duracao_minutos: e.target.value })} required placeholder="60" /></div>
-                <div><Label>Valor (R$) *</Label><Input data-testid="input-valor" type="number" step="0.01" value={formData.valor} onChange={(e) => setFormData({ ...formData, valor: e.target.value })} required placeholder="150" /></div>
-                <div><Label>Categoria</Label><Input data-testid="input-categoria" value={formData.categoria} onChange={(e) => setFormData({ ...formData, categoria: e.target.value })} placeholder="Estética" /></div>
+              <div>
+                <Label>Nome *</Label>
+                <Input
+                  data-testid="input-nome"
+                  value={formData.nome}
+                  onChange={(e) => setFormData({ ...formData, nome: e.target.value })}
+                  required
+                  placeholder="Limpeza de Pele"
+                />
               </div>
-              <div><Label>Orientações</Label><Textarea data-testid="input-orientacoes" value={formData.orientacoes} onChange={(e) => setFormData({ ...formData, orientacoes: e.target.value })} /></div>
-              <div className="flex justify-end space-x-3"><Button type="button" variant="outline" onClick={() => setModalOpen(false)}>Cancelar</Button><Button type="submit" data-testid="submit-servico" style={{ backgroundColor: '#2C7464', color: 'white' }}>Salvar</Button></div>
+              
+              <div>
+                <Label>Descrição</Label>
+                <Textarea
+                  data-testid="input-descricao"
+                  value={formData.descricao}
+                  onChange={(e) => setFormData({ ...formData, descricao: e.target.value })}
+                />
+              </div>
+              
+              <div className="grid grid-cols-3 gap-4">
+                <div>
+                  <Label>Duração (min) *</Label>
+                  <Input
+                    data-testid="input-duracao"
+                    type="number"
+                    value={formData.duracao_minutos}
+                    onChange={(e) => setFormData({ ...formData, duracao_minutos: e.target.value })}
+                    required
+                    placeholder="60"
+                  />
+                </div>
+                <div>
+                  <Label>Valor (R$) *</Label>
+                  <Input
+                    data-testid="input-valor"
+                    type="number"
+                    step="0.01"
+                    value={formData.valor}
+                    onChange={(e) => setFormData({ ...formData, valor: e.target.value })}
+                    required
+                    placeholder="150"
+                  />
+                </div>
+                <div>
+                  <Label>Categoria</Label>
+                  <Input
+                    data-testid="input-categoria"
+                    value={formData.categoria}
+                    onChange={(e) => setFormData({ ...formData, categoria: e.target.value })}
+                    placeholder="Estética"
+                  />
+                </div>
+              </div>
+              
+              <div>
+                <Label>Orientações</Label>
+                <Textarea
+                  data-testid="input-orientacoes"
+                  value={formData.orientacoes}
+                  onChange={(e) => setFormData({ ...formData, orientacoes: e.target.value })}
+                />
+              </div>
+              
+              <div className="flex justify-end space-x-3">
+                <Button type="button" variant="outline" onClick={() => setModalOpen(false)}>
+                  Cancelar
+                </Button>
+                <Button
+                  type="submit"
+                  data-testid="submit-servico"
+                  style={{ backgroundColor: '#2C7464', color: 'white' }}
+                >
+                  Salvar
+                </Button>
+              </div>
             </form>
           </DialogContent>
         </Dialog>
