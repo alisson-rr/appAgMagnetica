@@ -36,7 +36,7 @@ const Servicos = () => {
       setFormData({ nome: procedimento.nome || '', descricao: procedimento.descricao || '', duracao_minutos: procedimento.duracao_minutos?.toString() || '', valor: procedimento.valor?.toString() || '', orientacoes: procedimento.orientacoes || '' });
     } else {
       setEditingProcedimento(null);
-      setFormData({ nome: '', descricao: '', duracao_minutos: '', valor: '', categoria: '', orientacoes: '' });
+      setFormData({ nome: '', descricao: '', duracao_minutos: '', valor: '', orientacoes: '' });
     }
     setModalOpen(true);
   };
