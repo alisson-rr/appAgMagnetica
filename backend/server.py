@@ -105,9 +105,6 @@ class ConsultaCreate(BaseModel):
     data_inicio: datetime
     duracao_minutos: int
     status: str = "pendente"
-    observacoes: Optional[str] = None
-    valor_pago: Optional[float] = None
-    forma_pagamento: Optional[str] = None
 
 class ConsultaUpdate(BaseModel):
     id_profissional: Optional[int] = None
@@ -116,9 +113,6 @@ class ConsultaUpdate(BaseModel):
     data_inicio: Optional[datetime] = None
     duracao_minutos: Optional[int] = None
     status: Optional[str] = None
-    observacoes: Optional[str] = None
-    valor_pago: Optional[float] = None
-    forma_pagamento: Optional[str] = None
     confirmado_em: Optional[date] = None
     cancelado_em: Optional[date] = None
     motivo_cancelamento: Optional[str] = None
