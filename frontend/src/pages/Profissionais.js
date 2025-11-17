@@ -76,8 +76,7 @@ const Profissionais = () => {
     try {
       const payload = {
         ...formData,
-        id_area_atuacao: formData.id_area_atuacao ? parseInt(formData.id_area_atuacao) : null,
-        comissao_percentual: formData.comissao_percentual ? parseFloat(formData.comissao_percentual) : null
+        id_area_atuacao: formData.id_area_atuacao ? parseInt(formData.id_area_atuacao) : null
       };
 
       if (editingProfissional) {
