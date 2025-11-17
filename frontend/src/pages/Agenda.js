@@ -211,14 +211,30 @@ const Agenda = () => {
     setModalType(type);
     setEditingItem(item);
     
-    if (item) {
+    if (item && type === 'consulta') {
+      // Extrair data e hora do intervalo
+      const intervalo = item.intervalo || '';
+      const match = intervalo.match(/(\d{4}-\d{2}-\d{2})\s(\d{2}:\d{2})/);
+      const dataInicio = match ? match[1] : format(selectedDate, 'yyyy-MM-dd');
+      const horaInicio = match ? match[2] : '';
+      
       setFormData({
-        id_cliente: item.id_cliente || '',
-        id_profissional: item.id_profissional || '',
-        id_procedimento: item.id_procedimento || '',
+        id_cliente: item.id_cliente?.toString() || '',
+        id_profissional: item.id_profissional?.toString() || '',
+        id_procedimento: item.id_procedimento?.toString() || '',
+        data_inicio: dataInicio,
+        hora_inicio: horaInicio,
+        status: item.status || 'pendente',
+        motivo: item.motivo || ''
+      });
+    } else if (item && type === 'bloqueio') {
+      setFormData({
+        id_cliente: '',
+        id_profissional: item.id_profissional?.toString() || '',
+        id_procedimento: '',
         data_inicio: format(selectedDate, 'yyyy-MM-dd'),
         hora_inicio: '',
-        status: item.status || 'pendente',
+        status: 'pendente',
         motivo: item.motivo || ''
       });
     } else {
