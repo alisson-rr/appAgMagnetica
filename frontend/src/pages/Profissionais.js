@@ -128,22 +128,101 @@ const Profissionais = () => {
             </Button>
           </DialogTrigger>
           <DialogContent className="max-w-2xl">
-            <DialogHeader><DialogTitle>{editingProfissional ? 'Editar' : 'Novo'} Profissional</DialogTitle></DialogHeader>
+            <DialogHeader>
+              <DialogTitle>{editingProfissional ? 'Editar' : 'Novo'} Profissional</DialogTitle>
+            </DialogHeader>
             <form onSubmit={handleSubmit} className="space-y-4">
-              <div><Label>Nome *</Label><Input data-testid="input-nome" value={formData.nome} onChange={(e) => setFormData({ ...formData, nome: e.target.value })} required placeholder="Nome" /></div>
-              <div className="grid grid-cols-2 gap-4">
-                <div><Label>Email</Label><Input data-testid="input-email" type="email" value={formData.email} onChange={(e) => setFormData({ ...formData, email: e.target.value })} /></div>
-                <div><Label>WhatsApp</Label><Input data-testid="input-whatsapp" value={formData.whats} onChange={(e) => setFormData({ ...formData, whats: e.target.value })} /></div>
+              <div>
+                <Label>Nome *</Label>
+                <Input
+                  data-testid="input-nome"
+                  value={formData.nome}
+                  onChange={(e) => setFormData({ ...formData, nome: e.target.value })}
+                  required
+                  placeholder="Nome"
+                />
               </div>
+              
               <div className="grid grid-cols-2 gap-4">
-                <div><Label>Área</Label><Select value={formData.id_area_atuacao} onValueChange={(value) => setFormData({ ...formData, id_area_atuacao: value })}><SelectTrigger data-testid="select-area"><SelectValue placeholder="Selecione" /></SelectTrigger><SelectContent>{areas.map((area) => (<SelectItem key={area.id} value={area.id.toString()}>{area.nome}</SelectItem>))}</SelectContent></Select></div>
-                <div><Label>Comissão (%)</Label><Input data-testid="input-comissao" type="number" step="0.01" value={formData.comissao_percentual} onChange={(e) => setFormData({ ...formData, comissao_percentual: e.target.value })} /></div>
+                <div>
+                  <Label>Email</Label>
+                  <Input
+                    data-testid="input-email"
+                    type="email"
+                    value={formData.email}
+                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                  />
+                </div>
+                <div>
+                  <Label>WhatsApp</Label>
+                  <Input
+                    data-testid="input-whatsapp"
+                    value={formData.whats}
+                    onChange={(e) => setFormData({ ...formData, whats: e.target.value })}
+                  />
+                </div>
               </div>
-              <div className="flex items-center space-x-2"><Switch data-testid="switch-ativo" checked={formData.ativo} onCheckedChange={(checked) => setFormData({ ...formData, ativo: checked })} /><Label>Ativo</Label></div>
-              <div><Label>Observações</Label><Textarea data-testid="input-observacoes" value={formData.observacoes} onChange={(e) => setFormData({ ...formData, observacoes: e.target.value })} /></div>
+              
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label>Área</Label>
+                  <Select
+                    value={formData.id_area_atuacao}
+                    onValueChange={(value) => setFormData({ ...formData, id_area_atuacao: value })}
+                  >
+                    <SelectTrigger data-testid="select-area">
+                      <SelectValue placeholder="Selecione" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {areas.map((area) => (
+                        <SelectItem key={area.id} value={area.id.toString()}>
+                          {area.nome}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label>Comissão (%)</Label>
+                  <Input
+                    data-testid="input-comissao"
+                    type="number"
+                    step="0.01"
+                    value={formData.comissao_percentual}
+                    onChange={(e) => setFormData({ ...formData, comissao_percentual: e.target.value })}
+                  />
+                </div>
+              </div>
+              
+              <div className="flex items-center space-x-2">
+                <Switch
+                  data-testid="switch-ativo"
+                  checked={formData.ativo}
+                  onCheckedChange={(checked) => setFormData({ ...formData, ativo: checked })}
+                />
+                <Label>Ativo</Label>
+              </div>
+              
+              <div>
+                <Label>Observações</Label>
+                <Textarea
+                  data-testid="input-observacoes"
+                  value={formData.observacoes}
+                  onChange={(e) => setFormData({ ...formData, observacoes: e.target.value })}
+                />
+              </div>
+              
               <div className="flex justify-end space-x-3">
-                <Button type="button" variant="outline" onClick={() => setModalOpen(false)}>Cancelar</Button>
-                <Button type="submit" data-testid="submit-profissional" style={{ backgroundColor: '#2C7464', color: 'white' }}>Salvar</Button>
+                <Button type="button" variant="outline" onClick={() => setModalOpen(false)}>
+                  Cancelar
+                </Button>
+                <Button
+                  type="submit"
+                  data-testid="submit-profissional"
+                  style={{ backgroundColor: '#2C7464', color: 'white' }}
+                >
+                  Salvar
+                </Button>
               </div>
             </form>
           </DialogContent>
