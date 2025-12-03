@@ -71,7 +71,8 @@ const Profissionais = () => {
         whats: '',
         id_area_atuacao: '',
         ativo: true,
-        observacoes: ''
+        observacoes: '',
+        procedimentos: []
       });
     }
     setModalOpen(true);
