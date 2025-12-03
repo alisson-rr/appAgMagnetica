@@ -330,9 +330,7 @@ const AgendaNew = () => {
                   <SelectTrigger data-testid="select-status"><SelectValue /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="pendente">Pendente</SelectItem>
-                    <SelectItem value="agendado">Agendado</SelectItem>
                     <SelectItem value="cancelado">Cancelado</SelectItem>
-                    <SelectItem value="concluido">Concluído</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
