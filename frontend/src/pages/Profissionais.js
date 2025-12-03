@@ -155,8 +155,10 @@ const Profissionais = () => {
                   <Label>WhatsApp</Label>
                   <Input
                     data-testid="input-whatsapp"
-                    value={formData.whats}
+                    value={formatPhone(formData.whats)}
                     onChange={(e) => setFormData({ ...formData, whats: e.target.value })}
+                    placeholder="(00) 00000-0000"
+                    maxLength={15}
                   />
                 </div>
               </div>
