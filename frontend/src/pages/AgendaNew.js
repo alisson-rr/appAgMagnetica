@@ -327,11 +327,27 @@ const AgendaNew = () => {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <Label>Data</Label>
-                  <Input type="date" data-testid="input-data" value={formData.data_inicio} onChange={(e) => setFormData({ ...formData, data_inicio: e.target.value })} required />
+                  <Input 
+                    type="date" 
+                    data-testid="input-data" 
+                    value={formData.data_inicio} 
+                    onChange={(e) => setFormData({ ...formData, data_inicio: e.target.value })} 
+                    required 
+                    className="rounded-xl"
+                    style={{ padding: '12px 16px', borderColor: '#2C7464' }}
+                  />
                 </div>
                 <div>
                   <Label>Hora</Label>
-                  <Input type="time" data-testid="input-hora" value={formData.hora_inicio} onChange={(e) => setFormData({ ...formData, hora_inicio: e.target.value })} required />
+                  <Input 
+                    type="time" 
+                    data-testid="input-hora" 
+                    value={formData.hora_inicio} 
+                    onChange={(e) => setFormData({ ...formData, hora_inicio: e.target.value })} 
+                    required 
+                    className="rounded-xl"
+                    style={{ padding: '12px 16px', borderColor: '#2C7464' }}
+                  />
                 </div>
               </div>
 
