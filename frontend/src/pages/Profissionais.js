@@ -286,7 +286,7 @@ const Profissionais = () => {
                 )}
                 {prof.whats && (
                   <p className="text-sm" style={{ color: '#292726' }}>
-                    <span className="font-medium">WhatsApp:</span> {prof.whats}
+                    <span className="font-medium">WhatsApp:</span> {formatPhone(prof.whats)}
                   </p>
                 )}
               </div>
