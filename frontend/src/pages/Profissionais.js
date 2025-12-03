@@ -60,7 +60,8 @@ const Profissionais = () => {
         whats: profissional.whats || '',
         id_area_atuacao: profissional.id_area_atuacao?.toString() || '',
         ativo: profissional.ativo ?? true,
-        observacoes: profissional.observacoes || ''
+        observacoes: profissional.observacoes || '',
+        procedimentos: profissional.procedimentos || []
       });
     } else {
       setEditingProfissional(null);
