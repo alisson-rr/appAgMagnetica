@@ -434,11 +434,11 @@ const AgendaNew = () => {
                         </p>
                       </div>
                       <div className="flex flex-col space-y-1 ml-2">
-                        <button onClick={() => openModal(consulta)} className="p-1 rounded hover:bg-gray-100">
-                          <Edit className="w-3 h-3" style={{ color: '#2C7464' }} />
+                        <button onClick={() => openModal(consulta)} className="p-2 rounded-lg hover:bg-gray-100" title="Editar">
+                          <Edit className="w-4 h-4" style={{ color: '#2C7464' }} />
                         </button>
-                        <button onClick={() => handleDelete(consulta.id)} className="p-1 rounded hover:bg-gray-100">
-                          <Trash2 className="w-3 h-3" style={{ color: '#FEA5A4' }} />
+                        <button onClick={() => handleDelete(consulta.id)} className="p-2 rounded-lg hover:bg-gray-100" title="Deletar">
+                          <Trash2 className="w-4 h-4" style={{ color: '#FEA5A4' }} />
                         </button>
                       </div>
                     </div>
