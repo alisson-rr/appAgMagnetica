@@ -118,6 +118,17 @@ const AgendaNew = () => {
   const handleDragOver = (e) => {
     e.preventDefault();
     e.dataTransfer.dropEffect = 'move';
+    
+    if (draggedItem) {
+      const rect = e.currentTarget.getBoundingClientRect();
+      const yPosition = e.clientY - rect.top;
+      const newTime = getTimeFromPosition(yPosition);
+      
+      setDragOverPosition({
+        top: (newTime.hours - 8) * HOUR_HEIGHT + (newTime.minutes / 60) * HOUR_HEIGHT,
+        height: getDurationInMinutes(draggedItem.intervalo) / 60 * HOUR_HEIGHT
+      });
+    }
   };
 
   const handleDrop = async (e) => {
