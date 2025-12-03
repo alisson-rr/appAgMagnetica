@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import api from '../services/api';
 import { toast } from 'sonner';
 import { Plus, Edit, Trash2, Search, Phone, Mail } from 'lucide-react';
+import { formatPhone, unformatPhone } from '../utils/formatters';
 import { Card } from '../components/ui/card';
 import { Button } from '../components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '../components/ui/dialog';
