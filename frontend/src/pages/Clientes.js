@@ -292,7 +292,7 @@ const Clientes = () => {
                 {cliente.whats && (
                   <div className="flex items-center text-sm" style={{ color: '#292726' }}>
                     <Phone className="w-4 h-4 mr-2" style={{ color: '#2C7464' }} />
-                    {cliente.whats}
+                    {formatPhone(cliente.whats)}
                   </div>
                 )}
                 {cliente.email && (
