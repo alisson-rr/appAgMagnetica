@@ -382,25 +382,28 @@ const AgendaNew = () => {
             <div className="animate-spin rounded-full h-12 w-12 border-b-2" style={{ borderColor: '#2C7464' }} />
           </div>
         ) : (
-          <div className="flex">
+          <div className="flex" style={{ position: 'relative', minHeight: `${HOURS.length * HOUR_HEIGHT}px` }}>
             {/* Coluna de Horários */}
             <div className="w-20 flex-shrink-0">
               {HOURS.map((hour) => (
-                <div key={hour} style={{ height: `${HOUR_HEIGHT}px` }} className="flex items-start justify-end pr-3 text-sm" style={{ color: '#292726' }}>
+                <div key={hour} style={{ height: `${HOUR_HEIGHT}px`, color: '#292726' }} className="flex items-start justify-end pr-3 text-sm">
                   {String(hour).padStart(2, '0')}:00
                 </div>
               ))}
             </div>
 
             {/* Área de Agendamentos */}
-            <div className="flex-1 relative border-l" style={{ borderColor: '#F7F1EB' }} onDragOver={handleDragOver} onDrop={handleDrop}>
+            <div className="flex-1 relative border-l" style={{ borderColor: '#F7F1EB', minHeight: `${HOURS.length * HOUR_HEIGHT}px` }} onDragOver={handleDragOver} onDrop={handleDrop}>
               {/* Linhas de grade */}
-              {HOURS.map((hour) => (
-                <div key={hour} style={{ height: `${HOUR_HEIGHT}px` }} className="border-b" style={{ borderColor: '#F7F1EB' }} />
-              ))}
+              <div className="absolute inset-0">
+                {HOURS.map((hour) => (
+                  <div key={hour} style={{ height: `${HOUR_HEIGHT}px`, borderColor: '#F7F1EB' }} className="border-b" />
+                ))}
+              </div>
 
               {/* Agendamentos posicionados */}
-              {consultas.map((consulta) => {
+              <div className="absolute inset-0">
+                {consultas.map((consulta) => {
                 const { top, height } = calculatePosition(consulta.intervalo);
                 const time = parseTimeFromInterval(consulta.intervalo);
                 const timeStr = time ? `${String(time.hour).padStart(2, '0')}:${String(time.minute).padStart(2, '0')}` : '--:--';
