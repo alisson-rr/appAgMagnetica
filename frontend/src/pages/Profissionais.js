@@ -77,7 +77,8 @@ const Profissionais = () => {
     try {
       const payload = {
         ...formData,
-        id_area_atuacao: formData.id_area_atuacao ? parseInt(formData.id_area_atuacao) : null
+        id_area_atuacao: formData.id_area_atuacao ? parseInt(formData.id_area_atuacao) : null,
+        whats: unformatPhone(formData.whats)
       };
 
       if (editingProfissional) {
