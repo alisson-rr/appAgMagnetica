@@ -233,13 +233,45 @@ async def register(request: UsuarioCreate):
 @api_router.get("/dashboard/stats")
 async def get_dashboard_stats(current_user: dict = Depends(verify_token)):
     try:
-        # Retornar dados vazios se não houver consultas
-        # Isso evita erros enquanto o sistema está sendo configurado
+        import re
+        from datetime import date, datetime
+        
+        hoje_str = date.today().isoformat()
+        
+        # Buscar todas as consultas
+        result = supabase.table('consulta').select('*, cliente(*), profissional(*), procedimento(*)').execute()
+        consultas = result.data or []
+        
+        # Filtrar consultas de hoje
+        consultas_hoje = []
+        for consulta in consultas:
+            intervalo_str = consulta.get('intervalo', '')
+            if intervalo_str:
+                match = re.search(r'(\d{4}-\d{2}-\d{2})', intervalo_str)
+                if match and match.group(1) == hoje_str:
+                    consultas_hoje.append(consulta)
+        
+        total_atendimentos = len(consultas_hoje)
+        
+        # Calcular valores (como não temos campo de valor na consulta, vamos pegar do procedimento)
+        total_recebido = 0.0
+        total_pendente = 0.0
+        
+        for consulta in consultas_hoje:
+            valor = consulta.get('procedimento', {}).get('valor', 0) or 0
+            if consulta.get('status') == 'pendente':
+                total_pendente += float(valor)
+            else:
+                total_recebido += float(valor)
+        
+        # Próximos agendamentos (ordenar por horário)
+        proximos = sorted(consultas_hoje, key=lambda x: x.get('intervalo', ''))[:5]
+        
         return {
-            "total_atendimentos": 0,
-            "total_recebido": 0.0,
-            "total_pendente": 0.0,
-            "proximos_agendamentos": []
+            "total_atendimentos": total_atendimentos,
+            "total_recebido": total_recebido,
+            "total_pendente": total_pendente,
+            "proximos_agendamentos": proximos
         }
     except Exception as e:
         logging.error(f"Erro ao buscar estatísticas: {str(e)}")
