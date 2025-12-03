@@ -36,12 +36,14 @@ const Profissionais = () => {
 
   const fetchData = async () => {
     try {
-      const [profsRes, areasRes] = await Promise.all([
+      const [profsRes, areasRes, procsRes] = await Promise.all([
         api.get('/profissionais'),
-        api.get('/areas-atuacao')
+        api.get('/areas-atuacao'),
+        api.get('/procedimentos')
       ]);
       setProfissionais(profsRes.data || []);
       setAreas(areasRes.data || []);
+      setProcedimentos(procsRes.data || []);
     } catch (error) {
       toast.error('Erro ao carregar dados');
     } finally {
