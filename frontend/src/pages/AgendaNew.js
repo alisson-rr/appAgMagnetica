@@ -163,6 +163,7 @@ const AgendaNew = () => {
       toast.error('Erro ao atualizar horário');
     } finally {
       setDraggedItem(null);
+      setDragOverPosition(null);
     }
   };
 
