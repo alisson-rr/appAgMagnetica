@@ -93,18 +93,30 @@ const Profissionais = () => {
     e.preventDefault();
     try {
       const payload = {
-        ...formData,
+        nome: formData.nome,
+        email: formData.email,
+        whats: unformatPhone(formData.whats),
         id_area_atuacao: formData.id_area_atuacao ? parseInt(formData.id_area_atuacao) : null,
-        whats: unformatPhone(formData.whats)
+        ativo: formData.ativo,
+        observacoes: formData.observacoes
       };
 
+      let profId;
       if (editingProfissional) {
         await api.put(`/profissionais/${editingProfissional.id}`, payload);
+        profId = editingProfissional.id;
         toast.success('Profissional atualizado!');
       } else {
-        await api.post('/profissionais', payload);
+        const response = await api.post('/profissionais', payload);
+        profId = response.data.id;
         toast.success('Profissional criado!');
       }
+      
+      // Salvar procedimentos
+      if (formData.procedimentos && formData.procedimentos.length > 0) {
+        await api.post(`/profissionais/${profId}/procedimentos`, formData.procedimentos);
+      }
+      
       setModalOpen(false);
       fetchData();
     } catch (error) {
