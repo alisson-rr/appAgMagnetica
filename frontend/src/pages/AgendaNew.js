@@ -501,6 +501,16 @@ const AgendaNew = () => {
                         </p>
                       </div>
                       <div className="flex flex-col space-y-1 ml-2">
+                        {consulta.status !== 'concluido' && (
+                          <button 
+                            onClick={() => handleConcluir(consulta)} 
+                            className="px-2 py-1 text-xs font-medium rounded-lg text-white"
+                            style={{ backgroundColor: '#2C7464' }}
+                            title="Concluir"
+                          >
+                            ✓
+                          </button>
+                        )}
                         <button onClick={() => openModal(consulta)} className="p-2 rounded-lg hover:bg-gray-100" title="Editar">
                           <Edit className="w-4 h-4" style={{ color: '#2C7464' }} />
                         </button>
