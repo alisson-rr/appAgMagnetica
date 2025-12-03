@@ -285,6 +285,7 @@ const AgendaNew = () => {
     switch (status) {
       case 'pendente': return '#FEA5A4';
       case 'cancelado': return '#ccc';
+      case 'concluido': return '#2C7464';
       default: return '#FEA5A4';
     }
   };
