@@ -80,11 +80,17 @@ const Clientes = () => {
     e.preventDefault();
     
     try {
+      // Remover formatação do WhatsApp antes de enviar
+      const dataToSend = {
+        ...formData,
+        whats: unformatPhone(formData.whats)
+      };
+      
       if (editingCliente) {
-        await api.put(`/clientes/${editingCliente.id}`, formData);
+        await api.put(`/clientes/${editingCliente.id}`, dataToSend);
         toast.success('Cliente atualizado com sucesso!');
       } else {
-        await api.post('/clientes', formData);
+        await api.post('/clientes', dataToSend);
         toast.success('Cliente criado com sucesso!');
       }
       
