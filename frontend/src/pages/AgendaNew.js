@@ -414,13 +414,14 @@ const AgendaNew = () => {
                     draggable
                     onDragStart={(e) => handleDragStart(e, consulta)}
                     data-testid={`agendamento-${consulta.id}`}
-                    className="absolute left-2 right-2 p-3 rounded-lg shadow-md cursor-move"
+                    className="absolute p-3 rounded-lg shadow-md cursor-move overflow-hidden"
                     style={{
                       top: `${top}px`,
-                      height: `${height}px`,
+                      left: '8px',
+                      right: '8px',
+                      height: `${Math.max(height, 60)}px`,
                       backgroundColor: 'white',
                       borderLeft: `4px solid ${getStatusColor(consulta.status)}`,
-                      minHeight: '60px',
                       zIndex: 10
                     }}
                   >
