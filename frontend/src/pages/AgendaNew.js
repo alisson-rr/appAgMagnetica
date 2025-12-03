@@ -447,7 +447,8 @@ const AgendaNew = () => {
                     </div>
                   </div>
                 );
-              })}
+                })}
+              </div>
             </div>
           </div>
         )}
