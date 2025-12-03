@@ -209,6 +209,26 @@ const Profissionais = () => {
               </div>
               
               <div>
+                <Label>Procedimentos que realiza</Label>
+                <div className="border rounded-lg p-3 max-h-48 overflow-y-auto" style={{ borderColor: '#2C7464' }}>
+                  {procedimentos.map((proc) => (
+                    <label key={proc.id} className="flex items-center space-x-2 py-2 cursor-pointer hover:bg-gray-50 px-2 rounded">
+                      <input
+                        type="checkbox"
+                        checked={(formData.procedimentos || []).includes(proc.id)}
+                        onChange={() => toggleProcedimento(proc.id)}
+                        className="w-4 h-4 rounded"
+                        style={{ accentColor: '#2C7464' }}
+                      />
+                      <span className="text-sm" style={{ color: '#292726' }}>
+                        {proc.nome} ({proc.duracao_minutos}min)
+                      </span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+
+              <div>
                 <Label>Observações</Label>
                 <Textarea
                   data-testid="input-observacoes"
