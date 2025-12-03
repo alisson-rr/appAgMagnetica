@@ -5,7 +5,7 @@ import { Toaster } from './components/ui/sonner';
 import Layout from './components/Layout';
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
-import Agenda from './pages/Agenda';
+import Agenda from './pages/AgendaNew';
 import Clientes from './pages/Clientes';
 import Profissionais from './pages/Profissionais';
 import Servicos from './pages/Servicos';
