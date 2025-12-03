@@ -227,8 +227,7 @@ const Servicos = () => {
                   {proc.duracao_minutos} min
                 </div>
                 <div className="flex items-center text-lg font-bold" style={{ color: '#2C7464' }}>
-                  <DollarSign className="w-5 h-5" />
-                  {proc.valor?.toFixed(2)}
+                  R$ {proc.valor?.toFixed(2)}
                 </div>
               </div>
             </Card>
