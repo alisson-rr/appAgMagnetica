@@ -32,6 +32,7 @@ const AgendaNew = () => {
   const [modalOpen, setModalOpen] = useState(false);
   const [editingItem, setEditingItem] = useState(null);
   const [draggedItem, setDraggedItem] = useState(null);
+  const [dragOverPosition, setDragOverPosition] = useState(null);
 
   const [formData, setFormData] = useState({
     id_cliente: '',
