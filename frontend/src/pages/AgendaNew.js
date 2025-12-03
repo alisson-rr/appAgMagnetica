@@ -501,7 +501,10 @@ const AgendaNew = () => {
                           {consulta.profissional?.nome}
                         </p>
                       </div>
-                      <div className="flex flex-col space-y-1 ml-2">
+                      <div className="flex items-center space-x-1 ml-2">
+                        <button onClick={() => openModal(consulta)} className="p-2 rounded-lg hover:bg-gray-100" title="Editar">
+                          <Edit className="w-4 h-4" style={{ color: '#2C7464' }} />
+                        </button>
                         {consulta.status !== 'concluido' && (
                           <button 
                             onClick={() => handleConcluir(consulta)} 
@@ -512,12 +515,6 @@ const AgendaNew = () => {
                             ✓
                           </button>
                         )}
-                        <button onClick={() => openModal(consulta)} className="p-2 rounded-lg hover:bg-gray-100" title="Editar">
-                          <Edit className="w-4 h-4" style={{ color: '#2C7464' }} />
-                        </button>
-                        <button onClick={() => handleDelete(consulta.id)} className="p-2 rounded-lg hover:bg-gray-100" title="Deletar">
-                          <Trash2 className="w-4 h-4" style={{ color: '#FEA5A4' }} />
-                        </button>
                       </div>
                     </div>
                   </div>
