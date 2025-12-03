@@ -246,10 +246,8 @@ const AgendaNew = () => {
 
   const getStatusColor = (status) => {
     switch (status) {
-      case 'agendado': return '#2C7464';
       case 'pendente': return '#FEA5A4';
       case 'cancelado': return '#ccc';
-      case 'concluido': return '#2C7464';
       default: return '#FEA5A4';
     }
   };
