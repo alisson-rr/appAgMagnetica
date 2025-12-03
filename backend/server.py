@@ -236,33 +236,41 @@ async def get_dashboard_stats(current_user: dict = Depends(verify_token)):
         import re
         from datetime import date, datetime
         
-        hoje_str = date.today().isoformat()
+        hoje = date.today()
+        hoje_str = hoje.isoformat()
+        mes_atual = hoje.strftime('%Y-%m')
         
         # Buscar todas as consultas
         result = supabase.table('consulta').select('*, cliente(*), profissional(*), procedimento(*)').execute()
         consultas = result.data or []
         
-        # Filtrar consultas de hoje
+        # Filtrar consultas de hoje e do mês
         consultas_hoje = []
+        consultas_mes = []
+        
         for consulta in consultas:
             intervalo_str = consulta.get('intervalo', '')
             if intervalo_str:
                 match = re.search(r'(\d{4}-\d{2}-\d{2})', intervalo_str)
-                if match and match.group(1) == hoje_str:
-                    consultas_hoje.append(consulta)
+                if match:
+                    data_consulta = match.group(1)
+                    if data_consulta == hoje_str:
+                        consultas_hoje.append(consulta)
+                    if data_consulta.startswith(mes_atual):
+                        consultas_mes.append(consulta)
         
         total_atendimentos = len(consultas_hoje)
         
-        # Calcular valores (como não temos campo de valor na consulta, vamos pegar do procedimento)
+        # Calcular valores do mês
         total_recebido = 0.0
         total_pendente = 0.0
         
-        for consulta in consultas_hoje:
+        for consulta in consultas_mes:
             valor = consulta.get('procedimento', {}).get('valor', 0) or 0
-            if consulta.get('status') == 'pendente':
-                total_pendente += float(valor)
-            else:
+            if consulta.get('status') == 'concluido':
                 total_recebido += float(valor)
+            elif consulta.get('status') == 'pendente':
+                total_pendente += float(valor)
         
         # Próximos agendamentos (ordenar por horário)
         proximos = sorted(consultas_hoje, key=lambda x: x.get('intervalo', ''))[:5]
