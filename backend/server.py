@@ -372,6 +372,31 @@ async def create_profissional(prof: ProfissionalCreate, current_user: dict = Dep
         logging.error(f"Erro ao criar profissional: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 
+@api_router.post("/profissionais/{prof_id}/procedimentos")
+async def add_procedimentos_profissional(prof_id: int, procedimentos: List[int], current_user: dict = Depends(verify_token)):
+    try:
+        # Deletar relações antigas
+        supabase.table('profissional_procedimento').delete().eq('id_profissional', prof_id).execute()
+        
+        # Inserir novas relações
+        if procedimentos:
+            relations = [{"id_profissional": prof_id, "id_procedimento": proc_id, "especialista": False} for proc_id in procedimentos]
+            supabase.table('profissional_procedimento').insert(relations).execute()
+        
+        return {"message": "Procedimentos atualizados"}
+    except Exception as e:
+        logging.error(f"Erro ao atualizar procedimentos: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@api_router.get("/profissionais/{prof_id}/procedimentos")
+async def get_procedimentos_profissional(prof_id: int, current_user: dict = Depends(verify_token)):
+    try:
+        result = supabase.table('profissional_procedimento').select('id_procedimento').eq('id_profissional', prof_id).execute()
+        return [r['id_procedimento'] for r in result.data]
+    except Exception as e:
+        logging.error(f"Erro ao buscar procedimentos: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
 @api_router.put("/profissionais/{prof_id}")
 async def update_profissional(prof_id: int, prof: ProfissionalUpdate, current_user: dict = Depends(verify_token)):
     try:
