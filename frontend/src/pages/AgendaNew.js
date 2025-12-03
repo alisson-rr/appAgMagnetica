@@ -410,6 +410,20 @@ const AgendaNew = () => {
                 ))}
               </div>
 
+              {/* Pré-visualização do drag */}
+              {dragOverPosition && (
+                <div
+                  className="absolute left-2 right-2 rounded-lg border-2 border-dashed pointer-events-none"
+                  style={{
+                    top: `${dragOverPosition.top}px`,
+                    height: `${dragOverPosition.height}px`,
+                    borderColor: '#2C7464',
+                    backgroundColor: 'rgba(44, 116, 100, 0.1)',
+                    zIndex: 5
+                  }}
+                />
+              )}
+
               {/* Agendamentos posicionados */}
               <div className="absolute inset-0">
                 {consultas.map((consulta) => {
