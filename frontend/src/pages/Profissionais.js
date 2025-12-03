@@ -51,6 +51,17 @@ const Profissionais = () => {
     }
   };
 
+  const toggleProcedimento = (procId) => {
+    setFormData(prev => {
+      const procs = prev.procedimentos || [];
+      if (procs.includes(procId)) {
+        return { ...prev, procedimentos: procs.filter(id => id !== procId) };
+      } else {
+        return { ...prev, procedimentos: [...procs, procId] };
+      }
+    });
+  };
+
   const openModal = (profissional = null) => {
     if (profissional) {
       setEditingProfissional(profissional);
