@@ -62,9 +62,19 @@ const Profissionais = () => {
     });
   };
 
-  const openModal = (profissional = null) => {
+  const openModal = async (profissional = null) => {
     if (profissional) {
       setEditingProfissional(profissional);
+      
+      // Buscar procedimentos do profissional
+      let procs = [];
+      try {
+        const response = await api.get(`/profissionais/${profissional.id}/procedimentos`);
+        procs = response.data;
+      } catch (error) {
+        console.error('Erro ao buscar procedimentos:', error);
+      }
+      
       setFormData({
         nome: profissional.nome || '',
         email: profissional.email || '',
@@ -72,7 +82,7 @@ const Profissionais = () => {
         id_area_atuacao: profissional.id_area_atuacao?.toString() || '',
         ativo: profissional.ativo ?? true,
         observacoes: profissional.observacoes || '',
-        procedimentos: profissional.procedimentos || []
+        procedimentos: procs
       });
     } else {
       setEditingProfissional(null);
