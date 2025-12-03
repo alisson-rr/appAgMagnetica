@@ -15,6 +15,7 @@ import { Switch } from '../components/ui/switch';
 const Profissionais = () => {
   const [profissionais, setProfissionais] = useState([]);
   const [areas, setAreas] = useState([]);
+  const [procedimentos, setProcedimentos] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [loading, setLoading] = useState(true);
   const [modalOpen, setModalOpen] = useState(false);
