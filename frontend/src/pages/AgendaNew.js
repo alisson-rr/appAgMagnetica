@@ -252,6 +252,30 @@ const AgendaNew = () => {
     }
   };
 
+  const handleConcluir = async (consulta) => {
+    try {
+      const duration = getDurationInMinutes(consulta.intervalo);
+      const time = parseTimeFromInterval(consulta.intervalo);
+      const dateStr = format(selectedDate, 'yyyy-MM-dd');
+      const dataHora = new Date(`${dateStr}T${String(time.hour).padStart(2, '0')}:${String(time.minute).padStart(2, '0')}:00`);
+      
+      const payload = {
+        id_cliente: consulta.id_cliente,
+        id_profissional: consulta.id_profissional,
+        id_procedimento: consulta.id_procedimento,
+        data_inicio: dataHora.toISOString(),
+        duracao_minutos: duration,
+        status: 'concluido'
+      };
+
+      await api.put(`/consultas/${consulta.id}`, payload);
+      toast.success('Serviço marcado como concluído!');
+      fetchData();
+    } catch (error) {
+      toast.error('Erro ao concluir serviço');
+    }
+  };
+
   const getWeekDays = () => {
     const start = startOfWeek(selectedDate, { locale: ptBR });
     return Array.from({ length: 7 }, (_, i) => addDays(start, i));
