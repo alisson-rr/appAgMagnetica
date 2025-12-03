@@ -88,7 +88,7 @@ const Dashboard = () => {
         >
           <div className="flex items-start justify-between">
             <div className="flex-1">
-              <p className="text-sm font-medium" style={{ color: '#292726' }}>Total Recebido</p>
+              <p className="text-sm font-medium" style={{ color: '#292726' }}>Total Recebido (Mês)</p>
               <p className="mt-2 text-3xl font-bold" style={{ color: '#2C7464' }}>
                 R$ {(stats?.total_recebido || 0).toFixed(2)}
               </p>
