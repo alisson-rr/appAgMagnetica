@@ -13,12 +13,24 @@ import jwt
 from passlib.context import CryptContext
 
 ROOT_DIR = Path(__file__).parent
-load_dotenv(ROOT_DIR / '.env')
+
+# Tentar carregar .env primeiro, se não existir, usar settings.py
+env_path = ROOT_DIR / '.env'
+if env_path.exists():
+    load_dotenv(env_path)
+else:
+    import settings  # Isso vai configurar as variáveis de ambiente
 
 # Supabase connection
-supabase_url = os.environ['SUPABASE_URL']
-supabase_key = os.environ['SUPABASE_ANON_KEY']
-supabase: Client = create_client(supabase_url, supabase_key)
+supabase_url = os.environ.get('SUPABASE_URL', 'https://xyzcompanyid.supabase.co')
+supabase_key = os.environ.get('SUPABASE_ANON_KEY', 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inh5emNvbXBhbnlpZCIsInJvbGUiOiJhbm9uIiwiaWF0IjoxNjQ2MjM5MDIyLCJleHAiOjE5NjE4MTUwMjJ9.dummy_key')
+
+try:
+    supabase: Client = create_client(supabase_url, supabase_key)
+    logging.info("Supabase client criado com sucesso")
+except Exception as e:
+    logging.warning(f"Erro ao conectar ao Supabase: {e}. Servidor iniciará sem conexão com banco de dados.")
+    supabase = None
 
 # JWT Configuration
 JWT_SECRET = os.environ['JWT_SECRET']
@@ -643,4 +655,14 @@ logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
 )
+
+# Adicionar rota de health check
+@app.get("/health")
+async def health_check():
+    return {"status": "ok", "message": "Backend is running"}
+
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run(app, host="0.0.0.0", port=8000, reload=True)
+
 logger = logging.getLogger(__name__)
