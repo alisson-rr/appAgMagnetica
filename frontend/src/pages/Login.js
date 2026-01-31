@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
@@ -122,6 +122,19 @@ const Login = () => {
           >
             {loading ? 'Entrando...' : 'Entrar'}
           </Button>
+
+          <div className="text-center">
+            <p className="text-sm" style={{ color: '#292726' }}>
+              Não tem uma conta?{' '}
+              <Link
+                to="/cadastro"
+                className="font-medium hover:underline"
+                style={{ color: '#2C7464' }}
+              >
+                Cadastre-se
+              </Link>
+            </p>
+          </div>
         </form>
       </div>
     </div>

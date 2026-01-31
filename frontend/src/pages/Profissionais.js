@@ -212,11 +212,15 @@ const Profissionais = () => {
                     <SelectValue placeholder="Selecione" />
                   </SelectTrigger>
                   <SelectContent>
-                    {areas.map((area) => (
-                      <SelectItem key={area.id} value={area.id.toString()}>
-                        {area.nome}
-                      </SelectItem>
-                    ))}
+                    {areas
+                      .filter((area, index, self) => 
+                        index === self.findIndex(a => a.nome === area.nome)
+                      )
+                      .map((area) => (
+                        <SelectItem key={area.id} value={area.id.toString()}>
+                          {area.nome}
+                        </SelectItem>
+                      ))}
                   </SelectContent>
                 </Select>
               </div>

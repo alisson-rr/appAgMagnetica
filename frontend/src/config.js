@@ -1,7 +1,7 @@
 // Configuração da aplicação
 const config = {
   // URL do backend - ajuste conforme necessário
-  BACKEND_URL: process.env.REACT_APP_BACKEND_URL || 'http://localhost:8001',
+  BACKEND_URL: process.env.REACT_APP_BACKEND_URL || 'http://localhost:8000',
   
   // Configurações do Supabase (caso necessário no frontend)
   SUPABASE_URL: process.env.REACT_APP_SUPABASE_URL || 'https://nkeiylfzzrqpjjlstpcj.supabase.co',

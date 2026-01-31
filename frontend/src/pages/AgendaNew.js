@@ -143,7 +143,8 @@ const AgendaNew = () => {
     try {
       // Calcular nova data/hora
       const dateStr = format(selectedDate, 'yyyy-MM-dd');
-      const newDateTime = new Date(`${dateStr}T${String(newTime.hours).padStart(2, '0')}:${String(newTime.minutes).padStart(2, '0')}:00`);
+      // Manter a data/hora no formato local sem conversão para UTC
+      const newDateTimeLocal = `${dateStr}T${String(newTime.hours).padStart(2, '0')}:${String(newTime.minutes).padStart(2, '0')}:00`;
       
       const duration = getDurationInMinutes(draggedItem.intervalo);
       
@@ -151,7 +152,7 @@ const AgendaNew = () => {
         id_cliente: draggedItem.id_cliente,
         id_profissional: draggedItem.id_profissional,
         id_procedimento: draggedItem.id_procedimento,
-        data_inicio: newDateTime.toISOString(),
+        data_inicio: newDateTimeLocal,
         duracao_minutos: duration,
         status: draggedItem.status
       };
@@ -214,13 +215,14 @@ const AgendaNew = () => {
         return;
       }
 
-      const dataHora = new Date(`${formData.data_inicio}T${formData.hora_inicio}`);
+      // Manter a data/hora no formato local sem conversão para UTC
+      const dataHoraLocal = `${formData.data_inicio}T${formData.hora_inicio}:00`;
       
       const payload = {
         id_cliente: parseInt(formData.id_cliente),
         id_profissional: parseInt(formData.id_profissional),
         id_procedimento: parseInt(formData.id_procedimento),
-        data_inicio: dataHora.toISOString(),
+        data_inicio: dataHoraLocal,
         duracao_minutos: procedimento.duracao_minutos || 60,
         status: formData.status
       };
@@ -257,13 +259,14 @@ const AgendaNew = () => {
       const duration = getDurationInMinutes(consulta.intervalo);
       const time = parseTimeFromInterval(consulta.intervalo);
       const dateStr = format(selectedDate, 'yyyy-MM-dd');
-      const dataHora = new Date(`${dateStr}T${String(time.hour).padStart(2, '0')}:${String(time.minute).padStart(2, '0')}:00`);
+      // Manter a data/hora no formato local sem conversão para UTC
+      const dataHoraLocal = `${dateStr}T${String(time.hour).padStart(2, '0')}:${String(time.minute).padStart(2, '0')}:00`;
       
       const payload = {
         id_cliente: consulta.id_cliente,
         id_profissional: consulta.id_profissional,
         id_procedimento: consulta.id_procedimento,
-        data_inicio: dataHora.toISOString(),
+        data_inicio: dataHoraLocal,
         duracao_minutos: duration,
         status: 'concluido'
       };

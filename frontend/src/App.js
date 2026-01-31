@@ -12,6 +12,8 @@ import Servicos from './pages/Servicos';
 import Pagamentos from './pages/Pagamentos';
 import Comissoes from './pages/Comissoes';
 import Configuracoes from './pages/Configuracoes';
+import Cadastro from './pages/Cadastro';
+import EscolherPlano from './pages/EscolherPlano';
 import './App.css';
 
 const PrivateRoute = ({ children }) => {
@@ -43,6 +45,8 @@ function AppContent() {
     <BrowserRouter>
       <Routes>
         <Route path="/login" element={user ? <Navigate to="/dashboard" /> : <Login />} />
+        <Route path="/cadastro" element={user ? <Navigate to="/dashboard" /> : <Cadastro />} />
+        <Route path="/planos" element={user ? <Navigate to="/dashboard" /> : <EscolherPlano />} />
         <Route path="/" element={<Navigate to={user ? "/dashboard" : "/login"} />} />
         
         <Route path="/dashboard" element={<PrivateRoute><Layout><Dashboard /></Layout></PrivateRoute>} />
