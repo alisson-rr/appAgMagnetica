@@ -27,30 +27,33 @@ Armazena informações das clínicas cadastradas no sistema.
 ### 2. `usuarios`
 Usuários do sistema com autenticação.
 
-| Coluna       | Tipo        | Descrição                    |
-|--------------|-------------|------------------------------|
-| `id`         | int8        | 🔑 Chave primária            |
-| `email`      | text        | 🔒 E-mail único (login)      |
-| `senha_hash` | text        | Hash da senha                |
-| `nome`       | text        | Nome do usuário              |
-| `created_at` | timestamptz | Data de criação              |
+| Coluna            | Tipo        | Descrição                    |
+|-------------------|-------------|------------------------------|
+| `id`              | int8        | 🔑 Chave primária            |
+| `email`           | text        | 🔒 E-mail único (login)      |
+| `senha_hash`      | text        | Hash da senha                |
+| `nome`            | text        | Nome do usuário              |
+| `created_at`      | timestamptz | Data de criação              |
+| `id_info_clinica` | int8        | 🔗 FK → info_clinica         |
+| `role`            | text        | Papel do usuário (default: 'owner') |
 
 ---
 
 ### 3. `cliente`
 Pacientes/clientes cadastrados.
 
-| Coluna           | Tipo        | Descrição                    |
-|------------------|-------------|------------------------------|
-| `id`             | int8        | 🔑 Chave primária            |
-| `nome`           | text        | Nome completo                |
-| `whats`          | text        | WhatsApp                     |
-| `status`         | text        | Status do cliente            |
-| `interesses`     | text        | Interesses/preferências      |
-| `created_at`     | timestamptz | Data de cadastro             |
-| `id_plano_saude` | int8        | FK → plano de saúde          |
-| `email`          | text        | E-mail                       |
-| `data_nascimento`| date        | Data de nascimento           |
+| Coluna            | Tipo        | Descrição                    |
+|-------------------|-------------|------------------------------|
+| `id`              | int8        | 🔑 Chave primária            |
+| `nome`            | text        | Nome completo                |
+| `whats`           | text        | WhatsApp                     |
+| `status`          | text        | Status do cliente            |
+| `interesses`      | text        | Interesses/preferências      |
+| `created_at`      | timestamptz | Data de cadastro             |
+| `id_plano_saude`  | int8        | FK → plano de saúde          |
+| `email`           | text        | E-mail                       |
+| `data_nascimento` | date        | Data de nascimento           |
+| `id_info_clinica` | int8        | 🔗 FK → info_clinica         |
 
 ---
 
@@ -160,37 +163,63 @@ Agendamentos/consultas marcadas.
 | `confirmado_em`      | date      | Data de confirmação          |
 | `cancelado_em`       | date      | Data de cancelamento         |
 | `motivo_cancelamento`| text      | Motivo do cancelamento       |
+| `id_info_clinica`    | int8      | 🔗 FK → info_clinica         |
+
+---
+
+### 12. `planos`
+Planos disponíveis no sistema.
+
+| Coluna      | Tipo        | Descrição                         |
+|-------------|-------------|-----------------------------------|
+| `id`        | int8        | 🔑 Chave primária                 |
+| `codigo`    | text        | 🔒 Código único do plano          |
+| `nome`      | text        | Nome do plano                     |
+| `preco`     | numeric     | Valor do plano                    |
+| `intervalo` | text        | Intervalo (mensal \| anual)       |
+| `ativo`     | bool        | Se o plano está ativo             |
+| `created_at`| timestamptz | Data de criação                   |
+
+---
+
+### 13. `assinaturas`
+Controle de assinaturas de planos por clínica.
+
+| Coluna                    | Tipo        | Descrição                              |
+|---------------------------|-------------|----------------------------------------|
+| `id`                      | int8        | 🔑 Chave primária                      |
+| `id_info_clinica`         | int8        | 🔗 FK → info_clinica                   |
+| `id_plano`                | int8        | 🔗 FK → planos                         |
+| `status`                  | text        | Status (active, past_due, canceled)    |
+| `started_at`              | timestamptz | Data de início                         |
+| `current_period_end`      | timestamptz | Fim do período atual                   |
+| `cancel_at_period_end`    | bool        | Cancelar ao fim do período             |
+| `provider`                | text        | Provedor de pagamento                  |
+| `provider_customer_id`    | text        | ID do cliente no provedor              |
+| `provider_subscription_id`| text        | ID da assinatura no provedor           |
+| `created_at`              | timestamptz | Data de criação                        |
 
 ---
 
 ## Diagrama de Relacionamentos
 
 ```
-                    ┌─────────────────┐
-                    │  info_clinica   │
-                    │    (central)    │
-                    └────────┬────────┘
-                             │
-         ┌───────────────────┼───────────────────┐
-         │                   │                   │
-         ▼                   ▼                   ▼
-┌─────────────────┐ ┌─────────────────┐ ┌─────────────────┐
-│ horario_clinica │ │  profissional   │ │  procedimento   │
-└─────────────────┘ └────────┬────────┘ └────────┬────────┘
-                             │                   │
-                    ┌────────┴───────────────────┘
-                    │
-                    ▼
-         ┌─────────────────────────┐
-         │ profissional_procedim. │
-         └─────────────────────────┘
-                    │
-    ┌───────────────┼───────────────┐
-    │               │               │
-    ▼               ▼               ▼
-┌────────┐   ┌───────────┐   ┌──────────────────────────┐
-│consulta│   │  cliente  │   │disponibilidade_profiss.  │
-└────────┘   └───────────┘   └──────────────────────────┘
+                         ┌─────────────────┐
+                         │  info_clinica   │
+                         │   (TENANT)      │
+                         └────────┬────────┘
+                                  │
+    ┌──────────┬──────────┬───────┼───────┬──────────┬──────────┐
+    │          │          │       │       │          │          │
+    ▼          ▼          ▼       ▼       ▼          ▼          ▼
+┌────────┐┌────────┐┌─────────┐┌──────┐┌───────┐┌────────┐┌──────────┐
+│usuarios││cliente ││consulta ││prof. ││proced.││horario ││assinat.  │
+└────────┘└────────┘└─────────┘└──────┘└───────┘└────────┘└────┬─────┘
+                                                               │
+                                                               ▼
+                                                         ┌──────────┐
+                                                         │  planos  │
+                                                         └──────────┘
 ```
 
 ---
@@ -219,6 +248,52 @@ ADD COLUMN id_info_clinica INT8 REFERENCES info_clinica(id);
 CREATE INDEX idx_horario_clinica_info ON horario_clinica(id_info_clinica);
 CREATE INDEX idx_profissional_info ON profissional(id_info_clinica);
 CREATE INDEX idx_procedimento_info ON procedimento(id_info_clinica);
+CREATE INDEX idx_usuarios_info ON usuarios(id_info_clinica);
+CREATE INDEX idx_cliente_info ON cliente(id_info_clinica);
+CREATE INDEX idx_consulta_info ON consulta(id_info_clinica);
+```
+
+### Adicionar FK nas novas tabelas
+
+```sql
+-- Adicionar id_info_clinica em usuarios
+ALTER TABLE usuarios 
+ADD COLUMN id_info_clinica INT8 REFERENCES info_clinica(id),
+ADD COLUMN role TEXT DEFAULT 'owner';
+
+-- Adicionar id_info_clinica em cliente
+ALTER TABLE cliente 
+ADD COLUMN id_info_clinica INT8 REFERENCES info_clinica(id);
+
+-- Adicionar id_info_clinica em consulta
+ALTER TABLE consulta 
+ADD COLUMN id_info_clinica INT8 REFERENCES info_clinica(id);
+
+-- Criar tabela planos
+CREATE TABLE planos (
+  id BIGSERIAL PRIMARY KEY,
+  codigo TEXT UNIQUE NOT NULL,
+  nome TEXT NOT NULL,
+  preco NUMERIC NOT NULL,
+  intervalo TEXT CHECK (intervalo IN ('mensal', 'anual')),
+  ativo BOOLEAN DEFAULT true,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Criar tabela assinaturas
+CREATE TABLE assinaturas (
+  id BIGSERIAL PRIMARY KEY,
+  id_info_clinica INT8 REFERENCES info_clinica(id),
+  id_plano INT8 REFERENCES planos(id),
+  status TEXT CHECK (status IN ('active', 'past_due', 'canceled')),
+  started_at TIMESTAMPTZ DEFAULT NOW(),
+  current_period_end TIMESTAMPTZ,
+  cancel_at_period_end BOOLEAN DEFAULT false,
+  provider TEXT,
+  provider_customer_id TEXT,
+  provider_subscription_id TEXT,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
 ```
 
 ---
@@ -231,6 +306,11 @@ CREATE INDEX idx_procedimento_info ON procedimento(id_info_clinica);
 | 2025-12-18 | Adicionado id_info_clinica em horario_clinica          |
 | 2025-12-18 | Adicionado id_info_clinica em profissional             |
 | 2025-12-18 | Adicionado id_info_clinica em procedimento             |
+| 2026-01-31 | Adicionado id_info_clinica e role em usuarios          |
+| 2026-01-31 | Adicionado id_info_clinica em cliente                  |
+| 2026-01-31 | Adicionado id_info_clinica em consulta                 |
+| 2026-01-31 | Criada tabela planos                                   |
+| 2026-01-31 | Criada tabela assinaturas                              |
 
 ---
 

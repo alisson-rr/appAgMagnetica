@@ -16,11 +16,12 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
-import { format, addDays, startOfWeek, isSameDay, parseISO } from 'date-fns';
+import { format, addDays, startOfWeek, isSameDay, parseISO, getDay } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
-const HOURS = Array.from({ length: 13 }, (_, i) => i + 8); // 8:00 até 20:00
 const HOUR_HEIGHT = 80; // Altura de cada bloco de hora em pixels
+const DEFAULT_START_HOUR = 8;
+const DEFAULT_END_HOUR = 20;
 
 const AgendaNew = () => {
   const [selectedDate, setSelectedDate] = useState(new Date());
@@ -28,6 +29,7 @@ const AgendaNew = () => {
   const [clientes, setClientes] = useState([]);
   const [profissionais, setProfissionais] = useState([]);
   const [procedimentos, setProcedimentos] = useState([]);
+  const [horariosClinica, setHorariosClinica] = useState([]);
   const [loading, setLoading] = useState(true);
   const [modalOpen, setModalOpen] = useState(false);
   const [editingItem, setEditingItem] = useState(null);
@@ -51,23 +53,47 @@ const AgendaNew = () => {
     setLoading(true);
     try {
       const dateStr = format(selectedDate, 'yyyy-MM-dd');
-      const [consultasRes, clientesRes, profissionaisRes, procedimentosRes] = await Promise.all([
+      const [consultasRes, clientesRes, profissionaisRes, procedimentosRes, horariosRes] = await Promise.all([
         api.get(`/consultas?data_inicio=${dateStr}&data_fim=${dateStr}`),
         api.get('/clientes'),
         api.get('/profissionais'),
-        api.get('/procedimentos')
+        api.get('/procedimentos'),
+        api.get('/config/horarios-clinica')
       ]);
 
       setConsultas(consultasRes.data || []);
       setClientes(clientesRes.data || []);
       setProfissionais(profissionaisRes.data || []);
       setProcedimentos(procedimentosRes.data || []);
+      setHorariosClinica(horariosRes.data || []);
     } catch (error) {
       toast.error('Erro ao carregar dados');
     } finally {
       setLoading(false);
     }
   };
+
+  // Obter horário de funcionamento para o dia selecionado
+  const getHorariosDoDia = () => {
+    // getDay retorna 0 para domingo, 1 para segunda, etc.
+    // Nossa tabela usa 1 para segunda, 7 para domingo
+    const jsDay = getDay(selectedDate);
+    const dbDay = jsDay === 0 ? 7 : jsDay;
+    
+    const horarioDia = horariosClinica.find(h => h.dia_semana === dbDay);
+    
+    if (horarioDia && horarioDia.hora_inicio && horarioDia.hora_fim) {
+      const startHour = parseInt(horarioDia.hora_inicio.split(':')[0]);
+      const endHour = parseInt(horarioDia.hora_fim.split(':')[0]);
+      return { startHour, endHour, isOpen: true };
+    }
+    
+    // Se não houver horário configurado, usar padrão
+    return { startHour: DEFAULT_START_HOUR, endHour: DEFAULT_END_HOUR, isOpen: false };
+  };
+
+  const { startHour, endHour, isOpen } = getHorariosDoDia();
+  const HOURS = Array.from({ length: endHour - startHour + 1 }, (_, i) => i + startHour);
 
   const parseTimeFromInterval = (intervalo) => {
     const match = intervalo?.match(/(\d{2}):(\d{2}):(\d{2})/);
@@ -90,7 +116,6 @@ const AgendaNew = () => {
     const time = parseTimeFromInterval(intervalo);
     if (!time) return { top: 0, height: HOUR_HEIGHT };
     
-    const startHour = 8;
     const offsetHours = time.hour - startHour;
     const offsetMinutes = time.minute;
     const top = (offsetHours * HOUR_HEIGHT) + (offsetMinutes * HOUR_HEIGHT / 60);
@@ -102,12 +127,11 @@ const AgendaNew = () => {
   };
 
   const getTimeFromPosition = (yPosition) => {
-    const startHour = 8;
     const totalMinutes = (yPosition / HOUR_HEIGHT) * 60;
     const hours = Math.floor(totalMinutes / 60) + startHour;
     const minutes = Math.round((totalMinutes % 60) / 15) * 15; // Arredondar para 15min
     
-    return { hours: Math.min(20, Math.max(8, hours)), minutes: Math.min(45, Math.max(0, minutes)) };
+    return { hours: Math.min(endHour, Math.max(startHour, hours)), minutes: Math.min(45, Math.max(0, minutes)) };
   };
 
   const handleDragStart = (e, consulta) => {
@@ -191,7 +215,7 @@ const AgendaNew = () => {
         id_profissional: '',
         id_procedimento: '',
         data_inicio: format(selectedDate, 'yyyy-MM-dd'),
-        hora_inicio: '09:00',
+        hora_inicio: `${String(startHour).padStart(2, '0')}:00`,
         status: 'pendente',
       });
     }

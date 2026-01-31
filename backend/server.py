@@ -141,7 +141,6 @@ class DisponibilidadeCreate(BaseModel):
     id_profissional: int
     dia_semana: int  # 0-6
     hora_inicio: time
-    hora_fim: time
 
 # Área de Atuação
 class AreaAtuacaoCreate(BaseModel):
@@ -150,12 +149,20 @@ class AreaAtuacaoCreate(BaseModel):
 # Horário Clínica
 class HorarioClinicaCreate(BaseModel):
     dia_semana: int
-    hora_inicio: time
-    hora_fim: time
+    hora_inicio: str
+    hora_fim: str
 
 # Info Clínica
 class InfoClinicaUpdate(BaseModel):
     nome: Optional[str] = None
+    telefone: Optional[str] = None
+    email: Optional[str] = None
+    descricao: Optional[str] = None
+    endereco: Optional[str] = None
+    onboarding_completo: Optional[bool] = None
+
+class InfoClinicaCreate(BaseModel):
+    nome: str
     telefone: Optional[str] = None
     email: Optional[str] = None
     descricao: Optional[str] = None
@@ -185,6 +192,10 @@ def verify_token(credentials: HTTPAuthorizationCredentials = Depends(security)):
     except jwt.InvalidTokenError:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token inválido")
 
+def get_user_clinica_id(current_user: dict) -> Optional[int]:
+    """Retorna o id_info_clinica do usuário logado"""
+    return current_user.get('id_info_clinica')
+
 # ===== AUTH ROUTES =====
 @api_router.post("/auth/login", response_model=LoginResponse)
 async def login(request: LoginRequest):
@@ -200,15 +211,22 @@ async def login(request: LoginRequest):
         if not verify_password(request.senha, user['senha_hash']):
             raise HTTPException(status_code=401, detail="Credenciais inválidas")
         
-        # Criar token JWT
-        token = create_access_token({"user_id": user['id'], "email": user['email']})
+        # Criar token JWT com id_info_clinica
+        token = create_access_token({
+            "user_id": user['id'], 
+            "email": user['email'],
+            "id_info_clinica": user.get('id_info_clinica'),
+            "role": user.get('role', 'owner')
+        })
         
         return LoginResponse(
             access_token=token,
             usuario={
                 "id": user['id'],
                 "email": user['email'],
-                "nome": user['nome']
+                "nome": user['nome'],
+                "id_info_clinica": user.get('id_info_clinica'),
+                "role": user.get('role', 'owner')
             }
         )
     except Exception as e:
@@ -248,12 +266,18 @@ async def get_dashboard_stats(current_user: dict = Depends(verify_token)):
         import re
         from datetime import date, datetime
         
+        clinica_id = get_user_clinica_id(current_user)
+        
         hoje = date.today()
         hoje_str = hoje.isoformat()
         mes_atual = hoje.strftime('%Y-%m')
         
-        # Buscar todas as consultas
-        result = supabase.table('consulta').select('*, cliente(*), profissional(*), procedimento(*)').execute()
+        # Buscar consultas filtradas por clínica
+        query = supabase.table('consulta').select('*, cliente(*), profissional(*), procedimento(*)')
+        if clinica_id:
+            query = query.eq('id_info_clinica', clinica_id)
+        result = query.execute()
+        
         consultas = result.data or []
         
         # Filtrar consultas de hoje e do mês
@@ -301,7 +325,11 @@ async def get_dashboard_stats(current_user: dict = Depends(verify_token)):
 @api_router.get("/clientes")
 async def get_clientes(current_user: dict = Depends(verify_token)):
     try:
-        result = supabase.table('cliente').select('*').order('nome').execute()
+        clinica_id = get_user_clinica_id(current_user)
+        query = supabase.table('cliente').select('*')
+        if clinica_id:
+            query = query.eq('id_info_clinica', clinica_id)
+        result = query.order('nome').execute()
         return result.data
     except Exception as e:
         logging.error(f"Erro ao buscar clientes: {str(e)}")
@@ -310,7 +338,11 @@ async def get_clientes(current_user: dict = Depends(verify_token)):
 @api_router.get("/clientes/{cliente_id}")
 async def get_cliente(cliente_id: int, current_user: dict = Depends(verify_token)):
     try:
-        result = supabase.table('cliente').select('*').eq('id', cliente_id).execute()
+        clinica_id = get_user_clinica_id(current_user)
+        query = supabase.table('cliente').select('*')
+        if clinica_id:
+            query = query.eq('id_info_clinica', clinica_id)
+        result = query.eq('id', cliente_id).execute()
         if not result.data:
             raise HTTPException(status_code=404, detail="Cliente não encontrado")
         return result.data[0]
@@ -321,10 +353,13 @@ async def get_cliente(cliente_id: int, current_user: dict = Depends(verify_token
 @api_router.post("/clientes")
 async def create_cliente(cliente: ClienteCreate, current_user: dict = Depends(verify_token)):
     try:
+        clinica_id = get_user_clinica_id(current_user)
         data = cliente.model_dump()
         if data.get('data_nascimento'):
             data['data_nascimento'] = data['data_nascimento'].isoformat()
         data['created_at'] = datetime.utcnow().isoformat()
+        if clinica_id:
+            data['id_info_clinica'] = clinica_id
         
         result = supabase.table('cliente').insert(data).execute()
         return result.data[0]
@@ -335,11 +370,16 @@ async def create_cliente(cliente: ClienteCreate, current_user: dict = Depends(ve
 @api_router.put("/clientes/{cliente_id}")
 async def update_cliente(cliente_id: int, cliente: ClienteUpdate, current_user: dict = Depends(verify_token)):
     try:
+        clinica_id = get_user_clinica_id(current_user)
         data = cliente.model_dump(exclude_none=True)
         if data.get('data_nascimento'):
             data['data_nascimento'] = data['data_nascimento'].isoformat()
         
-        result = supabase.table('cliente').update(data).eq('id', cliente_id).execute()
+        if clinica_id:
+            query = supabase.table('cliente').update(data).eq('id', cliente_id).eq('id_info_clinica', clinica_id)
+        else:
+            query = supabase.table('cliente').update(data).eq('id', cliente_id)
+        result = query.execute()
         return result.data[0]
     except Exception as e:
         logging.error(f"Erro ao atualizar cliente: {str(e)}")
@@ -348,7 +388,11 @@ async def update_cliente(cliente_id: int, cliente: ClienteUpdate, current_user: 
 @api_router.delete("/clientes/{cliente_id}")
 async def delete_cliente(cliente_id: int, current_user: dict = Depends(verify_token)):
     try:
-        supabase.table('cliente').delete().eq('id', cliente_id).execute()
+        clinica_id = get_user_clinica_id(current_user)
+        if clinica_id:
+            supabase.table('cliente').delete().eq('id', cliente_id).eq('id_info_clinica', clinica_id).execute()
+        else:
+            supabase.table('cliente').delete().eq('id', cliente_id).execute()
         return {"message": "Cliente deletado com sucesso"}
     except Exception as e:
         logging.error(f"Erro ao deletar cliente: {str(e)}")
@@ -358,7 +402,11 @@ async def delete_cliente(cliente_id: int, current_user: dict = Depends(verify_to
 @api_router.get("/profissionais")
 async def get_profissionais(current_user: dict = Depends(verify_token)):
     try:
-        result = supabase.table('profissional').select('*, area_atuacao(*)').order('nome').execute()
+        clinica_id = get_user_clinica_id(current_user)
+        query = supabase.table('profissional').select('*, area_atuacao(*)')
+        if clinica_id:
+            query = query.eq('id_info_clinica', clinica_id)
+        result = query.order('nome').execute()
         return result.data
     except Exception as e:
         logging.error(f"Erro ao buscar profissionais: {str(e)}")
@@ -367,7 +415,11 @@ async def get_profissionais(current_user: dict = Depends(verify_token)):
 @api_router.get("/profissionais/{prof_id}")
 async def get_profissional(prof_id: int, current_user: dict = Depends(verify_token)):
     try:
-        result = supabase.table('profissional').select('*, area_atuacao(*)').eq('id', prof_id).execute()
+        clinica_id = get_user_clinica_id(current_user)
+        query = supabase.table('profissional').select('*, area_atuacao(*)')
+        if clinica_id:
+            query = query.eq('id_info_clinica', clinica_id)
+        result = query.eq('id', prof_id).execute()
         if not result.data:
             raise HTTPException(status_code=404, detail="Profissional não encontrado")
         return result.data[0]
@@ -378,7 +430,11 @@ async def get_profissional(prof_id: int, current_user: dict = Depends(verify_tok
 @api_router.post("/profissionais")
 async def create_profissional(prof: ProfissionalCreate, current_user: dict = Depends(verify_token)):
     try:
-        result = supabase.table('profissional').insert(prof.model_dump()).execute()
+        clinica_id = get_user_clinica_id(current_user)
+        data = prof.model_dump()
+        if clinica_id:
+            data['id_info_clinica'] = clinica_id
+        result = supabase.table('profissional').insert(data).execute()
         return result.data[0]
     except Exception as e:
         logging.error(f"Erro ao criar profissional: {str(e)}")
@@ -387,6 +443,7 @@ async def create_profissional(prof: ProfissionalCreate, current_user: dict = Dep
 @api_router.post("/profissionais/{prof_id}/procedimentos")
 async def add_procedimentos_profissional(prof_id: int, procedimentos: List[int], current_user: dict = Depends(verify_token)):
     try:
+        # Nota: profissional_procedimento é tabela de relação N:N, não tem id_info_clinica
         # Deletar relações antigas
         supabase.table('profissional_procedimento').delete().eq('id_profissional', prof_id).execute()
         
@@ -403,6 +460,7 @@ async def add_procedimentos_profissional(prof_id: int, procedimentos: List[int],
 @api_router.get("/profissionais/{prof_id}/procedimentos")
 async def get_procedimentos_profissional(prof_id: int, current_user: dict = Depends(verify_token)):
     try:
+        # Nota: profissional_procedimento não tem id_info_clinica
         result = supabase.table('profissional_procedimento').select('id_procedimento').eq('id_profissional', prof_id).execute()
         return [r['id_procedimento'] for r in result.data]
     except Exception as e:
@@ -412,8 +470,13 @@ async def get_procedimentos_profissional(prof_id: int, current_user: dict = Depe
 @api_router.put("/profissionais/{prof_id}")
 async def update_profissional(prof_id: int, prof: ProfissionalUpdate, current_user: dict = Depends(verify_token)):
     try:
+        clinica_id = get_user_clinica_id(current_user)
         data = prof.model_dump(exclude_none=True)
-        result = supabase.table('profissional').update(data).eq('id', prof_id).execute()
+        if clinica_id:
+            query = supabase.table('profissional').update(data).eq('id', prof_id).eq('id_info_clinica', clinica_id)
+        else:
+            query = supabase.table('profissional').update(data).eq('id', prof_id)
+        result = query.execute()
         return result.data[0]
     except Exception as e:
         logging.error(f"Erro ao atualizar profissional: {str(e)}")
@@ -422,7 +485,11 @@ async def update_profissional(prof_id: int, prof: ProfissionalUpdate, current_us
 @api_router.delete("/profissionais/{prof_id}")
 async def delete_profissional(prof_id: int, current_user: dict = Depends(verify_token)):
     try:
-        supabase.table('profissional').delete().eq('id', prof_id).execute()
+        clinica_id = get_user_clinica_id(current_user)
+        if clinica_id:
+            supabase.table('profissional').delete().eq('id', prof_id).eq('id_info_clinica', clinica_id).execute()
+        else:
+            supabase.table('profissional').delete().eq('id', prof_id).execute()
         return {"message": "Profissional deletado com sucesso"}
     except Exception as e:
         logging.error(f"Erro ao deletar profissional: {str(e)}")
@@ -432,7 +499,11 @@ async def delete_profissional(prof_id: int, current_user: dict = Depends(verify_
 @api_router.get("/procedimentos")
 async def get_procedimentos(current_user: dict = Depends(verify_token)):
     try:
-        result = supabase.table('procedimento').select('*').order('nome').execute()
+        clinica_id = get_user_clinica_id(current_user)
+        query = supabase.table('procedimento').select('*')
+        if clinica_id:
+            query = query.eq('id_info_clinica', clinica_id)
+        result = query.order('nome').execute()
         return result.data
     except Exception as e:
         logging.error(f"Erro ao buscar procedimentos: {str(e)}")
@@ -441,7 +512,11 @@ async def get_procedimentos(current_user: dict = Depends(verify_token)):
 @api_router.post("/procedimentos")
 async def create_procedimento(proc: ProcedimentoCreate, current_user: dict = Depends(verify_token)):
     try:
-        result = supabase.table('procedimento').insert(proc.model_dump()).execute()
+        clinica_id = get_user_clinica_id(current_user)
+        data = proc.model_dump()
+        if clinica_id:
+            data['id_info_clinica'] = clinica_id
+        result = supabase.table('procedimento').insert(data).execute()
         return result.data[0]
     except Exception as e:
         logging.error(f"Erro ao criar procedimento: {str(e)}")
@@ -450,8 +525,13 @@ async def create_procedimento(proc: ProcedimentoCreate, current_user: dict = Dep
 @api_router.put("/procedimentos/{proc_id}")
 async def update_procedimento(proc_id: int, proc: ProcedimentoUpdate, current_user: dict = Depends(verify_token)):
     try:
+        clinica_id = get_user_clinica_id(current_user)
         data = proc.model_dump(exclude_none=True)
-        result = supabase.table('procedimento').update(data).eq('id', proc_id).execute()
+        if clinica_id:
+            query = supabase.table('procedimento').update(data).eq('id', proc_id).eq('id_info_clinica', clinica_id)
+        else:
+            query = supabase.table('procedimento').update(data).eq('id', proc_id)
+        result = query.execute()
         return result.data[0]
     except Exception as e:
         logging.error(f"Erro ao atualizar procedimento: {str(e)}")
@@ -460,7 +540,11 @@ async def update_procedimento(proc_id: int, proc: ProcedimentoUpdate, current_us
 @api_router.delete("/procedimentos/{proc_id}")
 async def delete_procedimento(proc_id: int, current_user: dict = Depends(verify_token)):
     try:
-        supabase.table('procedimento').delete().eq('id', proc_id).execute()
+        clinica_id = get_user_clinica_id(current_user)
+        if clinica_id:
+            supabase.table('procedimento').delete().eq('id', proc_id).eq('id_info_clinica', clinica_id).execute()
+        else:
+            supabase.table('procedimento').delete().eq('id', proc_id).execute()
         return {"message": "Procedimento deletado com sucesso"}
     except Exception as e:
         logging.error(f"Erro ao deletar procedimento: {str(e)}")
@@ -470,8 +554,12 @@ async def delete_procedimento(proc_id: int, current_user: dict = Depends(verify_
 @api_router.get("/consultas")
 async def get_consultas(data_inicio: Optional[str] = None, data_fim: Optional[str] = None, current_user: dict = Depends(verify_token)):
     try:
-        # Buscar todas as consultas (simplificado por enquanto)
-        result = supabase.table('consulta').select('*, cliente(*), profissional(*), procedimento(*)').execute()
+        clinica_id = get_user_clinica_id(current_user)
+        # Buscar consultas filtradas por clínica
+        query = supabase.table('consulta').select('*, cliente(*), profissional(*), procedimento(*)')
+        if clinica_id:
+            query = query.eq('id_info_clinica', clinica_id)
+        result = query.execute()
         
         consultas = result.data or []
         
@@ -498,6 +586,7 @@ async def get_consultas(data_inicio: Optional[str] = None, data_fim: Optional[st
 @api_router.post("/consultas")
 async def create_consulta(consulta: ConsultaCreate, current_user: dict = Depends(verify_token)):
     try:
+        clinica_id = get_user_clinica_id(current_user)
         data = consulta.model_dump()
         data_inicio = data['data_inicio']
         data_fim = data_inicio + timedelta(minutes=data['duracao_minutos'])
@@ -506,6 +595,9 @@ async def create_consulta(consulta: ConsultaCreate, current_user: dict = Depends
         data['intervalo'] = f"[{data_inicio.isoformat()},{data_fim.isoformat()})"
         del data['data_inicio']
         del data['duracao_minutos']
+        
+        if clinica_id:
+            data['id_info_clinica'] = clinica_id
         
         result = supabase.table('consulta').insert(data).execute()
         return result.data[0]
@@ -516,6 +608,7 @@ async def create_consulta(consulta: ConsultaCreate, current_user: dict = Depends
 @api_router.put("/consultas/{consulta_id}")
 async def update_consulta(consulta_id: int, consulta: ConsultaUpdate, current_user: dict = Depends(verify_token)):
     try:
+        clinica_id = get_user_clinica_id(current_user)
         data = consulta.model_dump(exclude_none=True)
         
         if 'data_inicio' in data and 'duracao_minutos' in data:
@@ -530,7 +623,11 @@ async def update_consulta(consulta_id: int, consulta: ConsultaUpdate, current_us
         if data.get('cancelado_em'):
             data['cancelado_em'] = data['cancelado_em'].isoformat()
         
-        result = supabase.table('consulta').update(data).eq('id', consulta_id).execute()
+        if clinica_id:
+            query = supabase.table('consulta').update(data).eq('id', consulta_id).eq('id_info_clinica', clinica_id)
+        else:
+            query = supabase.table('consulta').update(data).eq('id', consulta_id)
+        result = query.execute()
         return result.data[0]
     except Exception as e:
         logging.error(f"Erro ao atualizar consulta: {str(e)}")
@@ -539,7 +636,11 @@ async def update_consulta(consulta_id: int, consulta: ConsultaUpdate, current_us
 @api_router.delete("/consultas/{consulta_id}")
 async def delete_consulta(consulta_id: int, current_user: dict = Depends(verify_token)):
     try:
-        supabase.table('consulta').delete().eq('id', consulta_id).execute()
+        clinica_id = get_user_clinica_id(current_user)
+        if clinica_id:
+            supabase.table('consulta').delete().eq('id', consulta_id).eq('id_info_clinica', clinica_id).execute()
+        else:
+            supabase.table('consulta').delete().eq('id', consulta_id).execute()
         return {"message": "Consulta deletada com sucesso"}
     except Exception as e:
         logging.error(f"Erro ao deletar consulta: {str(e)}")
@@ -549,7 +650,11 @@ async def delete_consulta(consulta_id: int, current_user: dict = Depends(verify_
 @api_router.get("/bloqueios")
 async def get_bloqueios(current_user: dict = Depends(verify_token)):
     try:
-        result = supabase.table('agenda_bloqueio').select('*, profissional(*)').execute()
+        clinica_id = get_user_clinica_id(current_user)
+        query = supabase.table('agenda_bloqueio').select('*, profissional(*)')
+        if clinica_id:
+            query = query.eq('id_info_clinica', clinica_id)
+        result = query.execute()
         return result.data
     except Exception as e:
         logging.error(f"Erro ao buscar bloqueios: {str(e)}")
@@ -558,12 +663,16 @@ async def get_bloqueios(current_user: dict = Depends(verify_token)):
 @api_router.post("/bloqueios")
 async def create_bloqueio(bloqueio: BloqueioCreate, current_user: dict = Depends(verify_token)):
     try:
+        clinica_id = get_user_clinica_id(current_user)
         data = bloqueio.model_dump()
         data_inicio = data['data_inicio']
         data_fim = data['data_fim']
         data['intervalo'] = f"[{data_inicio.isoformat()},{data_fim.isoformat()})"
         del data['data_inicio']
         del data['data_fim']
+        
+        if clinica_id:
+            data['id_info_clinica'] = clinica_id
         
         result = supabase.table('agenda_bloqueio').insert(data).execute()
         return result.data[0]
@@ -574,13 +683,18 @@ async def create_bloqueio(bloqueio: BloqueioCreate, current_user: dict = Depends
 @api_router.delete("/bloqueios/{bloqueio_id}")
 async def delete_bloqueio(bloqueio_id: int, current_user: dict = Depends(verify_token)):
     try:
-        supabase.table('agenda_bloqueio').delete().eq('id', bloqueio_id).execute()
+        clinica_id = get_user_clinica_id(current_user)
+        if clinica_id:
+            supabase.table('agenda_bloqueio').delete().eq('id', bloqueio_id).eq('id_info_clinica', clinica_id).execute()
+        else:
+            supabase.table('agenda_bloqueio').delete().eq('id', bloqueio_id).execute()
         return {"message": "Bloqueio deletado com sucesso"}
     except Exception as e:
         logging.error(f"Erro ao deletar bloqueio: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 
 # ===== ÁREAS DE ATUAÇÃO =====
+# Nota: area_atuacao é uma tabela global (lookup), não filtrada por clínica
 @api_router.get("/areas-atuacao")
 async def get_areas_atuacao(current_user: dict = Depends(verify_token)):
     try:
@@ -603,7 +717,11 @@ async def create_area_atuacao(area: AreaAtuacaoCreate, current_user: dict = Depe
 @api_router.get("/config/horarios-clinica")
 async def get_horarios_clinica(current_user: dict = Depends(verify_token)):
     try:
-        result = supabase.table('horario_clinica').select('*').order('dia_semana').execute()
+        clinica_id = get_user_clinica_id(current_user)
+        query = supabase.table('horario_clinica').select('*')
+        if clinica_id:
+            query = query.eq('id_info_clinica', clinica_id)
+        result = query.order('dia_semana').execute()
         return result.data
     except Exception as e:
         logging.error(f"Erro ao buscar horários da clínica: {str(e)}")
@@ -612,9 +730,15 @@ async def get_horarios_clinica(current_user: dict = Depends(verify_token)):
 @api_router.post("/config/horarios-clinica")
 async def create_horario_clinica(horario: HorarioClinicaCreate, current_user: dict = Depends(verify_token)):
     try:
+        clinica_id = get_user_clinica_id(current_user)
         data = horario.model_dump()
-        data['hora_inicio'] = data['hora_inicio'].isoformat()
-        data['hora_fim'] = data['hora_fim'].isoformat()
+        # hora_inicio e hora_fim já são strings "HH:MM", adicionar :00 para formato TIME
+        if data['hora_inicio'] and ':' in data['hora_inicio'] and len(data['hora_inicio']) == 5:
+            data['hora_inicio'] = data['hora_inicio'] + ':00'
+        if data['hora_fim'] and ':' in data['hora_fim'] and len(data['hora_fim']) == 5:
+            data['hora_fim'] = data['hora_fim'] + ':00'
+        if clinica_id:
+            data['id_info_clinica'] = clinica_id
         result = supabase.table('horario_clinica').insert(data).execute()
         return result.data[0]
     except Exception as e:
@@ -624,7 +748,11 @@ async def create_horario_clinica(horario: HorarioClinicaCreate, current_user: di
 @api_router.get("/config/info-clinica")
 async def get_info_clinica(current_user: dict = Depends(verify_token)):
     try:
-        result = supabase.table('info_clinica').select('*').limit(1).execute()
+        clinica_id = get_user_clinica_id(current_user)
+        if clinica_id:
+            result = supabase.table('info_clinica').select('*').eq('id', clinica_id).execute()
+        else:
+            result = supabase.table('info_clinica').select('*').limit(1).execute()
         return result.data[0] if result.data else {}
     except Exception as e:
         logging.error(f"Erro ao buscar info da clínica: {str(e)}")
@@ -638,6 +766,57 @@ async def update_info_clinica(info_id: int, info: InfoClinicaUpdate, current_use
         return result.data[0]
     except Exception as e:
         logging.error(f"Erro ao atualizar info da clínica: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@api_router.post("/config/info-clinica")
+async def create_info_clinica(info: InfoClinicaCreate, current_user: dict = Depends(verify_token)):
+    try:
+        user_id = current_user.get('user_id')
+        data = info.model_dump()
+        data['onboarding_completo'] = False
+        
+        # Criar clínica
+        result = supabase.table('info_clinica').insert(data).execute()
+        clinica_id = result.data[0]['id']
+        
+        # Vincular usuário à clínica
+        supabase.table('usuarios').update({'id_info_clinica': clinica_id}).eq('id', user_id).execute()
+        
+        return result.data[0]
+    except Exception as e:
+        logging.error(f"Erro ao criar info da clínica: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@api_router.put("/config/horarios-clinica/{horario_id}")
+async def update_horario_clinica(horario_id: int, horario: HorarioClinicaCreate, current_user: dict = Depends(verify_token)):
+    try:
+        clinica_id = get_user_clinica_id(current_user)
+        data = horario.model_dump()
+        if data['hora_inicio'] and ':' in data['hora_inicio'] and len(data['hora_inicio']) == 5:
+            data['hora_inicio'] = data['hora_inicio'] + ':00'
+        if data['hora_fim'] and ':' in data['hora_fim'] and len(data['hora_fim']) == 5:
+            data['hora_fim'] = data['hora_fim'] + ':00'
+        if clinica_id:
+            query = supabase.table('horario_clinica').update(data).eq('id', horario_id).eq('id_info_clinica', clinica_id)
+        else:
+            query = supabase.table('horario_clinica').update(data).eq('id', horario_id)
+        result = query.execute()
+        return result.data[0] if result.data else {}
+    except Exception as e:
+        logging.error(f"Erro ao atualizar horário da clínica: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@api_router.delete("/config/horarios-clinica/{horario_id}")
+async def delete_horario_clinica(horario_id: int, current_user: dict = Depends(verify_token)):
+    try:
+        clinica_id = get_user_clinica_id(current_user)
+        if clinica_id:
+            supabase.table('horario_clinica').delete().eq('id', horario_id).eq('id_info_clinica', clinica_id).execute()
+        else:
+            supabase.table('horario_clinica').delete().eq('id', horario_id).execute()
+        return {"message": "Horário deletado com sucesso"}
+    except Exception as e:
+        logging.error(f"Erro ao deletar horário: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 
 # Include router

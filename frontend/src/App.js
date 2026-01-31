@@ -14,9 +14,10 @@ import Comissoes from './pages/Comissoes';
 import Configuracoes from './pages/Configuracoes';
 import Cadastro from './pages/Cadastro';
 import EscolherPlano from './pages/EscolherPlano';
+import Onboarding from './pages/Onboarding';
 import './App.css';
 
-const PrivateRoute = ({ children }) => {
+const PrivateRoute = ({ children, skipOnboardingCheck = false }) => {
   const { user, loading } = useAuth();
   
   if (loading) {
@@ -27,7 +28,16 @@ const PrivateRoute = ({ children }) => {
     );
   }
   
-  return user ? children : <Navigate to="/login" />;
+  if (!user) {
+    return <Navigate to="/login" />;
+  }
+  
+  // Se não tem id_info_clinica, precisa fazer onboarding
+  if (!skipOnboardingCheck && !user.id_info_clinica) {
+    return <Navigate to="/onboarding" />;
+  }
+  
+  return children;
 };
 
 function AppContent() {
@@ -47,6 +57,7 @@ function AppContent() {
         <Route path="/login" element={user ? <Navigate to="/dashboard" /> : <Login />} />
         <Route path="/cadastro" element={user ? <Navigate to="/dashboard" /> : <Cadastro />} />
         <Route path="/planos" element={user ? <Navigate to="/dashboard" /> : <EscolherPlano />} />
+        <Route path="/onboarding" element={<PrivateRoute skipOnboardingCheck={true}><Onboarding /></PrivateRoute>} />
         <Route path="/" element={<Navigate to={user ? "/dashboard" : "/login"} />} />
         
         <Route path="/dashboard" element={<PrivateRoute><Layout><Dashboard /></Layout></PrivateRoute>} />
