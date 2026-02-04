@@ -1,3 +1,4 @@
+# Notas: start back: "python server.py"
 # Documentação do Banco de Dados - AgMagnetica
 
 > **Supabase URL:** https://nkeiylfzzrqpjjlstpcj.supabase.co
@@ -36,6 +37,7 @@ Usuários do sistema com autenticação.
 | `created_at`      | timestamptz | Data de criação              |
 | `id_info_clinica` | int8        | 🔗 FK → info_clinica         |
 | `role`            | text        | Papel do usuário (default: 'owner') |
+| `instance_name`   | text        | Nome da instância Evolution API |
 
 ---
 
@@ -311,6 +313,15 @@ CREATE TABLE assinaturas (
 | 2026-01-31 | Adicionado id_info_clinica em consulta                 |
 | 2026-01-31 | Criada tabela planos                                   |
 | 2026-01-31 | Criada tabela assinaturas                              |
+| 2026-02-04 | Adicionado instance_name em usuarios (Evolution API)   |
+
+---
+
+### SQL: Adicionar instance_name em usuarios
+
+```sql
+ALTER TABLE usuarios ADD COLUMN instance_name TEXT;
+```
 
 ---
 

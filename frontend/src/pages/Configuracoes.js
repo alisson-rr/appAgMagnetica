@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import api from '../services/api';
 import { toast } from 'sonner';
-import { Building2, MessageSquare, Clock, History, Save, QrCode, Plus, Trash2 } from 'lucide-react';
+import { Building2, MessageSquare, Clock, History, Save, QrCode, Plus, Trash2, RefreshCw, Power, CheckCircle, XCircle, Loader2 } from 'lucide-react';
 import { Card } from '../components/ui/card';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
@@ -56,8 +56,18 @@ const Configuracoes = () => {
   // Histórico de assinaturas
   const [assinaturas, setAssinaturas] = useState([]);
 
+  // WhatsApp/Evolution API
+  const [whatsappStatus, setWhatsappStatus] = useState({ connected: false, state: 'loading', instance: null });
+  const [qrCode, setQrCode] = useState(null);
+  const [loadingWhatsapp, setLoadingWhatsapp] = useState(false);
+
   useEffect(() => {
     fetchData();
+    fetchWhatsappStatus();
+    
+    // Atualiza status WhatsApp a cada 5 minutos
+    const intervalId = setInterval(fetchWhatsappStatus, 5 * 60 * 1000);
+    return () => clearInterval(intervalId);
   }, []);
 
   const fetchData = async () => {
@@ -189,6 +199,87 @@ const Configuracoes = () => {
           }
         : h
     ));
+  };
+
+  // ===== WhatsApp Functions =====
+  const fetchWhatsappStatus = async () => {
+    try {
+      const response = await api.get('/whatsapp/status');
+      setWhatsappStatus(response.data);
+    } catch (error) {
+      setWhatsappStatus({ connected: false, state: 'error', instance: null });
+    }
+  };
+
+  const handleGenerateQRCode = async () => {
+    try {
+      setLoadingWhatsapp(true);
+      setQrCode(null);
+      const response = await api.get('/whatsapp/qrcode');
+      console.log('QR Code response:', response.data);
+      
+      // Tentar diferentes campos da resposta
+      const qrCodeData = response.data.qrcode || response.data.base64 || response.data.raw?.base64;
+      console.log('QR Code data:', qrCodeData);
+      
+      if (qrCodeData) {
+        setQrCode(qrCodeData);
+        toast.success('QR Code gerado! Escaneie com seu WhatsApp.');
+      } else {
+        toast.error('QR Code não disponível na resposta');
+        console.log('Raw response:', response.data.raw);
+      }
+      
+      // Verificar status após alguns segundos
+      setTimeout(fetchWhatsappStatus, 5000);
+      setTimeout(fetchWhatsappStatus, 15000);
+      setTimeout(fetchWhatsappStatus, 30000);
+    } catch (error) {
+      toast.error(error.response?.data?.detail || 'Erro ao gerar QR Code');
+    } finally {
+      setLoadingWhatsapp(false);
+    }
+  };
+
+  const handleRestartWhatsapp = async () => {
+    try {
+      setLoadingWhatsapp(true);
+      await api.post('/whatsapp/restart');
+      toast.success('Instância reiniciada com sucesso!');
+      setQrCode(null);
+      setTimeout(fetchWhatsappStatus, 2000);
+    } catch (error) {
+      toast.error(error.response?.data?.detail || 'Erro ao reiniciar instância');
+    } finally {
+      setLoadingWhatsapp(false);
+    }
+  };
+
+  const handleDisconnectWhatsapp = async () => {
+    try {
+      setLoadingWhatsapp(true);
+      await api.post('/whatsapp/disconnect');
+      toast.success('WhatsApp desconectado!');
+      setQrCode(null);
+      setWhatsappStatus({ connected: false, state: 'disconnected', instance: whatsappStatus.instance });
+    } catch (error) {
+      toast.error(error.response?.data?.detail || 'Erro ao desconectar');
+    } finally {
+      setLoadingWhatsapp(false);
+    }
+  };
+
+  const getStatusLabel = (state) => {
+    const labels = {
+      'open': 'Conectado',
+      'close': 'Desconectado',
+      'connecting': 'Conectando...',
+      'disconnected': 'Desconectado',
+      'not_configured': 'Não configurado',
+      'loading': 'Carregando...',
+      'error': 'Erro'
+    };
+    return labels[state] || state;
   };
 
   const tabs = [
@@ -342,26 +433,98 @@ const Configuracoes = () => {
           <div className="space-y-6">
             {/* Card WhatsApp */}
             <Card className="p-8 rounded-2xl shadow-lg" style={{ backgroundColor: 'white' }}>
-              <h2 className="text-xl font-semibold mb-6" style={{ color: '#2C7464' }}>
-                Integração WhatsApp
-              </h2>
-              <div className="flex flex-col items-center justify-center py-12">
-                <div 
-                  className="w-20 h-20 rounded-full flex items-center justify-center mb-4"
-                  style={{ backgroundColor: '#F7F1EB' }}
-                >
-                  <QrCode size={40} style={{ color: '#2C7464' }} />
+              <div className="flex items-center justify-between mb-6">
+                <h2 className="text-xl font-semibold" style={{ color: '#2C7464' }}>
+                  Integração WhatsApp
+                </h2>
+                <div className="flex items-center gap-2">
+                  {whatsappStatus.connected ? (
+                    <span className="flex items-center gap-1 text-sm text-green-600">
+                      <CheckCircle size={16} />
+                      {getStatusLabel(whatsappStatus.state)}
+                    </span>
+                  ) : (
+                    <span className="flex items-center gap-1 text-sm text-gray-500">
+                      <XCircle size={16} />
+                      {getStatusLabel(whatsappStatus.state)}
+                    </span>
+                  )}
                 </div>
-                <p className="text-gray-500 mb-6">
-                  Conecte seu WhatsApp para enviar lembretes automáticos
+              </div>
+              
+              {whatsappStatus.instance && (
+                <p className="text-xs text-gray-400 mb-4">
+                  Instância: {whatsappStatus.instance}
                 </p>
-                <Button
-                  className="flex items-center gap-2"
-                  style={{ backgroundColor: '#25D366', color: 'white' }}
-                >
-                  <QrCode size={18} />
-                  Gerar QR Code
-                </Button>
+              )}
+
+              <div className="flex flex-col items-center justify-center py-8">
+                {qrCode ? (
+                  <div className="text-center">
+                    <img 
+                      src={qrCode} 
+                      alt="QR Code WhatsApp" 
+                      className="w-64 h-64 mx-auto border rounded-lg"
+                    />
+                    <p className="text-sm text-gray-500 mt-4">
+                      Escaneie o QR Code com seu WhatsApp
+                    </p>
+                  </div>
+                ) : (
+                  <>
+                    <div 
+                      className="w-20 h-20 rounded-full flex items-center justify-center mb-4"
+                      style={{ backgroundColor: whatsappStatus.connected ? '#dcfce7' : '#F7F1EB' }}
+                    >
+                      {whatsappStatus.connected ? (
+                        <CheckCircle size={40} className="text-green-600" />
+                      ) : (
+                        <QrCode size={40} style={{ color: '#2C7464' }} />
+                      )}
+                    </div>
+                    <p className="text-gray-500 mb-6 text-center">
+                      {whatsappStatus.connected 
+                        ? 'WhatsApp conectado e pronto para enviar mensagens!' 
+                        : 'Conecte seu WhatsApp para enviar lembretes automáticos'}
+                    </p>
+                  </>
+                )}
+                
+                <div className="flex gap-3 mt-4">
+                  {!whatsappStatus.connected && (
+                    <Button
+                      onClick={handleGenerateQRCode}
+                      disabled={loadingWhatsapp}
+                      className="flex items-center gap-2"
+                      style={{ backgroundColor: '#25D366', color: 'white' }}
+                    >
+                      {loadingWhatsapp ? <Loader2 size={18} className="animate-spin" /> : <QrCode size={18} />}
+                      Gerar QR Code
+                    </Button>
+                  )}
+                  
+                  <Button
+                    onClick={handleRestartWhatsapp}
+                    disabled={loadingWhatsapp}
+                    variant="outline"
+                    className="flex items-center gap-2"
+                  >
+                    <RefreshCw size={18} />
+                    Reiniciar
+                  </Button>
+                  
+                  {whatsappStatus.connected && (
+                    <Button
+                      onClick={handleDisconnectWhatsapp}
+                      disabled={loadingWhatsapp}
+                      variant="outline"
+                      className="flex items-center gap-2 text-red-600 border-red-300 hover:bg-red-50"
+                    >
+                      <Power size={18} />
+                      Desconectar
+                    </Button>
+                  )}
+                </div>
               </div>
             </Card>
 

@@ -11,6 +11,7 @@ from typing import List, Optional
 from datetime import datetime, date, time, timedelta
 import jwt
 from passlib.context import CryptContext
+import re as regex_module
 
 ROOT_DIR = Path(__file__).parent
 
@@ -236,6 +237,9 @@ async def login(request: LoginRequest):
 @api_router.post("/auth/register")
 async def register(request: UsuarioCreate):
     try:
+        import evolution_api
+        import re
+        
         # Verificar se usuário já existe
         result = supabase.table('usuarios').select('id').eq('email', request.email).execute()
         if result.data:
@@ -244,7 +248,7 @@ async def register(request: UsuarioCreate):
         # Hash da senha
         senha_hash = get_password_hash(request.senha)
         
-        # Inserir usuário
+        # Inserir usuário primeiro para obter o ID
         user_data = {
             "email": request.email,
             "senha_hash": senha_hash,
@@ -253,8 +257,23 @@ async def register(request: UsuarioCreate):
         }
         
         result = supabase.table('usuarios').insert(user_data).execute()
+        user_id = result.data[0]['id']
         
-        return {"message": "Usuário criado com sucesso", "id": result.data[0]['id']}
+        # Criar instância Evolution API
+        # Nome: user_id + nome sanitizado (sem espaços e caracteres especiais)
+        nome_sanitizado = re.sub(r'[^a-zA-Z0-9]', '', request.nome.lower())[:20]
+        instance_name = f"agm_{user_id}_{nome_sanitizado}"
+        
+        try:
+            await evolution_api.create_instance(instance_name)
+            # Atualizar usuário com o nome da instância
+            supabase.table('usuarios').update({"instance_name": instance_name}).eq('id', user_id).execute()
+        except Exception as evo_error:
+            logging.warning(f"Erro ao criar instância Evolution (usuário criado sem instância): {str(evo_error)}")
+        
+        return {"message": "Usuário criado com sucesso", "id": user_id, "instance_name": instance_name}
+    except HTTPException:
+        raise
     except Exception as e:
         logging.error(f"Erro no registro: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
@@ -819,6 +838,128 @@ async def delete_horario_clinica(horario_id: int, current_user: dict = Depends(v
         logging.error(f"Erro ao deletar horário: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 
+# ===== EVOLUTION API (WhatsApp) =====
+@api_router.get("/whatsapp/status")
+async def get_whatsapp_status(current_user: dict = Depends(verify_token)):
+    """Retorna o status da conexão WhatsApp"""
+    import evolution_api
+    try:
+        user_id = current_user.get('user_id')
+        result = supabase.table('usuarios').select('instance_name').eq('id', user_id).execute()
+        
+        if not result.data or not result.data[0].get('instance_name'):
+            return {"connected": False, "instance": None, "state": "not_configured"}
+        
+        instance_name = result.data[0]['instance_name']
+        
+        try:
+            state = await evolution_api.get_connection_state(instance_name)
+            logging.info(f"Estado da conexão: {state}")
+            # Evolution API retorna: {"instance": {"instanceName": "...", "state": "open"}}
+            instance_data = state.get('instance', {})
+            connection_state = instance_data.get('state', state.get('state', 'unknown'))
+            return {
+                "connected": connection_state == 'open',
+                "instance": instance_name,
+                "state": connection_state,
+                "raw": state
+            }
+        except Exception as inner_e:
+            logging.error(f"Erro ao buscar estado: {str(inner_e)}")
+            return {"connected": False, "instance": instance_name, "state": "disconnected"}
+    except Exception as e:
+        logging.error(f"Erro ao buscar status WhatsApp: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@api_router.get("/whatsapp/qrcode")
+async def get_whatsapp_qrcode(current_user: dict = Depends(verify_token)):
+    """Gera QR Code para conectar WhatsApp"""
+    import evolution_api
+    try:
+        user_id = current_user.get('user_id')
+        result = supabase.table('usuarios').select('instance_name').eq('id', user_id).execute()
+        
+        if not result.data or not result.data[0].get('instance_name'):
+            raise HTTPException(status_code=400, detail="Instância não configurada")
+        
+        instance_name = result.data[0]['instance_name']
+        logging.info(f"Buscando QR Code para instância: {instance_name}")
+        
+        qr_data = await evolution_api.connect_instance(instance_name)
+        
+        logging.info(f"QR Data recebido (tipo: {type(qr_data)}): {qr_data}")
+        
+        # Evolution API retorna base64 diretamente na raiz
+        qrcode = None
+        code = None
+        
+        if isinstance(qr_data, dict):
+            # Tentar diferentes campos possíveis
+            qrcode = qr_data.get('base64')
+            if not qrcode and 'qrcode' in qr_data:
+                qrcode_obj = qr_data.get('qrcode')
+                if isinstance(qrcode_obj, dict):
+                    qrcode = qrcode_obj.get('base64')
+                elif isinstance(qrcode_obj, str):
+                    qrcode = qrcode_obj
+            code = qr_data.get('code') or qr_data.get('pairingCode')
+        
+        logging.info(f"QR Code extraído: {qrcode[:50] if qrcode else 'None'}...")
+        
+        return {
+            "instance": instance_name,
+            "qrcode": qrcode,
+            "code": code,
+            "raw": qr_data
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        logging.error(f"Erro ao gerar QR Code: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@api_router.post("/whatsapp/restart")
+async def restart_whatsapp(current_user: dict = Depends(verify_token)):
+    """Reinicia a instância WhatsApp"""
+    import evolution_api
+    try:
+        user_id = current_user.get('user_id')
+        result = supabase.table('usuarios').select('instance_name').eq('id', user_id).execute()
+        
+        if not result.data or not result.data[0].get('instance_name'):
+            raise HTTPException(status_code=400, detail="Instância não configurada")
+        
+        instance_name = result.data[0]['instance_name']
+        await evolution_api.restart_instance(instance_name)
+        
+        return {"message": "Instância reiniciada com sucesso", "instance": instance_name}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logging.error(f"Erro ao reiniciar instância: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@api_router.post("/whatsapp/disconnect")
+async def disconnect_whatsapp(current_user: dict = Depends(verify_token)):
+    """Desconecta a instância WhatsApp"""
+    import evolution_api
+    try:
+        user_id = current_user.get('user_id')
+        result = supabase.table('usuarios').select('instance_name').eq('id', user_id).execute()
+        
+        if not result.data or not result.data[0].get('instance_name'):
+            raise HTTPException(status_code=400, detail="Instância não configurada")
+        
+        instance_name = result.data[0]['instance_name']
+        await evolution_api.logout_instance(instance_name)
+        
+        return {"message": "Instância desconectada com sucesso", "instance": instance_name}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logging.error(f"Erro ao desconectar instância: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
 # Include router
 app.include_router(api_router)
 
@@ -842,6 +983,6 @@ async def health_check():
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run("server:app", host="0.0.0.0", port=8000, reload=True)
+    uvicorn.run("server:app", host="localhost", port=8000, reload=True)
 
 logger = logging.getLogger(__name__)
