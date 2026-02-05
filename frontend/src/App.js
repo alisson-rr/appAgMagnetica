@@ -17,7 +17,7 @@ import EscolherPlano from './pages/EscolherPlano';
 import Onboarding from './pages/Onboarding';
 import './App.css';
 
-const PrivateRoute = ({ children, skipOnboardingCheck = false }) => {
+const PrivateRoute = ({ children, skipOnboardingCheck = false, skipTrialCheck = false }) => {
   const { user, loading } = useAuth();
   
   if (loading) {
@@ -30,6 +30,11 @@ const PrivateRoute = ({ children, skipOnboardingCheck = false }) => {
   
   if (!user) {
     return <Navigate to="/login" />;
+  }
+  
+  // Se trial expirou e não tem assinatura ativa, redireciona para planos
+  if (!skipTrialCheck && user.trial_expirado && user.status_assinatura !== 'ativo') {
+    return <Navigate to="/planos" />;
   }
   
   // Se não tem id_info_clinica, precisa fazer onboarding
@@ -56,7 +61,7 @@ function AppContent() {
       <Routes>
         <Route path="/login" element={user ? <Navigate to="/dashboard" /> : <Login />} />
         <Route path="/cadastro" element={user ? <Navigate to="/dashboard" /> : <Cadastro />} />
-        <Route path="/planos" element={user ? <Navigate to="/dashboard" /> : <EscolherPlano />} />
+        <Route path="/planos" element={user && !user.trial_expirado ? <Navigate to="/dashboard" /> : <EscolherPlano />} />
         <Route path="/onboarding" element={<PrivateRoute skipOnboardingCheck={true}><Onboarding /></PrivateRoute>} />
         <Route path="/" element={<Navigate to={user ? "/dashboard" : "/login"} />} />
         

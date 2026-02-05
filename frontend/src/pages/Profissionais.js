@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import api from '../services/api';
 import { toast } from 'sonner';
-import { Plus, Edit, Trash2, Search } from 'lucide-react';
+import { Plus, Edit, Trash2, Search, Clock, X } from 'lucide-react';
 import { formatPhone, unformatPhone } from '../utils/formatters';
 import { Card } from '../components/ui/card';
 import { Button } from '../components/ui/button';
@@ -11,6 +11,16 @@ import { Label } from '../components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
 import { Textarea } from '../components/ui/textarea';
 import { Switch } from '../components/ui/switch';
+
+const DIAS_SEMANA = [
+  { value: 1, label: 'Segunda-feira' },
+  { value: 2, label: 'Terça-feira' },
+  { value: 3, label: 'Quarta-feira' },
+  { value: 4, label: 'Quinta-feira' },
+  { value: 5, label: 'Sexta-feira' },
+  { value: 6, label: 'Sábado' },
+  { value: 7, label: 'Domingo' }
+];
 
 const Profissionais = () => {
   const [profissionais, setProfissionais] = useState([]);
@@ -27,7 +37,8 @@ const Profissionais = () => {
     id_area_atuacao: '',
     ativo: true,
     observacoes: '',
-    procedimentos: []
+    procedimentos: [],
+    disponibilidades: []
   });
 
   useEffect(() => {
@@ -66,13 +77,22 @@ const Profissionais = () => {
     if (profissional) {
       setEditingProfissional(profissional);
       
-      // Buscar procedimentos do profissional
+      // Buscar procedimentos e disponibilidades do profissional
       let procs = [];
+      let disps = [];
       try {
-        const response = await api.get(`/profissionais/${profissional.id}/procedimentos`);
-        procs = response.data;
+        const [procsRes, dispsRes] = await Promise.all([
+          api.get(`/profissionais/${profissional.id}/procedimentos`),
+          api.get(`/profissionais/${profissional.id}/disponibilidade`)
+        ]);
+        procs = procsRes.data;
+        disps = (dispsRes.data || []).map(d => ({
+          dia_semana: d.dia_semana,
+          hora_inicio: d.hora_inicio?.substring(0, 5) || '',
+          hora_fim: d.hora_fim?.substring(0, 5) || ''
+        }));
       } catch (error) {
-        console.error('Erro ao buscar procedimentos:', error);
+        console.error('Erro ao buscar dados:', error);
       }
       
       setFormData({
@@ -82,7 +102,8 @@ const Profissionais = () => {
         id_area_atuacao: profissional.id_area_atuacao?.toString() || '',
         ativo: profissional.ativo ?? true,
         observacoes: profissional.observacoes || '',
-        procedimentos: procs
+        procedimentos: procs,
+        disponibilidades: disps
       });
     } else {
       setEditingProfissional(null);
@@ -93,7 +114,8 @@ const Profissionais = () => {
         id_area_atuacao: '',
         ativo: true,
         observacoes: '',
-        procedimentos: []
+        procedimentos: [],
+        disponibilidades: []
       });
     }
     setModalOpen(true);
@@ -126,6 +148,9 @@ const Profissionais = () => {
       if (formData.procedimentos && formData.procedimentos.length > 0) {
         await api.post(`/profissionais/${profId}/procedimentos`, formData.procedimentos);
       }
+      
+      // Salvar disponibilidades
+      await api.post(`/profissionais/${profId}/disponibilidade`, formData.disponibilidades || []);
       
       setModalOpen(false);
       fetchData();
@@ -261,6 +286,85 @@ const Profissionais = () => {
                   value={formData.observacoes}
                   onChange={(e) => setFormData({ ...formData, observacoes: e.target.value })}
                 />
+              </div>
+
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <Label className="flex items-center gap-2">
+                    <Clock className="w-4 h-4" style={{ color: '#2C7464' }} />
+                    Horários de Trabalho
+                  </Label>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setFormData({
+                      ...formData,
+                      disponibilidades: [...(formData.disponibilidades || []), { dia_semana: 1, hora_inicio: '08:00', hora_fim: '18:00' }]
+                    })}
+                    className="text-xs"
+                    style={{ borderColor: '#2C7464', color: '#2C7464' }}
+                  >
+                    <Plus className="w-3 h-3 mr-1" /> Adicionar
+                  </Button>
+                </div>
+                <div className="border rounded-lg p-3 max-h-48 overflow-y-auto space-y-2" style={{ borderColor: '#2C7464' }}>
+                  {(!formData.disponibilidades || formData.disponibilidades.length === 0) ? (
+                    <p className="text-sm text-gray-500 text-center py-2">Nenhum horário cadastrado</p>
+                  ) : (
+                    formData.disponibilidades.map((disp, index) => (
+                      <div key={index} className="flex items-center gap-2 p-2 bg-gray-50 rounded">
+                        <select
+                          value={disp.dia_semana}
+                          onChange={(e) => {
+                            const newDisps = [...formData.disponibilidades];
+                            newDisps[index].dia_semana = parseInt(e.target.value);
+                            setFormData({ ...formData, disponibilidades: newDisps });
+                          }}
+                          className="flex-1 text-sm border rounded px-2 py-1"
+                          style={{ borderColor: '#ccc' }}
+                        >
+                          {DIAS_SEMANA.map(dia => (
+                            <option key={dia.value} value={dia.value}>{dia.label}</option>
+                          ))}
+                        </select>
+                        <input
+                          type="time"
+                          value={disp.hora_inicio}
+                          onChange={(e) => {
+                            const newDisps = [...formData.disponibilidades];
+                            newDisps[index].hora_inicio = e.target.value;
+                            setFormData({ ...formData, disponibilidades: newDisps });
+                          }}
+                          className="text-sm border rounded px-2 py-1 w-24"
+                          style={{ borderColor: '#ccc' }}
+                        />
+                        <span className="text-sm text-gray-500">até</span>
+                        <input
+                          type="time"
+                          value={disp.hora_fim}
+                          onChange={(e) => {
+                            const newDisps = [...formData.disponibilidades];
+                            newDisps[index].hora_fim = e.target.value;
+                            setFormData({ ...formData, disponibilidades: newDisps });
+                          }}
+                          className="text-sm border rounded px-2 py-1 w-24"
+                          style={{ borderColor: '#ccc' }}
+                        />
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const newDisps = formData.disponibilidades.filter((_, i) => i !== index);
+                            setFormData({ ...formData, disponibilidades: newDisps });
+                          }}
+                          className="p-1 rounded hover:bg-gray-200"
+                        >
+                          <X className="w-4 h-4" style={{ color: '#FEA5A4' }} />
+                        </button>
+                      </div>
+                    ))
+                  )}
+                </div>
               </div>
               
               <div className="flex justify-end space-x-3">

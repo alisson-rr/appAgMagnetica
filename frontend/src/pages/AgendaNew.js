@@ -17,11 +17,19 @@ import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
 import { format, addDays, startOfWeek, isSameDay, parseISO, getDay } from 'date-fns';
+import { formatInTimeZone, toZonedTime } from 'date-fns-tz';
 import { ptBR } from 'date-fns/locale';
 
 const HOUR_HEIGHT = 80; // Altura de cada bloco de hora em pixels
 const DEFAULT_START_HOUR = 8;
 const DEFAULT_END_HOUR = 20;
+const TIMEZONE = 'America/Sao_Paulo';
+const TIMEZONE_OFFSET = '-03:00'; // UTC-03:00
+
+// Helper para criar datetime com timezone explícito (sem conversão)
+const createDateTimeWithOffset = (dateStr, hours, minutes) => {
+  return `${dateStr}T${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:00${TIMEZONE_OFFSET}`;
+};
 
 const AgendaNew = () => {
   const [selectedDate, setSelectedDate] = useState(new Date());
@@ -74,18 +82,33 @@ const AgendaNew = () => {
   };
 
   // Obter horário de funcionamento para o dia selecionado
+  // Considera múltiplos turnos e retorna do menor hora_inicio ao maior hora_fim
   const getHorariosDoDia = () => {
     // getDay retorna 0 para domingo, 1 para segunda, etc.
     // Nossa tabela usa 1 para segunda, 7 para domingo
     const jsDay = getDay(selectedDate);
     const dbDay = jsDay === 0 ? 7 : jsDay;
     
-    const horarioDia = horariosClinica.find(h => h.dia_semana === dbDay);
+    // Filtrar todos os turnos do dia (pode haver múltiplos: manhã e tarde, por exemplo)
+    const horariosDoDia = horariosClinica.filter(h => h.dia_semana === dbDay);
     
-    if (horarioDia && horarioDia.hora_inicio && horarioDia.hora_fim) {
-      const startHour = parseInt(horarioDia.hora_inicio.split(':')[0]);
-      const endHour = parseInt(horarioDia.hora_fim.split(':')[0]);
-      return { startHour, endHour, isOpen: true };
+    if (horariosDoDia.length > 0) {
+      // Pegar o menor hora_inicio e o maior hora_fim de todos os turnos
+      let minStartHour = 24;
+      let maxEndHour = 0;
+      
+      horariosDoDia.forEach(h => {
+        if (h.hora_inicio && h.hora_fim) {
+          const start = parseInt(h.hora_inicio.split(':')[0]);
+          const end = parseInt(h.hora_fim.split(':')[0]);
+          if (start < minStartHour) minStartHour = start;
+          if (end > maxEndHour) maxEndHour = end;
+        }
+      });
+      
+      if (minStartHour < 24 && maxEndHour > 0) {
+        return { startHour: minStartHour, endHour: maxEndHour, isOpen: true };
+      }
     }
     
     // Se não houver horário configurado, usar padrão
@@ -96,18 +119,26 @@ const AgendaNew = () => {
   const HOURS = Array.from({ length: endHour - startHour + 1 }, (_, i) => i + startHour);
 
   const parseTimeFromInterval = (intervalo) => {
-    const match = intervalo?.match(/(\d{2}):(\d{2}):(\d{2})/);
-    return match ? { hour: parseInt(match[1]), minute: parseInt(match[2]) } : null;
+    // Extrair datetime completo do intervalo e converter de UTC para hora local
+    // Formato: ["2025-02-05 10:00:00+00","2025-02-05 11:00:00+00")
+    const match = intervalo?.match(/(\d{4}-\d{2}-\d{2})\s(\d{2}):(\d{2}):(\d{2})/);
+    if (match) {
+      // Criar data UTC e converter para timezone local
+      const utcDate = new Date(`${match[1]}T${match[2]}:${match[3]}:${match[4]}Z`);
+      const localDate = toZonedTime(utcDate, TIMEZONE);
+      return { hour: localDate.getHours(), minute: localDate.getMinutes() };
+    }
+    return null;
   };
 
   const getDurationInMinutes = (intervalo) => {
-    const matches = intervalo?.match(/(\d{2}):(\d{2}):(\d{2})/g);
-    if (matches && matches.length === 2) {
-      const start = matches[0].split(':');
-      const end = matches[1].split(':');
-      const startMinutes = parseInt(start[0]) * 60 + parseInt(start[1]);
-      const endMinutes = parseInt(end[0]) * 60 + parseInt(end[1]);
-      return endMinutes - startMinutes;
+    // Extrair ambos os datetimes e calcular diferença
+    const regex = /(\d{4}-\d{2}-\d{2})\s(\d{2}):(\d{2}):(\d{2})/g;
+    const matches = [...(intervalo?.matchAll(regex) || [])];
+    if (matches.length === 2) {
+      const startDate = new Date(`${matches[0][1]}T${matches[0][2]}:${matches[0][3]}:${matches[0][4]}Z`);
+      const endDate = new Date(`${matches[1][1]}T${matches[1][2]}:${matches[1][3]}:${matches[1][4]}Z`);
+      return Math.round((endDate - startDate) / 60000); // Diferença em minutos
     }
     return 60;
   };
@@ -124,6 +155,71 @@ const AgendaNew = () => {
     const height = (duration / 60) * HOUR_HEIGHT;
     
     return { top, height };
+  };
+
+  // Calcular layout de colunas para agendamentos sobrepostos
+  const calculateColumnsLayout = (consultasList) => {
+    if (!consultasList || consultasList.length === 0) return [];
+
+    // Extrair início e fim em minutos para cada consulta
+    const items = consultasList.map(consulta => {
+      const time = parseTimeFromInterval(consulta.intervalo);
+      const duration = getDurationInMinutes(consulta.intervalo);
+      const startMinutes = time ? (time.hour * 60 + time.minute) : 0;
+      const endMinutes = startMinutes + duration;
+      return { consulta, startMinutes, endMinutes };
+    });
+
+    // Ordenar por hora de início
+    items.sort((a, b) => a.startMinutes - b.startMinutes);
+
+    // Algoritmo para atribuir colunas
+    const result = [];
+    const columns = []; // Array de arrays, cada coluna contém os items nela
+
+    for (const item of items) {
+      // Encontrar a primeira coluna onde não há sobreposição
+      let columnIndex = -1;
+      for (let i = 0; i < columns.length; i++) {
+        const lastItemInColumn = columns[i][columns[i].length - 1];
+        if (lastItemInColumn.endMinutes <= item.startMinutes) {
+          columnIndex = i;
+          break;
+        }
+      }
+
+      if (columnIndex === -1) {
+        // Criar nova coluna
+        columnIndex = columns.length;
+        columns.push([]);
+      }
+
+      columns[columnIndex].push(item);
+      
+      // Calcular quantas colunas existem no momento da sobreposição
+      // Para isso, precisamos saber quantos items se sobrepõem com este
+      const overlappingCount = items.filter(other => 
+        other.startMinutes < item.endMinutes && other.endMinutes > item.startMinutes
+      ).length;
+
+      result.push({
+        consulta: item.consulta,
+        column: columnIndex,
+        totalColumns: Math.max(overlappingCount, 1)
+      });
+    }
+
+    // Segunda passagem: recalcular totalColumns corretamente para cada grupo de sobreposição
+    for (const item of result) {
+      const itemData = items.find(i => i.consulta.id === item.consulta.id);
+      const overlapping = result.filter(other => {
+        const otherData = items.find(i => i.consulta.id === other.consulta.id);
+        return otherData.startMinutes < itemData.endMinutes && otherData.endMinutes > itemData.startMinutes;
+      });
+      item.totalColumns = overlapping.length;
+    }
+
+    return result;
   };
 
   const getTimeFromPosition = (yPosition) => {
@@ -165,10 +261,9 @@ const AgendaNew = () => {
     const newTime = getTimeFromPosition(yPosition);
     
     try {
-      // Calcular nova data/hora
+      // Criar datetime com timezone explícito (hora local + offset)
       const dateStr = format(selectedDate, 'yyyy-MM-dd');
-      // Manter a data/hora no formato local sem conversão para UTC
-      const newDateTimeLocal = `${dateStr}T${String(newTime.hours).padStart(2, '0')}:${String(newTime.minutes).padStart(2, '0')}:00`;
+      const isoWithTimezone = createDateTimeWithOffset(dateStr, newTime.hours, newTime.minutes);
       
       const duration = getDurationInMinutes(draggedItem.intervalo);
       
@@ -176,7 +271,7 @@ const AgendaNew = () => {
         id_cliente: draggedItem.id_cliente,
         id_profissional: draggedItem.id_profissional,
         id_procedimento: draggedItem.id_procedimento,
-        data_inicio: newDateTimeLocal,
+        data_inicio: isoWithTimezone,
         duracao_minutos: duration,
         status: draggedItem.status
       };
@@ -197,9 +292,18 @@ const AgendaNew = () => {
     
     if (consulta) {
       const intervalo = consulta.intervalo || '';
-      const match = intervalo.match(/(\d{4}-\d{2}-\d{2})\s(\d{2}:\d{2})/);
-      const dataInicio = match ? match[1] : format(selectedDate, 'yyyy-MM-dd');
-      const horaInicio = match ? match[2] : '';
+      // Extrair datetime UTC e converter para hora local
+      const match = intervalo.match(/(\d{4}-\d{2}-\d{2})\s(\d{2}):(\d{2}):(\d{2})/);
+      let dataInicio = format(selectedDate, 'yyyy-MM-dd');
+      let horaInicio = '';
+      
+      if (match) {
+        // Criar data UTC e converter para timezone local
+        const utcDate = new Date(`${match[1]}T${match[2]}:${match[3]}:${match[4]}Z`);
+        const localDate = toZonedTime(utcDate, TIMEZONE);
+        dataInicio = format(localDate, 'yyyy-MM-dd');
+        horaInicio = format(localDate, 'HH:mm');
+      }
       
       setFormData({
         id_cliente: consulta.id_cliente?.toString() || '',
@@ -239,14 +343,15 @@ const AgendaNew = () => {
         return;
       }
 
-      // Manter a data/hora no formato local sem conversão para UTC
-      const dataHoraLocal = `${formData.data_inicio}T${formData.hora_inicio}:00`;
+      // Criar datetime com timezone explícito (hora local + offset)
+      const [hours, minutes] = formData.hora_inicio.split(':').map(Number);
+      const isoWithTimezone = createDateTimeWithOffset(formData.data_inicio, hours, minutes);
       
       const payload = {
         id_cliente: parseInt(formData.id_cliente),
         id_profissional: parseInt(formData.id_profissional),
         id_procedimento: parseInt(formData.id_procedimento),
-        data_inicio: dataHoraLocal,
+        data_inicio: isoWithTimezone,
         duracao_minutos: procedimento.duracao_minutos || 60,
         status: formData.status
       };
@@ -283,14 +388,14 @@ const AgendaNew = () => {
       const duration = getDurationInMinutes(consulta.intervalo);
       const time = parseTimeFromInterval(consulta.intervalo);
       const dateStr = format(selectedDate, 'yyyy-MM-dd');
-      // Manter a data/hora no formato local sem conversão para UTC
-      const dataHoraLocal = `${dateStr}T${String(time.hour).padStart(2, '0')}:${String(time.minute).padStart(2, '0')}:00`;
+      // Criar datetime com timezone explícito (hora local + offset)
+      const isoWithTimezone = createDateTimeWithOffset(dateStr, time.hour, time.minute);
       
       const payload = {
         id_cliente: consulta.id_cliente,
         id_profissional: consulta.id_profissional,
         id_procedimento: consulta.id_procedimento,
-        data_inicio: dataHoraLocal,
+        data_inicio: isoWithTimezone,
         duracao_minutos: duration,
         status: 'concluido'
       };
@@ -495,12 +600,19 @@ const AgendaNew = () => {
                 />
               )}
 
-              {/* Agendamentos posicionados */}
+              {/* Agendamentos posicionados com layout de colunas */}
               <div className="absolute inset-0">
-                {consultas.map((consulta) => {
+                {calculateColumnsLayout(consultas).map(({ consulta, column, totalColumns }) => {
                 const { top, height } = calculatePosition(consulta.intervalo);
                 const time = parseTimeFromInterval(consulta.intervalo);
                 const timeStr = time ? `${String(time.hour).padStart(2, '0')}:${String(time.minute).padStart(2, '0')}` : '--:--';
+                
+                // Calcular posição horizontal baseado na coluna
+                const GAP = 4; // Gap entre colunas em pixels
+                const PADDING = 8; // Padding lateral
+                const availableWidth = `calc(100% - ${PADDING * 2}px)`;
+                const columnWidth = `calc((${availableWidth} - ${(totalColumns - 1) * GAP}px) / ${totalColumns})`;
+                const leftOffset = `calc(${PADDING}px + (${columnWidth} + ${GAP}px) * ${column})`;
 
                 return (
                   <div
@@ -508,18 +620,18 @@ const AgendaNew = () => {
                     draggable
                     onDragStart={(e) => handleDragStart(e, consulta)}
                     data-testid={`agendamento-${consulta.id}`}
-                    className="absolute p-3 rounded-lg shadow-md cursor-move overflow-hidden"
+                    className="absolute p-2 rounded-lg shadow-md cursor-move overflow-hidden"
                     style={{
                       top: `${top}px`,
-                      left: '8px',
-                      right: '8px',
+                      left: leftOffset,
+                      width: columnWidth,
                       height: `${Math.max(height, 60)}px`,
                       backgroundColor: 'white',
                       borderLeft: `4px solid ${getStatusColor(consulta.status)}`,
                       zIndex: 10
                     }}
                   >
-                    <div className="flex items-start justify-between h-full">
+                    <div className="flex flex-col h-full">
                       <div className="flex-1 overflow-hidden">
                         <p className="text-sm font-bold truncate" style={{ color: '#2C7464' }}>
                           {timeStr} - {consulta.cliente?.nome}
@@ -531,14 +643,14 @@ const AgendaNew = () => {
                           {consulta.profissional?.nome}
                         </p>
                       </div>
-                      <div className="flex items-center space-x-1 ml-2">
-                        <button onClick={() => openModal(consulta)} className="p-2 rounded-lg hover:bg-gray-100" title="Editar">
-                          <Edit className="w-4 h-4" style={{ color: '#2C7464' }} />
+                      <div className="flex items-center space-x-1 mt-1">
+                        <button onClick={() => openModal(consulta)} className="p-1 rounded hover:bg-gray-100" title="Editar">
+                          <Edit className="w-3 h-3" style={{ color: '#2C7464' }} />
                         </button>
                         {consulta.status !== 'concluido' && (
                           <button 
                             onClick={() => handleConcluir(consulta)} 
-                            className="px-2 py-1 text-xs font-medium rounded-lg text-white"
+                            className="px-1 py-0.5 text-xs font-medium rounded text-white"
                             style={{ backgroundColor: '#2C7464' }}
                             title="Concluir"
                           >

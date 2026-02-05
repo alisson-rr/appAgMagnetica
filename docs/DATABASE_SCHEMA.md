@@ -14,14 +14,15 @@ Este documento contém a estrutura completa do banco de dados PostgreSQL utiliza
 ### 1. `info_clinica` (Tabela Central)
 Armazena informações das clínicas cadastradas no sistema.
 
-| Coluna     | Tipo    | Descrição                    |
-|------------|---------|------------------------------|
-| `id`       | int8    | 🔑 Chave primária            |
-| `nome`     | text    | Nome da clínica              |
-| `telefone` | text    | Telefone de contato          |
-| `email`    | text    | E-mail da clínica            |
-| `descricao`| text    | Descrição da clínica         |
-| `endereco` | text    | Endereço completo            |
+| Coluna              | Tipo    | Descrição                                    |
+|---------------------|---------|----------------------------------------------|
+| `id`                | int8    | 🔑 Chave primária                            |
+| `nome`              | text    | Nome da clínica                              |
+| `telefone`          | text    | Telefone de contato                          |
+| `email`             | text    | E-mail da clínica                            |
+| `descricao`         | text    | Descrição da clínica                         |
+| `endereco`          | text    | Endereço completo                            |
+| `mensagem_lembrete` | text    | Mensagem modelo para lembretes de consulta   |
 
 ---
 
@@ -38,6 +39,9 @@ Usuários do sistema com autenticação.
 | `id_info_clinica` | int8        | 🔗 FK → info_clinica         |
 | `role`            | text        | Papel do usuário (default: 'owner') |
 | `instance_name`   | text        | Nome da instância Evolution API |
+| `trial_inicio`    | timestamptz | Data de início do período de trial |
+| `trial_fim`       | timestamptz | Data de fim do período de trial (7 dias) |
+| `status_assinatura` | text      | Status: 'trial', 'ativo', 'expirado', 'cancelado' |
 
 ---
 
@@ -314,6 +318,8 @@ CREATE TABLE assinaturas (
 | 2026-01-31 | Criada tabela planos                                   |
 | 2026-01-31 | Criada tabela assinaturas                              |
 | 2026-02-04 | Adicionado instance_name em usuarios (Evolution API)   |
+| 2026-02-05 | Adicionado mensagem_lembrete em info_clinica           |
+| 2026-02-05 | Adicionado campos de trial em usuarios                 |
 
 ---
 
@@ -321,6 +327,20 @@ CREATE TABLE assinaturas (
 
 ```sql
 ALTER TABLE usuarios ADD COLUMN instance_name TEXT;
+```
+
+### SQL: Adicionar mensagem_lembrete em info_clinica
+
+```sql
+ALTER TABLE info_clinica ADD COLUMN mensagem_lembrete TEXT;
+```
+
+### SQL: Adicionar campos de trial em usuarios
+
+```sql
+ALTER TABLE usuarios ADD COLUMN trial_inicio TIMESTAMPTZ;
+ALTER TABLE usuarios ADD COLUMN trial_fim TIMESTAMPTZ;
+ALTER TABLE usuarios ADD COLUMN status_assinatura TEXT DEFAULT 'trial';
 ```
 
 ---

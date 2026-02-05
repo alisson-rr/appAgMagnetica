@@ -8,7 +8,10 @@ import logging
 from pathlib import Path
 from pydantic import BaseModel, Field, EmailStr
 from typing import List, Optional
-from datetime import datetime, date, time, timedelta
+from datetime import datetime, date, time, timedelta, timezone
+
+# Timezone de São Paulo (UTC-03:00)
+SAO_PAULO_TZ = timezone(timedelta(hours=-3))
 import jwt
 from passlib.context import CryptContext
 import re as regex_module
@@ -139,9 +142,14 @@ class BloqueioCreate(BaseModel):
 
 # Disponibilidade
 class DisponibilidadeCreate(BaseModel):
-    id_profissional: int
-    dia_semana: int  # 0-6
-    hora_inicio: time
+    dia_semana: int  # 1-7 (1=Segunda, 7=Domingo)
+    hora_inicio: str  # "HH:MM"
+    hora_fim: str  # "HH:MM"
+
+class DisponibilidadeItem(BaseModel):
+    dia_semana: int
+    hora_inicio: str
+    hora_fim: str
 
 # Área de Atuação
 class AreaAtuacaoCreate(BaseModel):
@@ -161,6 +169,7 @@ class InfoClinicaUpdate(BaseModel):
     descricao: Optional[str] = None
     endereco: Optional[str] = None
     onboarding_completo: Optional[bool] = None
+    mensagem_lembrete: Optional[str] = None
 
 class InfoClinicaCreate(BaseModel):
     nome: str
@@ -212,6 +221,27 @@ async def login(request: LoginRequest):
         if not verify_password(request.senha, user['senha_hash']):
             raise HTTPException(status_code=401, detail="Credenciais inválidas")
         
+        # Verificar status do trial
+        status_assinatura = user.get('status_assinatura', 'trial')
+        trial_fim = user.get('trial_fim')
+        trial_expirado = False
+        dias_restantes = 0
+        
+        if status_assinatura == 'trial' and trial_fim:
+            from datetime import datetime as dt
+            try:
+                trial_fim_dt = dt.fromisoformat(trial_fim.replace('Z', '+00:00'))
+                agora = dt.utcnow().replace(tzinfo=trial_fim_dt.tzinfo) if trial_fim_dt.tzinfo else dt.utcnow()
+                if agora > trial_fim_dt:
+                    trial_expirado = True
+                    status_assinatura = 'expirado'
+                    # Atualizar status no banco
+                    supabase.table('usuarios').update({"status_assinatura": "expirado"}).eq('id', user['id']).execute()
+                else:
+                    dias_restantes = (trial_fim_dt - agora).days
+            except:
+                pass
+        
         # Criar token JWT com id_info_clinica
         token = create_access_token({
             "user_id": user['id'], 
@@ -227,7 +257,11 @@ async def login(request: LoginRequest):
                 "email": user['email'],
                 "nome": user['nome'],
                 "id_info_clinica": user.get('id_info_clinica'),
-                "role": user.get('role', 'owner')
+                "role": user.get('role', 'owner'),
+                "status_assinatura": status_assinatura,
+                "trial_expirado": trial_expirado,
+                "dias_restantes": dias_restantes,
+                "trial_fim": trial_fim
             }
         )
     except Exception as e:
@@ -248,12 +282,19 @@ async def register(request: UsuarioCreate):
         # Hash da senha
         senha_hash = get_password_hash(request.senha)
         
+        # Calcular período de trial (7 dias)
+        trial_inicio = datetime.utcnow()
+        trial_fim = trial_inicio + timedelta(days=7)
+        
         # Inserir usuário primeiro para obter o ID
         user_data = {
             "email": request.email,
             "senha_hash": senha_hash,
             "nome": request.nome,
-            "created_at": datetime.utcnow().isoformat()
+            "created_at": trial_inicio.isoformat(),
+            "trial_inicio": trial_inicio.isoformat(),
+            "trial_fim": trial_fim.isoformat(),
+            "status_assinatura": "trial"
         }
         
         result = supabase.table('usuarios').insert(user_data).execute()
@@ -514,6 +555,50 @@ async def delete_profissional(prof_id: int, current_user: dict = Depends(verify_
         logging.error(f"Erro ao deletar profissional: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 
+# ===== DISPONIBILIDADE PROFISSIONAL =====
+@api_router.get("/profissionais/{prof_id}/disponibilidade")
+async def get_disponibilidade_profissional(prof_id: int, current_user: dict = Depends(verify_token)):
+    try:
+        result = supabase.table('disponibilidade_profissional').select('*').eq('id_profissional', prof_id).order('dia_semana').execute()
+        return result.data
+    except Exception as e:
+        logging.error(f"Erro ao buscar disponibilidade: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@api_router.post("/profissionais/{prof_id}/disponibilidade")
+async def save_disponibilidade_profissional(prof_id: int, disponibilidades: List[DisponibilidadeItem], current_user: dict = Depends(verify_token)):
+    try:
+        # Deletar disponibilidades antigas
+        supabase.table('disponibilidade_profissional').delete().eq('id_profissional', prof_id).execute()
+        
+        # Inserir novas disponibilidades
+        if disponibilidades:
+            records = []
+            for d in disponibilidades:
+                hora_inicio = d.hora_inicio if len(d.hora_inicio) == 8 else d.hora_inicio + ':00'
+                hora_fim = d.hora_fim if len(d.hora_fim) == 8 else d.hora_fim + ':00'
+                records.append({
+                    "id_profissional": prof_id,
+                    "dia_semana": d.dia_semana,
+                    "hora_inicio": hora_inicio,
+                    "hora_fim": hora_fim
+                })
+            supabase.table('disponibilidade_profissional').insert(records).execute()
+        
+        return {"message": "Disponibilidade atualizada com sucesso"}
+    except Exception as e:
+        logging.error(f"Erro ao salvar disponibilidade: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@api_router.delete("/profissionais/{prof_id}/disponibilidade/{disp_id}")
+async def delete_disponibilidade(prof_id: int, disp_id: int, current_user: dict = Depends(verify_token)):
+    try:
+        supabase.table('disponibilidade_profissional').delete().eq('id', disp_id).eq('id_profissional', prof_id).execute()
+        return {"message": "Disponibilidade deletada com sucesso"}
+    except Exception as e:
+        logging.error(f"Erro ao deletar disponibilidade: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
 # ===== PROCEDIMENTOS =====
 @api_router.get("/procedimentos")
 async def get_procedimentos(current_user: dict = Depends(verify_token)):
@@ -569,12 +654,10 @@ async def delete_procedimento(proc_id: int, current_user: dict = Depends(verify_
         logging.error(f"Erro ao deletar procedimento: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 
-# ===== CONSULTAS/AGENDA =====
 @api_router.get("/consultas")
 async def get_consultas(data_inicio: Optional[str] = None, data_fim: Optional[str] = None, current_user: dict = Depends(verify_token)):
     try:
         clinica_id = get_user_clinica_id(current_user)
-        # Buscar consultas filtradas por clínica
         query = supabase.table('consulta').select('*, cliente(*), profissional(*), procedimento(*)')
         if clinica_id:
             query = query.eq('id_info_clinica', clinica_id)
@@ -582,13 +665,11 @@ async def get_consultas(data_inicio: Optional[str] = None, data_fim: Optional[st
         
         consultas = result.data or []
         
-        # Se tiver filtro de data, filtrar manualmente
         if data_inicio and consultas:
             import re
             filtered = []
             for consulta in consultas:
                 intervalo_str = consulta.get('intervalo', '')
-                # Extrair a data do intervalo [\"2025-11-17 14:00:00+00\",\"2025-11-17 15:00:00+00\")
                 if intervalo_str:
                     match = re.search(r'(\d{4}-\d{2}-\d{2})', intervalo_str)
                     if match:
@@ -608,10 +689,19 @@ async def create_consulta(consulta: ConsultaCreate, current_user: dict = Depends
         clinica_id = get_user_clinica_id(current_user)
         data = consulta.model_dump()
         data_inicio = data['data_inicio']
-        data_fim = data_inicio + timedelta(minutes=data['duracao_minutos'])
         
-        # Criar intervalo no formato PostgreSQL
-        data['intervalo'] = f"[{data_inicio.isoformat()},{data_fim.isoformat()})"
+        # Converter para timezone de São Paulo antes de extrair a string
+        # Pydantic pode converter para UTC internamente, então precisamos converter de volta
+        if data_inicio.tzinfo is not None:
+            data_inicio_local = data_inicio.astimezone(SAO_PAULO_TZ)
+            data_fim_local = data_inicio_local + timedelta(minutes=data['duracao_minutos'])
+            local_str = data_inicio_local.strftime('%Y-%m-%d %H:%M:%S')
+            local_fim_str = data_fim_local.strftime('%Y-%m-%d %H:%M:%S')
+            data['intervalo'] = f'["{local_str}-03","{local_fim_str}-03")'
+        else:
+            data_fim = data_inicio + timedelta(minutes=data['duracao_minutos'])
+            data['intervalo'] = f"[{data_inicio.isoformat()},{data_fim.isoformat()})"
+        
         del data['data_inicio']
         del data['duracao_minutos']
         
@@ -632,8 +722,21 @@ async def update_consulta(consulta_id: int, consulta: ConsultaUpdate, current_us
         
         if 'data_inicio' in data and 'duracao_minutos' in data:
             data_inicio = data['data_inicio']
-            data_fim = data_inicio + timedelta(minutes=data['duracao_minutos'])
-            data['intervalo'] = f"[{data_inicio.isoformat()},{data_fim.isoformat()})"
+            logging.info(f"[DEBUG] data_inicio recebido: {data_inicio}")
+            logging.info(f"[DEBUG] data_inicio.tzinfo: {data_inicio.tzinfo}")
+            # Converter para timezone de São Paulo antes de extrair a string
+            # Pydantic converte para UTC internamente, então precisamos converter de volta
+            if data_inicio.tzinfo is not None:
+                data_inicio_local = data_inicio.astimezone(SAO_PAULO_TZ)
+                logging.info(f"[DEBUG] data_inicio_local após astimezone: {data_inicio_local}")
+                data_fim_local = data_inicio_local + timedelta(minutes=data['duracao_minutos'])
+                local_str = data_inicio_local.strftime('%Y-%m-%d %H:%M:%S')
+                local_fim_str = data_fim_local.strftime('%Y-%m-%d %H:%M:%S')
+                logging.info(f"[DEBUG] intervalo final: [{local_str}-03,{local_fim_str}-03)")
+                data['intervalo'] = f'["{local_str}-03","{local_fim_str}-03")'
+            else:
+                data_fim = data_inicio + timedelta(minutes=data['duracao_minutos'])
+                data['intervalo'] = f"[{data_inicio.isoformat()},{data_fim.isoformat()})"
             del data['data_inicio']
             del data['duracao_minutos']
         

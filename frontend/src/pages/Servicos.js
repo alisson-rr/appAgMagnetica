@@ -76,8 +76,8 @@ const Servicos = () => {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-4xl font-bold" style={{ color: '#2C7464', fontFamily: 'Playfair Display, serif' }}>Serviços</h1>
-          <p className="mt-2 text-base" style={{ color: '#292726' }}>Gerencie os serviços</p>
+          <h1 className="text-4xl font-bold" style={{ color: '#2C7464', fontFamily: 'Playfair Display, serif' }}>Procedimento</h1>
+          <p className="mt-2 text-base" style={{ color: '#292726' }}>Gerencie os procedimentos</p>
         </div>
         <Dialog open={modalOpen} onOpenChange={setModalOpen}>
           <DialogTrigger asChild>
@@ -88,12 +88,12 @@ const Servicos = () => {
               style={{ backgroundColor: '#2C7464' }}
             >
               <Plus className="w-5 h-5 mr-2" />
-              Novo Serviço
+              Novo Procedimento
             </Button>
           </DialogTrigger>
           <DialogContent className="max-w-2xl">
             <DialogHeader>
-              <DialogTitle>{editingProcedimento ? 'Editar' : 'Novo'} Serviço</DialogTitle>
+              <DialogTitle>{editingProcedimento ? 'Editar' : 'Novo'} Procedimento</DialogTitle>
             </DialogHeader>
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>
@@ -237,7 +237,7 @@ const Servicos = () => {
 
       {!loading && filteredProcedimentos.length === 0 && (
         <p className="text-center py-12" style={{ color: '#292726' }}>
-          Nenhum serviço encontrado
+          Nenhum procedimento encontrado
         </p>
       )}
     </div>

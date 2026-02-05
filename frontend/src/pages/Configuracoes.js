@@ -41,17 +41,16 @@ const Configuracoes = () => {
     telefone: '',
     email: '',
     descricao: '',
-    endereco: ''
+    endereco: '',
+    mensagem_lembrete: ''
   });
   
   // Horários de atendimento - agrupados por dia com múltiplos turnos
   const [horarios, setHorarios] = useState([]);
   const [horariosOriginais, setHorariosOriginais] = useState([]);
   
-  // Mensagem modelo
-  const [mensagemLembrete, setMensagemLembrete] = useState(
-    'Olá {nome}! Lembramos que você tem uma consulta agendada para {data} às {horario}. Confirme sua presença respondendo esta mensagem.'
-  );
+  // Mensagem modelo padrão (usado se não houver salva no banco)
+  const defaultMensagemLembrete = 'Olá {nome}! Lembramos que você tem uma consulta agendada para {data} às {horario}. Confirme sua presença respondendo esta mensagem.';
   
   // Histórico de assinaturas
   const [assinaturas, setAssinaturas] = useState([]);
@@ -79,7 +78,10 @@ const Configuracoes = () => {
       ]);
       
       if (clinicaRes.data) {
-        setClinicaData(clinicaRes.data);
+        setClinicaData({
+          ...clinicaRes.data,
+          mensagem_lembrete: clinicaRes.data.mensagem_lembrete || defaultMensagemLembrete
+        });
       }
       
       // Agrupar horários por dia da semana (suportando múltiplos turnos)
@@ -539,8 +541,8 @@ const Configuracoes = () => {
                   Lembrete de Consulta
                 </Label>
                 <Textarea
-                  value={mensagemLembrete}
-                  onChange={(e) => setMensagemLembrete(e.target.value)}
+                  value={clinicaData.mensagem_lembrete || ''}
+                  onChange={(e) => setClinicaData({ ...clinicaData, mensagem_lembrete: e.target.value })}
                   rows={4}
                   className="mt-2"
                   style={{ backgroundColor: '#F7F1EB', borderColor: '#E5E0DA' }}
@@ -553,11 +555,13 @@ const Configuracoes = () => {
 
               <div className="flex justify-end mt-6">
                 <Button
+                  onClick={handleSaveClinica}
+                  disabled={saving}
                   className="flex items-center gap-2"
                   style={{ backgroundColor: '#2C7464', color: 'white' }}
                 >
                   <Save size={18} />
-                  Salvar Mensagem
+                  {saving ? 'Salvando...' : 'Salvar Mensagem'}
                 </Button>
               </div>
             </Card>

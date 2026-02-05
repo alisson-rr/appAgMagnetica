@@ -29,7 +29,7 @@ const Layout = ({ children }) => {
     { path: '/agenda', icon: Calendar, label: 'Agenda' },
     { path: '/clientes', icon: Users, label: 'Clientes' },
     { path: '/profissionais', icon: UserCog, label: 'Profissionais' },
-    { path: '/servicos', icon: Scissors, label: 'Serviços' },
+    { path: '/servicos', icon: Scissors, label: 'Procedimento' },
     { path: '/pagamentos', icon: DollarSign, label: 'Pagamentos' },
     { path: '/comissoes', icon: Percent, label: 'Comissões' },
     { path: '/configuracoes', icon: Settings, label: 'Configurações' },

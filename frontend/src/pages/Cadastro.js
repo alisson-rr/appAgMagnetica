@@ -61,8 +61,8 @@ const Cadastro = () => {
         senha: formData.senha
       });
       
-      toast.success('Cadastro realizado com sucesso! Escolha seu plano.');
-      navigate('/planos');
+      toast.success('Cadastro realizado com sucesso! Você tem 7 dias de teste grátis.');
+      navigate('/login');
     } catch (error) {
       const message = error.response?.data?.detail || 'Erro ao realizar cadastro';
       toast.error(message);

@@ -6,7 +6,7 @@ const pageTitles = {
   '/agenda': 'Agenda',
   '/clientes': 'Clientes',
   '/profissionais': 'Profissionais',
-  '/servicos': 'Serviços',
+  '/servicos': 'Procedimento',
   '/pagamentos': 'Pagamentos',
   '/comissoes': 'Comissões',
   '/configuracoes': 'Configurações',
