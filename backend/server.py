@@ -66,6 +66,7 @@ class UsuarioCreate(BaseModel):
 class ClienteCreate(BaseModel):
     nome: str
     whats: Optional[str] = None
+    telefone: Optional[str] = None
     email: Optional[str] = None
     data_nascimento: Optional[date] = None
     interesses: Optional[str] = None
@@ -75,6 +76,7 @@ class ClienteCreate(BaseModel):
 class ClienteUpdate(BaseModel):
     nome: Optional[str] = None
     whats: Optional[str] = None
+    telefone: Optional[str] = None
     email: Optional[str] = None
     data_nascimento: Optional[date] = None
     interesses: Optional[str] = None

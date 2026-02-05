@@ -52,7 +52,8 @@ Pacientes/clientes cadastrados.
 |-------------------|-------------|------------------------------|
 | `id`              | int8        | 🔑 Chave primária            |
 | `nome`            | text        | Nome completo                |
-| `whats`           | text        | WhatsApp                     |
+| `whats`           | text        | WhatsApp (uso exclusivo N8N) |
+| `telefone`        | text        | Telefone (uso no sistema)    |
 | `status`          | text        | Status do cliente            |
 | `interesses`      | text        | Interesses/preferências      |
 | `created_at`      | timestamptz | Data de cadastro             |
@@ -320,6 +321,7 @@ CREATE TABLE assinaturas (
 | 2026-02-04 | Adicionado instance_name em usuarios (Evolution API)   |
 | 2026-02-05 | Adicionado mensagem_lembrete em info_clinica           |
 | 2026-02-05 | Adicionado campos de trial em usuarios                 |
+| 2026-02-05 | Adicionado campo telefone em cliente                   |
 
 ---
 
@@ -341,6 +343,13 @@ ALTER TABLE info_clinica ADD COLUMN mensagem_lembrete TEXT;
 ALTER TABLE usuarios ADD COLUMN trial_inicio TIMESTAMPTZ;
 ALTER TABLE usuarios ADD COLUMN trial_fim TIMESTAMPTZ;
 ALTER TABLE usuarios ADD COLUMN status_assinatura TEXT DEFAULT 'trial';
+```
+
+### SQL: Adicionar telefone em cliente
+
+```sql
+ALTER TABLE cliente ADD COLUMN telefone TEXT;
+CREATE INDEX idx_cliente_telefone ON cliente(telefone);
 ```
 
 ---

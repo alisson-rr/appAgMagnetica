@@ -20,7 +20,7 @@ const Clientes = () => {
   const [editingCliente, setEditingCliente] = useState(null);
   const [formData, setFormData] = useState({
     nome: '',
-    whats: '',
+    telefone: '',
     email: '',
     data_nascimento: '',
     interesses: '',
@@ -56,7 +56,7 @@ const Clientes = () => {
       setEditingCliente(cliente);
       setFormData({
         nome: cliente.nome || '',
-        whats: cliente.whats || '',
+        telefone: cliente.telefone || '',
         email: cliente.email || '',
         data_nascimento: cliente.data_nascimento || '',
         interesses: cliente.interesses || '',
@@ -66,7 +66,7 @@ const Clientes = () => {
       setEditingCliente(null);
       setFormData({
         nome: '',
-        whats: '',
+        telefone: '',
         email: '',
         data_nascimento: '',
         interesses: '',
@@ -80,10 +80,13 @@ const Clientes = () => {
     e.preventDefault();
     
     try {
-      // Remover formatação do WhatsApp antes de enviar
+      // Converter strings vazias para null
       const dataToSend = {
         ...formData,
-        whats: unformatPhone(formData.whats)
+        telefone: unformatPhone(formData.telefone) || null,
+        email: formData.email || null,
+        data_nascimento: formData.data_nascimento || null,
+        interesses: formData.interesses || null
       };
       
       if (editingCliente) {
@@ -154,11 +157,11 @@ const Clientes = () => {
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <Label>WhatsApp</Label>
+                  <Label>Telefone</Label>
                   <Input
-                    data-testid="input-whatsapp"
-                    value={formatPhone(formData.whats)}
-                    onChange={(e) => setFormData({ ...formData, whats: e.target.value })}
+                    data-testid="input-telefone"
+                    value={formatPhone(formData.telefone)}
+                    onChange={(e) => setFormData({ ...formData, telefone: e.target.value })}
                     placeholder="(00) 00000-0000"
                     maxLength={15}
                   />
@@ -289,10 +292,10 @@ const Clientes = () => {
               </div>
 
               <div className="space-y-2">
-                {cliente.whats && (
+                {cliente.telefone && (
                   <div className="flex items-center text-sm" style={{ color: '#292726' }}>
                     <Phone className="w-4 h-4 mr-2" style={{ color: '#2C7464' }} />
-                    {formatPhone(cliente.whats)}
+                    {formatPhone(cliente.telefone)}
                   </div>
                 )}
                 {cliente.email && (
