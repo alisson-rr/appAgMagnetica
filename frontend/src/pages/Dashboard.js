@@ -37,7 +37,7 @@ const Dashboard = () => {
   const atalhos = [
     { to: '/agenda', icon: Calendar, label: 'Nova Marcação', color: '#2C7464' },
     { to: '/clientes', icon: Users, label: 'Clientes', color: '#FEA5A4' },
-    { to: '/profissionais', icon: UserCog, label: 'Prestadores', color: '#2C7464' },
+    { to: '/profissionais', icon: UserCog, label: 'Profissionais', color: '#2C7464' },
     { to: '/servicos', icon: Scissors, label: 'Procedimento', color: '#FEA5A4' },
   ];
 
