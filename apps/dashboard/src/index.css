@@ -4,56 +4,144 @@
 
 @layer base {
   :root {
-    --background: 0 0% 100%;
-    --foreground: 222.2 84% 4.9%;
+    /*
+     * Paleta da marca — fonte única de verdade do painel.
+     * Canais HSL para que Tailwind aplique opacidade (bg-coral/20).
+     */
+    --am-green: 167 45% 31%;        /* #2C7464 */
+    --am-green-deep: 166 47% 22%;   /* #1E5347 */
+    --am-green-dark: 166 49% 15%;   /* #143A31 */
+    --am-green-lum: 161 31% 42%;    /* #3E9A7D */
+    --am-coral: 7 100% 74%;         /* #FF8B7B */
+    --am-coral-deep: 9 44% 42%;     /* #9A4A3C */
+    --am-coral-soft: 13 100% 94%;   /* #FFE5DE */
+    --am-apricot: 36 100% 71%;      /* #FFC36B */
+    --am-cream: 30 100% 97%;        /* #FFF8F1 */
+    --am-ink: 15 5% 15%;            /* #292625 */
+
+    /* Tokens shadcn — todos os componentes de ui/ herdam daqui */
+    --background: var(--am-cream);
+    --foreground: var(--am-ink);
     --card: 0 0% 100%;
-    --card-foreground: 222.2 84% 4.9%;
+    --card-foreground: var(--am-ink);
     --popover: 0 0% 100%;
-    --popover-foreground: 222.2 84% 4.9%;
-    --primary: 222.2 47.4% 11.2%;
-    --primary-foreground: 210 40% 98%;
-    --secondary: 210 40% 96.1%;
-    --secondary-foreground: 222.2 47.4% 11.2%;
-    --muted: 210 40% 96.1%;
-    --muted-foreground: 215.4 16.3% 46.9%;
-    --accent: 210 40% 96.1%;
-    --accent-foreground: 222.2 47.4% 11.2%;
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 210 40% 98%;
-    --border: 214.3 31.8% 91.4%;
-    --input: 214.3 31.8% 91.4%;
-    --ring: 222.2 84% 4.9%;
-    --radius: 0.5rem;
+    --popover-foreground: var(--am-ink);
+    --primary: var(--am-green);
+    --primary-foreground: 0 0% 100%;
+    --secondary: 30 44% 94%;
+    --secondary-foreground: var(--am-green-deep);
+    --muted: 30 40% 95%;
+    --muted-foreground: 15 6% 42%;
+    --accent: 167 40% 94%;
+    --accent-foreground: var(--am-green-deep);
+    /* Vermelho é exclusivo de erro e destruição. Coral nunca ocupa este papel. */
+    --destructive: 0 72% 46%;
+    --destructive-foreground: 0 0% 100%;
+    --success: 158 52% 34%;
+    --border: 24 22% 89%;
+    --input: 24 22% 89%;
+    --ring: var(--am-green);
+    --radius: 0.9rem;
+
+    --gradient-brand: linear-gradient(135deg, hsl(var(--am-green)) 0%, hsl(var(--am-green-deep)) 60%, hsl(var(--am-green-dark)) 100%);
+    /* Verde profundo: o branco translúcido da navegação precisa ficar legível. */
+    --gradient-sidebar: linear-gradient(190deg, hsl(var(--am-green-deep)) 0%, hsl(var(--am-green-dark)) 100%);
+    --gradient-surface: linear-gradient(140deg, hsl(var(--am-green-deep)) 0%, hsl(var(--am-green-dark)) 100%);
+    --gradient-warm: linear-gradient(135deg, hsl(var(--am-coral)) 0%, hsl(var(--am-apricot)) 100%);
+
+    --shadow-soft: 0 12px 32px -22px hsl(var(--am-ink) / .35);
+    --shadow-card: 0 20px 48px -34px hsl(var(--am-green-deep) / .40);
+    --shadow-green: 0 14px 30px -16px hsl(var(--am-green) / .45);
   }
 
-  .dark {
-    --background: 222.2 84% 4.9%;
-    --foreground: 210 40% 98%;
-    --card: 222.2 84% 4.9%;
-    --card-foreground: 210 40% 98%;
-    --popover: 222.2 84% 4.9%;
-    --popover-foreground: 210 40% 98%;
-    --primary: 210 40% 98%;
-    --primary-foreground: 222.2 47.4% 11.2%;
-    --secondary: 217.2 32.6% 17.5%;
-    --secondary-foreground: 210 40% 98%;
-    --muted: 217.2 32.6% 17.5%;
-    --muted-foreground: 215 20.2% 65.1%;
-    --accent: 217.2 32.6% 17.5%;
-    --accent-foreground: 210 40% 98%;
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 210 40% 98%;
-    --border: 217.2 32.6% 17.5%;
-    --input: 217.2 32.6% 17.5%;
-    --ring: 212.7 26.8% 83.9%;
+  * { @apply border-border; }
+
+  body {
+    @apply bg-background text-foreground antialiased;
+    font-family: 'Montserrat', system-ui, sans-serif;
+  }
+
+  h1, h2, h3, h4 {
+    font-family: 'Red Hat Display', system-ui, sans-serif;
+    letter-spacing: -.02em;
+  }
+
+  /* Foco visível e consistente em todo o painel. */
+  :where(a, button, input, select, textarea, summary, [role="button"], [tabindex]):focus-visible {
+    outline: 2px solid hsl(var(--am-green));
+    outline-offset: 2px;
   }
 }
 
-@layer base {
-  * {
-    @apply border-border;
+@layer components {
+  /* Estrutura de página */
+  .page-shell { @apply mx-auto w-full max-w-7xl space-y-6 pb-16 md:pb-6; }
+  .page-title { @apply font-display text-2xl font-bold text-ink md:text-3xl; }
+  .page-subtitle { @apply mt-1.5 max-w-2xl text-sm text-muted-foreground md:text-base; }
+
+  /* Superfícies */
+  .surface-card {
+    @apply rounded-2xl border border-border/70 bg-card;
+    box-shadow: var(--shadow-soft);
   }
-  body {
-    @apply bg-background text-foreground;
+  .surface-brand {
+    background: var(--gradient-surface);
+    @apply text-white;
+  }
+  .surface-muted { @apply rounded-2xl border border-border/60 bg-muted/60; }
+
+  /* Ações */
+  .btn-brand {
+    background: var(--gradient-brand);
+    box-shadow: var(--shadow-green);
+    @apply inline-flex items-center justify-center gap-2 rounded-full px-5 py-2.5 text-sm font-semibold text-white transition hover:brightness-105;
+  }
+  .icon-action {
+    @apply inline-flex h-9 w-9 items-center justify-center rounded-xl text-muted-foreground transition hover:bg-accent hover:text-primary;
+  }
+  .icon-action-danger { @apply hover:bg-destructive/10 hover:text-destructive; }
+
+  /* Selos de estado. Coral = atenção. Vermelho = erro. Verde = sucesso. */
+  .badge { @apply inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold; }
+  .badge-success { @apply bg-primary/10 text-primary; }
+  .badge-attention { @apply bg-coral-soft text-coral-deep; }
+  .badge-neutral { @apply bg-muted text-muted-foreground; }
+  .badge-danger { @apply bg-destructive/10 text-destructive; }
+
+  /* Tabelas mais leves */
+  .table-soft { @apply w-full border-collapse text-sm; }
+  .table-soft thead th {
+    @apply bg-muted/50 px-5 py-3 text-left text-xs font-bold uppercase tracking-[.08em] text-muted-foreground;
+  }
+  .table-soft tbody td { @apply border-t border-border/60 px-5 py-4 align-middle text-foreground/85; }
+  .table-soft tbody tr:hover { @apply bg-accent/40; }
+
+  .field-hint { @apply mt-1 text-xs text-muted-foreground; }
+}
+
+@layer utilities {
+  .font-display { font-family: 'Red Hat Display', system-ui, sans-serif; }
+  .gradient-text {
+    background: var(--gradient-brand);
+    background-clip: text;
+    -webkit-background-clip: text;
+    color: transparent;
+  }
+}
+
+@keyframes amFadeIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .animate-enter { animation: amFadeIn .24s ease-out both; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: .01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: .01ms !important;
   }
 }

@@ -8,6 +8,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
 import { Textarea } from '../components/ui/textarea';
+import { EmptyState, Loading, PageHeader } from '../components/PageChrome';
 
 const Servicos = () => {
   const [procedimentos, setProcedimentos] = useState([]);
@@ -73,24 +74,19 @@ const Servicos = () => {
   const filteredProcedimentos = procedimentos.filter(proc => proc.nome.toLowerCase().includes(searchTerm.toLowerCase()));
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-4xl font-bold" style={{ color: '#2C7464', fontFamily: 'Playfair Display, serif' }}>Procedimento</h1>
-          <p className="mt-2 text-base" style={{ color: '#292726' }}>Gerencie os procedimentos</p>
-        </div>
-        <Dialog open={modalOpen} onOpenChange={setModalOpen}>
+    <div className="page-shell">
+      <Dialog open={modalOpen} onOpenChange={setModalOpen}>
+        <PageHeader
+          title="Procedimento"
+          description="Duração e valor de cada serviço definem como a agenda é oferecida."
+        >
           <DialogTrigger asChild>
-            <Button
-              data-testid="novo-servico-button"
-              onClick={() => openModal()}
-              className="rounded-full px-6 py-6 text-white"
-              style={{ backgroundColor: '#2C7464' }}
-            >
-              <Plus className="w-5 h-5 mr-2" />
-              Novo Procedimento
+            <Button data-testid="novo-servico-button" onClick={() => openModal()} size="lg">
+              <Plus className="w-5 h-5" />
+              Novo procedimento
             </Button>
           </DialogTrigger>
+        </PageHeader>
           <DialogContent className="max-w-2xl">
             <DialogHeader>
               <DialogTitle>{editingProcedimento ? 'Editar' : 'Novo'} Procedimento</DialogTitle>
@@ -158,17 +154,15 @@ const Servicos = () => {
                 <Button
                   type="submit"
                   data-testid="submit-servico"
-                  style={{ backgroundColor: '#2C7464', color: 'white' }}
                 >
                   Salvar
                 </Button>
               </div>
             </form>
           </DialogContent>
-        </Dialog>
-      </div>
+      </Dialog>
       <div className="relative">
-        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5" style={{ color: '#2C7464' }} />
+        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-primary" />
         <Input
           data-testid="search-servicos"
           value={searchTerm}
@@ -179,21 +173,18 @@ const Servicos = () => {
       </div>
 
       {loading ? (
-        <div className="flex items-center justify-center py-12">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2" style={{ borderColor: '#2C7464' }} />
-        </div>
+        <Loading />
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {filteredProcedimentos.map((proc) => (
             <Card
               key={proc.id}
               data-testid={`servico-card-${proc.id}`}
-              className="p-6 rounded-2xl shadow-lg"
-              style={{ backgroundColor: 'white' }}
+              className="p-6 transition hover:-translate-y-0.5 hover:border-primary/30"
             >
               <div className="flex items-start justify-between mb-4">
                 <div className="flex-1">
-                  <h3 className="text-lg font-bold" style={{ color: '#2C7464' }}>
+                  <h3 className="font-display text-lg font-bold text-ink">
                     {proc.nome}
                   </h3>
                 </div>
@@ -201,32 +192,32 @@ const Servicos = () => {
                   <button
                     onClick={() => openModal(proc)}
                     data-testid={`edit-servico-${proc.id}`}
-                    className="p-2 rounded-lg hover:bg-gray-100"
+                    className="icon-action"
                   >
-                    <Edit className="w-4 h-4" style={{ color: '#2C7464' }} />
+                    <Edit className="w-4 h-4" />
                   </button>
                   <button
                     onClick={() => handleDelete(proc.id)}
                     data-testid={`delete-servico-${proc.id}`}
-                    className="p-2 rounded-lg hover:bg-gray-100"
+                    className="icon-action"
                   >
-                    <Trash2 className="w-4 h-4" style={{ color: '#FEA5A4' }} />
+                    <Trash2 className="w-4 h-4" />
                   </button>
                 </div>
               </div>
 
               {proc.descricao && (
-                <p className="text-sm mb-4" style={{ color: '#292726' }}>
+                <p className="text-sm mb-4 text-foreground">
                   {proc.descricao}
                 </p>
               )}
 
-              <div className="flex items-center justify-between pt-4 border-t" style={{ borderColor: '#F7F1EB' }}>
-                <div className="flex items-center text-sm" style={{ color: '#292726' }}>
-                  <Clock className="w-4 h-4 mr-1" style={{ color: '#2C7464' }} />
+              <div className="flex items-center justify-between border-t border-border/60 pt-4">
+                <div className="flex items-center text-sm text-foreground">
+                  <Clock className="w-4 h-4 mr-1 text-primary" />
                   {proc.duracao_minutos} min
                 </div>
-                <div className="flex items-center text-lg font-bold" style={{ color: '#2C7464' }}>
+                <div className="flex items-center text-lg font-bold text-primary">
                   R$ {proc.valor?.toFixed(2)}
                 </div>
               </div>
@@ -236,9 +227,13 @@ const Servicos = () => {
       )}
 
       {!loading && filteredProcedimentos.length === 0 && (
-        <p className="text-center py-12" style={{ color: '#292726' }}>
-          Nenhum procedimento encontrado
-        </p>
+        <Card>
+          <EmptyState
+            icon={Clock}
+            title={searchTerm ? 'Nenhum procedimento com esse nome' : 'Nenhum procedimento cadastrado'}
+            description="Duração e valor de cada procedimento definem os horários oferecidos no atendimento."
+          />
+        </Card>
       )}
     </div>
   );

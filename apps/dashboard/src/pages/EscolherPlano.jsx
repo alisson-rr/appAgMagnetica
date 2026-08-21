@@ -1,57 +1,10 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Check, Star } from 'lucide-react';
+import { Check, Clock3, Star } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import { Card } from '../components/ui/card';
 import { toast } from 'sonner';
-
-const planos = [
-  {
-    id: 'essencial',
-    nome: 'Plano Essencial',
-    precoAnual: 297,
-    precoMensal: 399,
-    descricao: 'Ideal para começar',
-    popular: false,
-    recursos: [
-      'Atendente Humanizado 24h/dia',
-      'Resposta automática instantânea',
-      'Agendamento automático',
-      'Suporte e manutenção contínuos'
-    ]
-  },
-  {
-    id: 'premium',
-    nome: 'Plano Premium',
-    precoAnual: 467,
-    precoMensal: 599,
-    descricao: 'O mais escolhido',
-    popular: true,
-    recursos: [
-      'Tudo do Plano Essencial',
-      'Multi profissionais',
-      'Lembretes de consulta',
-      'Histórico do cliente para recomendações',
-      'Avaliações pós-consulta',
-      'Acompanhamento por 90 dias'
-    ]
-  },
-  {
-    id: 'personalizado',
-    nome: 'Plano Personalizado',
-    precoMinimo: 799,
-    descricao: 'Para clínicas que querem mais',
-    popular: false,
-    recursos: [
-      'Tudo dos planos anteriores',
-      'Cadastro automático de clientes',
-      'Envio de links de pagamento',
-      'Campanhas inteligentes (aniversários, retornos)',
-      'Triagem inicial inteligente',
-      'Funcionalidades exclusivas para sua clínica'
-    ]
-  }
-];
+import { PLANOS } from '../data/planos';
 
 const EscolherPlano = () => {
   const [planoSelecionado, setPlanoSelecionado] = useState(null);
@@ -59,17 +12,22 @@ const EscolherPlano = () => {
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
+  // PONTO DE INTEGRAÇÃO DE COBRANÇA
+  // Hoje este handler apenas confirma a escolha e devolve o usuário ao login.
+  // O agente de billing substitui o corpo por: criar a sessão de checkout no
+  // backend (com o preço do plano e o período em `tipoCobranca`) e redirecionar.
+  // Nenhuma chave, SDK ou chamada de pagamento existe neste arquivo.
   const handleEscolherPlano = async (plano) => {
     setPlanoSelecionado(plano.id);
     setLoading(true);
-    
+
     try {
       if (plano.id === 'personalizado') {
         toast.success('Entraremos em contato para personalizar seu plano!');
       } else {
         toast.success(`Plano ${plano.nome} selecionado com sucesso!`);
       }
-      
+
       setTimeout(() => {
         navigate('/login');
       }, 1500);
@@ -81,139 +39,126 @@ const EscolherPlano = () => {
   };
 
   return (
-    <div className="min-h-screen py-12 px-4" style={{ backgroundColor: '#F7F1EB' }}>
-      <div className="max-w-6xl mx-auto">
-        <div className="flex justify-center mb-8">
-          <img src="/assets/logo.png" alt="Agenda Magnética" className="h-20" />
+    <div className="min-h-screen bg-background px-4 py-12">
+      <div className="mx-auto max-w-6xl">
+        <div className="flex justify-center">
+          <img src="/assets/logo.png" alt="Agenda Magnética" className="h-16" />
         </div>
 
-        <div className="text-center mb-12">
-          <h1 className="text-4xl font-bold mb-4" style={{ color: '#2C7464', fontFamily: 'Playfair Display, serif' }}>
-            Escolha o Plano <span style={{ color: '#FEA5A4' }}>Ideal</span> Para Sua Clínica
+        <div className="mt-8 text-center">
+          <h1 className="font-display text-3xl font-bold text-ink md:text-4xl">
+            Escolha o plano <span className="gradient-text">ideal</span> para o seu negócio
           </h1>
-          <p className="text-lg" style={{ color: '#292726' }}>
-            Todos os planos incluem setup gratuito e suporte completo
+          <p className="mt-3 text-muted-foreground">
+            Todos os planos incluem configuração acompanhada e suporte.
           </p>
         </div>
 
-        <div className="flex justify-center mb-8">
-          <div className="inline-flex rounded-full p-1" style={{ backgroundColor: 'white' }}>
-            <button
-              onClick={() => setTipoCobranca('mensal')}
-              className={`px-6 py-2 rounded-full text-sm font-medium transition-all ${
-                tipoCobranca === 'mensal' ? 'text-white' : ''
-              }`}
-              style={{ 
-                backgroundColor: tipoCobranca === 'mensal' ? '#2C7464' : 'transparent',
-                color: tipoCobranca === 'mensal' ? 'white' : '#292726'
-              }}
-            >
-              Mensal
-            </button>
-            <button
-              onClick={() => setTipoCobranca('anual')}
-              className={`px-6 py-2 rounded-full text-sm font-medium transition-all ${
-                tipoCobranca === 'anual' ? 'text-white' : ''
-              }`}
-              style={{ 
-                backgroundColor: tipoCobranca === 'anual' ? '#2C7464' : 'transparent',
-                color: tipoCobranca === 'anual' ? 'white' : '#292726'
-              }}
-            >
-              Anual <span style={{ color: tipoCobranca === 'anual' ? '#FEA5A4' : '#2C7464' }}>(Economia)</span>
-            </button>
+        <div className="mt-8 flex justify-center">
+          <div
+            className="inline-flex rounded-full border border-border/70 bg-card p-1 shadow-soft"
+            role="group"
+            aria-label="Periodicidade da cobrança"
+          >
+            {['mensal', 'anual'].map((opcao) => (
+              <button
+                key={opcao}
+                type="button"
+                onClick={() => setTipoCobranca(opcao)}
+                aria-pressed={tipoCobranca === opcao}
+                className={`rounded-full px-6 py-2.5 text-sm font-semibold transition ${
+                  tipoCobranca === opcao ? 'bg-primary text-white' : 'text-muted-foreground hover:text-primary'
+                }`}
+              >
+                {opcao === 'mensal' ? 'Mensal' : 'Anual'}
+              </button>
+            ))}
           </div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {planos.map((plano) => (
-            <Card
-              key={plano.id}
-              className={`relative p-8 rounded-2xl transition-all hover:shadow-xl ${
-                plano.popular ? 'ring-2 scale-105' : ''
-              }`}
-              style={{ 
-                backgroundColor: 'white',
-                ringColor: plano.popular ? '#2C7464' : 'transparent'
-              }}
-            >
-              {plano.popular && (
-                <div 
-                  className="absolute -top-4 left-1/2 transform -translate-x-1/2 px-4 py-1 rounded-full text-xs font-bold text-white flex items-center gap-1"
-                  style={{ backgroundColor: '#FEA5A4' }}
-                >
-                  <Star className="w-3 h-3" />
-                  MAIS POPULAR
-                </div>
-              )}
+        <div className="mt-10 grid items-start gap-6 md:grid-cols-3">
+          {PLANOS.map((plano) => {
+            const preco = plano.precoMinimo ?? (tipoCobranca === 'anual' ? plano.precoAnual : plano.precoMensal);
+            const processando = loading && planoSelecionado === plano.id;
 
-              <div className="text-center mb-6">
-                <h3 className="text-lg font-bold mb-2" style={{ color: '#2C7464' }}>
-                  {plano.nome.toUpperCase()}
-                </h3>
-                
-                {plano.precoMinimo ? (
-                  <div>
-                    <p className="text-sm" style={{ color: '#292726' }}>A partir de</p>
-                    <p className="text-4xl font-bold" style={{ color: '#2C7464' }}>
-                      R$ {plano.precoMinimo}
+            return (
+              <Card
+                key={plano.id}
+                className={`relative flex h-full flex-col p-8 ${
+                  plano.popular ? 'border-primary/30 shadow-card md:-mt-3 md:pt-10' : ''
+                }`}
+              >
+                {plano.popular && (
+                  <span
+                    className="absolute -top-3 left-1/2 inline-flex -translate-x-1/2 items-center gap-1.5 rounded-full px-4 py-1.5 text-[11px] font-bold uppercase tracking-wider text-ink"
+                    style={{ background: 'var(--gradient-warm)' }}
+                  >
+                    <Star className="h-3 w-3" /> Mais escolhido
+                  </span>
+                )}
+
+                <h2 className="font-display text-xl font-bold text-primary">{plano.nome}</h2>
+                <p className="mt-1 text-sm text-muted-foreground">{plano.descricao}</p>
+
+                <p className="mt-6 flex items-end gap-1.5">
+                  {plano.precoMinimo && (
+                    <span className="pb-2 text-sm text-muted-foreground">a partir de</span>
+                  )}
+                  <span className="pb-1.5 text-base font-bold text-foreground/70">R$</span>
+                  <strong className="font-display text-4xl font-bold leading-none text-ink">{preco}</strong>
+                  <span className="pb-1.5 text-sm text-muted-foreground">/mês</span>
+                </p>
+                <p className="mt-1.5 text-xs text-muted-foreground">
+                  {plano.precoMinimo
+                    ? 'valor final definido junto com o time'
+                    : tipoCobranca === 'anual'
+                      ? `no plano anual · R$ ${plano.precoMensal} no mensal`
+                      : 'no plano mensal'}
+                </p>
+
+                <ul className="mt-6 flex-1 space-y-3">
+                  {plano.recursos.map((recurso) => (
+                    <li key={recurso} className="flex items-start gap-3 text-sm text-foreground/80">
+                      <Check className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
+                      <span>{recurso}</span>
+                    </li>
+                  ))}
+                </ul>
+
+                {plano.roadmap.length > 0 && (
+                  <div className="surface-muted mt-5 p-4">
+                    <p className="flex items-center gap-2 text-[11px] font-bold uppercase tracking-[.1em] text-coral-deep">
+                      <Clock3 className="h-3.5 w-3.5" /> Ainda não disponível
                     </p>
-                    <p className="text-sm" style={{ color: '#292726' }}>/mês</p>
-                  </div>
-                ) : (
-                  <div>
-                    <p className="text-4xl font-bold" style={{ color: '#2C7464' }}>
-                      R$ {tipoCobranca === 'anual' ? plano.precoAnual : plano.precoMensal}
-                    </p>
-                    <p className="text-sm" style={{ color: '#292726' }}>
-                      /mês ({tipoCobranca === 'anual' ? 'Plano Anual' : 'Plano Mensal'})
-                    </p>
-                    {tipoCobranca === 'anual' && plano.precoMensal && (
-                      <p className="text-xs mt-1" style={{ color: '#FEA5A4' }}>
-                        ou R$ {plano.precoMensal}/mês no mensal
-                      </p>
-                    )}
+                    <ul className="mt-2 space-y-1 text-xs text-muted-foreground">
+                      {plano.roadmap.map((item) => (
+                        <li key={item}>{item}</li>
+                      ))}
+                    </ul>
                   </div>
                 )}
-              </div>
 
-              <div className="space-y-3 mb-8">
-                {plano.recursos.map((recurso, idx) => (
-                  <div key={idx} className="flex items-start gap-3">
-                    <Check className="w-5 h-5 flex-shrink-0 mt-0.5" style={{ color: '#2C7464' }} />
-                    <span className="text-sm" style={{ color: '#292726' }}>{recurso}</span>
-                  </div>
-                ))}
-              </div>
-
-              <Button
-                onClick={() => handleEscolherPlano(plano)}
-                disabled={loading && planoSelecionado === plano.id}
-                className="w-full py-6 rounded-full text-base font-medium transition-all"
-                style={{ 
-                  backgroundColor: plano.popular ? '#2C7464' : 'transparent',
-                  color: plano.popular ? 'white' : '#2C7464',
-                  border: plano.popular ? 'none' : '2px solid #2C7464'
-                }}
-              >
-                {loading && planoSelecionado === plano.id 
-                  ? 'Processando...' 
-                  : plano.id === 'personalizado' 
-                    ? 'QUERO UM PLANO PERSONALIZADO'
-                    : plano.popular 
-                      ? 'ESCOLHER ESTE PLANO - MAIS POPULAR' 
-                      : 'ESCOLHER ESTE PLANO'
-                }
-              </Button>
-            </Card>
-          ))}
+                <Button
+                  onClick={() => handleEscolherPlano(plano)}
+                  disabled={processando}
+                  size="lg"
+                  variant={plano.popular ? 'default' : 'outline'}
+                  className={`mt-7 w-full ${plano.popular ? '' : 'border-primary/40 text-primary'}`}
+                >
+                  {processando
+                    ? 'Processando...'
+                    : plano.id === 'personalizado'
+                      ? 'Quero um plano personalizado'
+                      : 'Escolher este plano'}
+                </Button>
+              </Card>
+            );
+          })}
         </div>
 
-        <div className="text-center mt-12">
-          <p className="text-sm" style={{ color: '#292726' }}>
-            Dúvidas? Entre em contato conosco pelo WhatsApp ou e-mail.
-          </p>
-        </div>
+        <p className="mt-10 text-center text-sm text-muted-foreground">
+          Os itens marcados como “ainda não disponível” fazem parte do plano de evolução do produto.
+        </p>
       </div>
     </div>
   );

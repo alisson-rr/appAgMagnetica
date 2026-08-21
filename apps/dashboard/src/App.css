@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&family=Red+Hat+Display:wght@500;600;700;800&display=swap');
+/* Fontes carregadas em index.html (preconnect + link). */
 
 * {
   margin: 0;
@@ -6,96 +6,30 @@
   box-sizing: border-box;
 }
 
-body {
-  font-family: 'Montserrat', sans-serif;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-}
-
-h1, h2, h3, h4, h5, h6 {
-  font-family: 'Red Hat Display', sans-serif;
-}
-
-.App {
-  min-height: 100vh;
-  background-color: #F7F1EB;
-}
-
-/* Smooth transitions */
-button,
-a {
-  transition: background-color 0.2s ease, color 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
-}
-
-button:hover {
-  transform: translateY(-1px);
-}
-
-button:active {
-  transform: translateY(0);
-}
-
-/* Custom scrollbar */
+/* Barra de rolagem discreta, nas cores da marca. */
 ::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
+  width: 10px;
+  height: 10px;
 }
 
 ::-webkit-scrollbar-track {
-  background: #F7F1EB;
+  background: hsl(var(--am-cream));
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #2C7464;
-  border-radius: 4px;
+  background: hsl(var(--am-green) / .35);
+  border: 2px solid hsl(var(--am-cream));
+  border-radius: 999px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #1f5347;
+  background: hsl(var(--am-green) / .6);
 }
 
-/* Input focus styles */
-input:focus,
-textarea:focus,
-select:focus {
-  outline: none;
-  border-color: #2C7464;
-  box-shadow: 0 0 0 3px rgba(44, 116, 100, 0.1);
-}
-
-/* Card hover effects */
-.hover-lift {
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
-}
-
-.hover-lift:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 12px 24px rgba(0, 0, 0, 0.1);
-}
-
-/* Loading animation */
 @keyframes spin {
-  to {
-    transform: rotate(360deg);
-  }
+  to { transform: rotate(360deg); }
 }
 
 .animate-spin {
   animation: spin 1s linear infinite;
-}
-
-/* Fade in animation */
-@keyframes fadeIn {
-  from {
-    opacity: 0;
-    transform: translateY(10px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-.fade-in {
-  animation: fadeIn 0.3s ease;
 }

@@ -21,6 +21,11 @@ const DIAS_SEMANA = [
   { value: 7, label: 'Domingo' },
 ];
 
+const PASSOS = [
+  { numero: 1, titulo: 'Dados do negócio' },
+  { numero: 2, titulo: 'Horários' },
+];
+
 const HORAS = Array.from({ length: 24 }, (_, i) => {
   const hora = String(i).padStart(2, '0');
   return { value: `${hora}:00`, label: `${hora}:00` };
@@ -66,27 +71,27 @@ const Onboarding = () => {
   );
 
   const addTurno = (diaSemana) => {
-    setHorarios(prev => prev.map(h => 
-      h.dia_semana === diaSemana 
+    setHorarios(prev => prev.map(h =>
+      h.dia_semana === diaSemana
         ? { ...h, turnos: [...h.turnos, { hora_inicio: '', hora_fim: '' }] }
         : h
     ));
   };
 
   const removeTurno = (diaSemana, turnoIndex) => {
-    setHorarios(prev => prev.map(h => 
-      h.dia_semana === diaSemana 
+    setHorarios(prev => prev.map(h =>
+      h.dia_semana === diaSemana
         ? { ...h, turnos: h.turnos.filter((_, i) => i !== turnoIndex) }
         : h
     ));
   };
 
   const updateTurno = (diaSemana, turnoIndex, field, value) => {
-    setHorarios(prev => prev.map(h => 
-      h.dia_semana === diaSemana 
-        ? { 
-            ...h, 
-            turnos: h.turnos.map((t, i) => 
+    setHorarios(prev => prev.map(h =>
+      h.dia_semana === diaSemana
+        ? {
+            ...h,
+            turnos: h.turnos.map((t, i) =>
               i === turnoIndex ? { ...t, [field]: value } : t
             )
           }
@@ -104,10 +109,10 @@ const Onboarding = () => {
       setSaving(true);
       const response = await api.post('/config/info-clinica', clinicaData);
       setClinicaId(response.data.id);
-      
+
       // Atualizar o contexto com o novo id_info_clinica
       updateUser({ id_info_clinica: response.data.id }, response.data.access_token);
-      
+
       setStep(2);
       toast.success('Dados salvos!');
     } catch (error) {
@@ -120,7 +125,7 @@ const Onboarding = () => {
   const handleStep2Submit = async () => {
     try {
       setSaving(true);
-      
+
       // Salvar horários preenchidos
       for (const horario of horarios) {
         for (const turno of horario.turnos) {
@@ -152,139 +157,115 @@ const Onboarding = () => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-6" style={{ backgroundColor: '#F7F1EB' }}>
-      <div className="w-full max-w-3xl">
-        {/* Header */}
-        <div className="text-center mb-8">
-          <h1 className="text-4xl font-bold" style={{ color: '#2C7464', fontFamily: 'Playfair Display, serif' }}>
-            Bem-vindo ao Agenda Magnética
-          </h1>
-          <p className="mt-2 text-lg" style={{ color: '#292726' }}>
-            Vamos configurar sua clínica em poucos passos
-          </p>
+    <div className="flex min-h-screen items-center justify-center bg-background p-4 md:p-6">
+      <div className="w-full max-w-3xl py-8">
+        <div className="text-center">
+          <img src="/assets/logo.png" alt="Agenda Magnética" className="mx-auto h-14" />
+          <h1 className="mt-6 font-display text-3xl font-bold text-ink">Vamos configurar seu negócio</h1>
+          <p className="mt-2 text-muted-foreground">Dois passos e sua agenda já entende como você atende.</p>
         </div>
 
-        {/* Progress Steps */}
-        <div className="flex items-center justify-center gap-4 mb-8">
-          <div className="flex items-center gap-2">
-            <div 
-              className={`w-10 h-10 rounded-full flex items-center justify-center font-bold ${step >= 1 ? 'text-white' : 'text-gray-400 bg-gray-200'}`}
-              style={{ backgroundColor: step >= 1 ? '#2C7464' : undefined }}
-            >
-              {step > 1 ? <Check size={20} /> : '1'}
-            </div>
-            <span className="font-medium" style={{ color: step >= 1 ? '#2C7464' : '#9CA3AF' }}>
-              Dados da Clínica
-            </span>
-          </div>
-          
-          <div className="w-16 h-1 rounded" style={{ backgroundColor: step > 1 ? '#2C7464' : '#E5E7EB' }} />
-          
-          <div className="flex items-center gap-2">
-            <div 
-              className={`w-10 h-10 rounded-full flex items-center justify-center font-bold ${step >= 2 ? 'text-white' : 'text-gray-400 bg-gray-200'}`}
-              style={{ backgroundColor: step >= 2 ? '#2C7464' : undefined }}
-            >
-              2
-            </div>
-            <span className="font-medium" style={{ color: step >= 2 ? '#2C7464' : '#9CA3AF' }}>
-              Horários
-            </span>
-          </div>
-        </div>
+        {/* Progresso */}
+        <ol className="mt-8 flex items-center justify-center gap-2 sm:gap-4">
+          {PASSOS.map((passo, index) => {
+            const concluido = step > passo.numero;
+            const atual = step === passo.numero;
+            return (
+              <li key={passo.numero} className="flex items-center gap-2 sm:gap-4">
+                <span className="flex items-center gap-2" aria-current={atual ? 'step' : undefined}>
+                  <span
+                    className={`flex h-10 w-10 items-center justify-center rounded-full font-display text-sm font-bold transition ${
+                      concluido || atual ? 'bg-primary text-white' : 'bg-muted text-muted-foreground'
+                    }`}
+                  >
+                    {concluido ? <Check size={18} /> : passo.numero}
+                  </span>
+                  <span className={`text-sm font-semibold ${concluido || atual ? 'text-primary' : 'text-muted-foreground'}`}>
+                    {passo.titulo}
+                  </span>
+                </span>
+                {index < PASSOS.length - 1 && (
+                  <span className={`h-1 w-10 rounded-full sm:w-16 ${step > 1 ? 'bg-primary' : 'bg-border'}`} />
+                )}
+              </li>
+            );
+          })}
+        </ol>
 
-        {/* Step 1: Dados da Clínica */}
+        {/* Passo 1: dados do negócio */}
         {step === 1 && (
-          <Card className="p-8 rounded-2xl shadow-lg" style={{ backgroundColor: 'white' }}>
-            <div className="flex items-center gap-3 mb-6">
-              <div className="w-12 h-12 rounded-full flex items-center justify-center" style={{ backgroundColor: '#F7F1EB' }}>
-                <Building2 size={24} style={{ color: '#2C7464' }} />
-              </div>
+          <Card className="animate-enter mt-8 p-6 sm:p-8">
+            <div className="flex items-center gap-3">
+              <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-accent text-primary">
+                <Building2 size={22} />
+              </span>
               <div>
-                <h2 className="text-xl font-semibold" style={{ color: '#2C7464' }}>
-                  Dados da Clínica
-                </h2>
-                <p className="text-sm text-gray-500">Informações básicas do seu negócio</p>
+                <h2 className="font-display text-lg font-bold text-ink">Dados do negócio</h2>
+                <p className="text-sm text-muted-foreground">Informações básicas usadas no atendimento</p>
               </div>
             </div>
 
-            <div className="space-y-4">
-              <div>
-                <Label className="text-sm font-medium" style={{ color: '#292726' }}>
-                  Nome da Clínica *
-                </Label>
+            <div className="mt-6 space-y-4">
+              <div className="space-y-1.5">
+                <Label htmlFor="clinica-nome">Nome do negócio *</Label>
                 <Input
+                  id="clinica-nome"
                   value={clinicaData.nome}
                   onChange={(e) => setClinicaData({ ...clinicaData, nome: e.target.value })}
-                  placeholder="Ex: Clínica Bem Estar"
-                  className="mt-1"
-                  style={{ backgroundColor: '#F7F1EB', borderColor: '#E5E0DA' }}
+                  placeholder="Ex.: Clínica Bem Estar"
+                  required
                 />
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <Label className="text-sm font-medium" style={{ color: '#292726' }}>
-                    Telefone
-                  </Label>
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                <div className="space-y-1.5">
+                  <Label htmlFor="clinica-telefone">Telefone</Label>
                   <Input
+                    id="clinica-telefone"
+                    type="tel"
+                    inputMode="tel"
                     value={clinicaData.telefone}
                     onChange={(e) => setClinicaData({ ...clinicaData, telefone: formatPhone(e.target.value) })}
                     placeholder="(00) 00000-0000"
                     maxLength={15}
-                    className="mt-1"
-                    style={{ backgroundColor: '#F7F1EB', borderColor: '#E5E0DA' }}
                   />
                 </div>
-                <div>
-                  <Label className="text-sm font-medium" style={{ color: '#292726' }}>
-                    E-mail
-                  </Label>
+                <div className="space-y-1.5">
+                  <Label htmlFor="clinica-email">E-mail</Label>
                   <Input
+                    id="clinica-email"
                     type="email"
                     value={clinicaData.email}
                     onChange={(e) => setClinicaData({ ...clinicaData, email: e.target.value })}
-                    className="mt-1"
-                    style={{ backgroundColor: '#F7F1EB', borderColor: '#E5E0DA' }}
                   />
                 </div>
               </div>
 
-              <div>
-                <Label className="text-sm font-medium" style={{ color: '#292726' }}>
-                  Endereço
-                </Label>
+              <div className="space-y-1.5">
+                <Label htmlFor="clinica-endereco">Endereço</Label>
                 <Input
+                  id="clinica-endereco"
                   value={clinicaData.endereco}
                   onChange={(e) => setClinicaData({ ...clinicaData, endereco: e.target.value })}
                   placeholder="Rua, número, bairro, cidade"
-                  className="mt-1"
-                  style={{ backgroundColor: '#F7F1EB', borderColor: '#E5E0DA' }}
                 />
               </div>
 
-              <div>
-                <Label className="text-sm font-medium" style={{ color: '#292726' }}>
-                  Descrição
-                </Label>
+              <div className="space-y-1.5">
+                <Label htmlFor="clinica-descricao">Descrição</Label>
                 <Textarea
+                  id="clinica-descricao"
                   value={clinicaData.descricao}
                   onChange={(e) => setClinicaData({ ...clinicaData, descricao: e.target.value })}
-                  placeholder="Breve descrição sobre a clínica..."
+                  placeholder="Breve descrição sobre o negócio..."
                   rows={3}
-                  className="mt-1"
-                  style={{ backgroundColor: '#F7F1EB', borderColor: '#E5E0DA' }}
                 />
+                <p className="field-hint">Ajuda a automação a se apresentar do jeito certo.</p>
               </div>
             </div>
 
-            <div className="flex justify-end mt-8">
-              <Button
-                onClick={handleStep1Submit}
-                disabled={saving}
-                className="flex items-center gap-2 px-6"
-                style={{ backgroundColor: '#2C7464', color: 'white' }}
-              >
+            <div className="mt-8 flex justify-end">
+              <Button onClick={handleStep1Submit} disabled={saving} size="lg">
                 {saving ? 'Salvando...' : 'Próximo'}
                 <ChevronRight size={18} />
               </Button>
@@ -292,51 +273,43 @@ const Onboarding = () => {
           </Card>
         )}
 
-        {/* Step 2: Horários de Atendimento */}
+        {/* Passo 2: horários de atendimento */}
         {step === 2 && (
-          <Card className="p-8 rounded-2xl shadow-lg" style={{ backgroundColor: 'white' }}>
-            <div className="flex items-center gap-3 mb-6">
-              <div className="w-12 h-12 rounded-full flex items-center justify-center" style={{ backgroundColor: '#F7F1EB' }}>
-                <Clock size={24} style={{ color: '#2C7464' }} />
-              </div>
+          <Card className="animate-enter mt-8 p-6 sm:p-8">
+            <div className="flex items-center gap-3">
+              <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-accent text-primary">
+                <Clock size={22} />
+              </span>
               <div>
-                <h2 className="text-xl font-semibold" style={{ color: '#2C7464' }}>
-                  Horário de Atendimento
-                </h2>
-                <p className="text-sm text-gray-500">Defina os horários de funcionamento</p>
+                <h2 className="font-display text-lg font-bold text-ink">Horário de atendimento</h2>
+                <p className="text-sm text-muted-foreground">Deixe em branco os dias em que você não atende</p>
               </div>
             </div>
 
-            <div className="space-y-4 max-h-[400px] overflow-y-auto pr-2">
+            <div className="mt-6 max-h-[420px] space-y-3 overflow-y-auto pr-1">
               {horarios.map((horario) => {
                 const dia = DIAS_SEMANA.find(d => d.value === horario.dia_semana);
                 return (
-                  <div 
-                    key={horario.dia_semana} 
-                    className="p-4 rounded-lg"
-                    style={{ backgroundColor: '#F7F1EB' }}
-                  >
-                    <div className="flex items-center justify-between mb-3">
-                      <span className="font-medium" style={{ color: '#292726' }}>
-                        {dia?.label}
-                      </span>
+                  <div key={horario.dia_semana} className="surface-muted p-4">
+                    <div className="mb-3 flex items-center justify-between gap-3">
+                      <span className="font-semibold text-ink">{dia?.label}</span>
                       <button
+                        type="button"
                         onClick={() => addTurno(horario.dia_semana)}
-                        className="text-sm flex items-center gap-1 hover:opacity-80"
-                        style={{ color: '#2C7464' }}
+                        className="flex items-center gap-1 rounded-lg px-2 py-1 text-sm font-semibold text-primary transition hover:bg-accent"
                       >
                         <Plus size={14} />
                         Adicionar turno
                       </button>
                     </div>
-                    
+
                     {horario.turnos.map((turno, turnoIndex) => (
-                      <div key={turnoIndex} className="flex items-center gap-3 mb-2">
-                        <Select 
-                          value={turno.hora_inicio} 
+                      <div key={turnoIndex} className="mb-2 flex flex-wrap items-center gap-2 sm:gap-3">
+                        <Select
+                          value={turno.hora_inicio}
                           onValueChange={(value) => updateTurno(horario.dia_semana, turnoIndex, 'hora_inicio', value)}
                         >
-                          <SelectTrigger className="w-28" style={{ backgroundColor: 'white', borderColor: '#E5E0DA' }}>
+                          <SelectTrigger className="w-28" aria-label={`Início — ${dia?.label}`}>
                             <SelectValue placeholder="Início" />
                           </SelectTrigger>
                           <SelectContent className="max-h-[200px]">
@@ -345,14 +318,14 @@ const Onboarding = () => {
                             ))}
                           </SelectContent>
                         </Select>
-                        
-                        <span className="text-gray-400">até</span>
-                        
-                        <Select 
-                          value={turno.hora_fim} 
+
+                        <span className="text-sm text-muted-foreground">até</span>
+
+                        <Select
+                          value={turno.hora_fim}
                           onValueChange={(value) => updateTurno(horario.dia_semana, turnoIndex, 'hora_fim', value)}
                         >
-                          <SelectTrigger className="w-28" style={{ backgroundColor: 'white', borderColor: '#E5E0DA' }}>
+                          <SelectTrigger className="w-28" aria-label={`Fim — ${dia?.label}`}>
                             <SelectValue placeholder="Fim" />
                           </SelectTrigger>
                           <SelectContent className="max-h-[200px]">
@@ -364,15 +337,17 @@ const Onboarding = () => {
 
                         {horario.turnos.length > 1 && (
                           <button
+                            type="button"
                             onClick={() => removeTurno(horario.dia_semana, turnoIndex)}
-                            className="p-1 rounded hover:bg-red-100"
+                            aria-label={`Remover turno de ${dia?.label}`}
+                            className="icon-action icon-action-danger"
                           >
-                            <Trash2 size={16} className="text-red-500" />
+                            <Trash2 size={16} />
                           </button>
                         )}
-                        
+
                         {!turno.hora_inicio && !turno.hora_fim && turnoIndex === 0 && (
-                          <span className="text-sm text-gray-400">Fechado</span>
+                          <span className="badge badge-neutral">Fechado</span>
                         )}
                       </div>
                     ))}
@@ -381,21 +356,12 @@ const Onboarding = () => {
               })}
             </div>
 
-            <div className="flex justify-between mt-8">
-              <Button
-                variant="outline"
-                onClick={() => setStep(1)}
-                className="flex items-center gap-2"
-              >
+            <div className="mt-8 flex justify-between gap-3">
+              <Button variant="outline" size="lg" onClick={() => setStep(1)}>
                 <ChevronLeft size={18} />
                 Voltar
               </Button>
-              <Button
-                onClick={handleStep2Submit}
-                disabled={saving}
-                className="flex items-center gap-2 px-6"
-                style={{ backgroundColor: '#2C7464', color: 'white' }}
-              >
+              <Button onClick={handleStep2Submit} disabled={saving} size="lg">
                 {saving ? 'Finalizando...' : 'Concluir'}
                 <Check size={18} />
               </Button>

@@ -8,6 +8,7 @@ import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
 import { Textarea } from '../components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
+import { EmptyState, Loading, PageHeader } from '../components/PageChrome';
 
 const HORAS = Array.from({ length: 24 }, (_, i) => {
   const hora = String(i).padStart(2, '0');
@@ -283,46 +284,37 @@ const Configuracoes = () => {
     { id: 'dados', label: 'Dados da Clínica', icon: Building2 },
     { id: 'automacao', label: 'Automação', icon: MessageSquare },
     { id: 'horarios', label: 'Horário de Atendimento', icon: Clock },
-    { id: 'historico', label: 'Histórico', icon: History },
+    { id: 'historico', label: 'Minha assinatura', icon: History },
   ];
 
   if (loading) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2" style={{ borderColor: '#2C7464' }} />
-      </div>
-    );
+    return <Loading label="Carregando configurações" className="h-64" />;
   }
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div>
-        <h1 className="text-4xl font-bold" style={{ color: '#2C7464', fontFamily: 'Playfair Display, serif' }}>
-          Configurações da Conta
-        </h1>
-        <p className="mt-2 text-base" style={{ color: '#292726' }}>
-          Personalize a plataforma para a sua clínica.
-        </p>
-      </div>
+    <div className="page-shell">
+      <PageHeader
+        title="Configurações"
+        description="Dados do negócio, horários, conexão do WhatsApp e histórico da conta."
+      />
 
-      {/* Tabs */}
-      <div className="flex gap-1 border-b" style={{ borderColor: '#E5E0DA' }}>
+      {/* Abas */}
+      <div className="flex gap-1 overflow-x-auto border-b border-border/70" role="tablist">
         {tabs.map(tab => {
           const Icon = tab.icon;
+          const ativa = activeTab === tab.id;
           return (
             <button
               key={tab.id}
+              type="button"
+              role="tab"
+              aria-selected={ativa}
               onClick={() => setActiveTab(tab.id)}
-              className={`flex items-center gap-2 px-4 py-3 text-sm font-medium transition-colors border-b-2 -mb-px ${
-                activeTab === tab.id
-                  ? 'border-current'
-                  : 'border-transparent hover:border-gray-300'
+              className={`-mb-px flex shrink-0 items-center gap-2 border-b-2 px-4 py-3 text-sm font-semibold transition ${
+                ativa
+                  ? 'border-primary text-primary'
+                  : 'border-transparent text-muted-foreground hover:border-border hover:text-foreground'
               }`}
-              style={{ 
-                color: activeTab === tab.id ? '#2C7464' : '#6B7280',
-                borderColor: activeTab === tab.id ? '#2C7464' : 'transparent'
-              }}
             >
               <Icon size={18} />
               {tab.label}
@@ -335,26 +327,26 @@ const Configuracoes = () => {
       <div className="mt-6">
         {/* Tab: Dados da Clínica */}
         {activeTab === 'dados' && (
-          <Card className="p-8 rounded-2xl shadow-lg" style={{ backgroundColor: 'white' }}>
-            <h2 className="text-xl font-semibold mb-6" style={{ color: '#2C7464' }}>
+          <Card className="p-6 sm:p-8">
+            <h2 className="mb-6 font-display text-lg font-bold text-ink">
               Dados Cadastrais
             </h2>
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
-                <Label className="text-sm font-medium" style={{ color: '#292726' }}>
+                <Label className="text-sm font-medium text-foreground">
                   Nome da Clínica
                 </Label>
                 <Input
                   value={clinicaData.nome || ''}
                   onChange={(e) => setClinicaData({ ...clinicaData, nome: e.target.value })}
                   className="mt-1"
-                  style={{ backgroundColor: '#F7F1EB', borderColor: '#E5E0DA' }}
+
                 />
               </div>
               
               <div>
-                <Label className="text-sm font-medium" style={{ color: '#292726' }}>
+                <Label className="text-sm font-medium text-foreground">
                   E-mail
                 </Label>
                 <Input
@@ -362,18 +354,18 @@ const Configuracoes = () => {
                   value={clinicaData.email || ''}
                   onChange={(e) => setClinicaData({ ...clinicaData, email: e.target.value })}
                   className="mt-1"
-                  style={{ backgroundColor: '#F7F1EB', borderColor: '#E5E0DA' }}
+
                 />
               </div>
             </div>
 
-            <h3 className="text-lg font-semibold mt-8 mb-4" style={{ color: '#2C7464' }}>
+            <h3 className="text-lg font-semibold mt-8 mb-4 text-primary">
               Contato
             </h3>
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
-                <Label className="text-sm font-medium" style={{ color: '#292726' }}>
+                <Label className="text-sm font-medium text-foreground">
                   Telefone Principal
                 </Label>
                 <Input
@@ -381,25 +373,25 @@ const Configuracoes = () => {
                   onChange={(e) => setClinicaData({ ...clinicaData, telefone: e.target.value })}
                   placeholder="(00) 00000-0000"
                   className="mt-1"
-                  style={{ backgroundColor: '#F7F1EB', borderColor: '#E5E0DA' }}
+
                 />
               </div>
               
               <div>
-                <Label className="text-sm font-medium" style={{ color: '#292726' }}>
+                <Label className="text-sm font-medium text-foreground">
                   Endereço
                 </Label>
                 <Input
                   value={clinicaData.endereco || ''}
                   onChange={(e) => setClinicaData({ ...clinicaData, endereco: e.target.value })}
                   className="mt-1"
-                  style={{ backgroundColor: '#F7F1EB', borderColor: '#E5E0DA' }}
+
                 />
               </div>
             </div>
 
             <div className="mt-6">
-              <Label className="text-sm font-medium" style={{ color: '#292726' }}>
+              <Label className="text-sm font-medium text-foreground">
                 Descrição
               </Label>
               <Textarea
@@ -407,7 +399,7 @@ const Configuracoes = () => {
                 onChange={(e) => setClinicaData({ ...clinicaData, descricao: e.target.value })}
                 rows={3}
                 className="mt-1"
-                style={{ backgroundColor: '#F7F1EB', borderColor: '#E5E0DA' }}
+
               />
             </div>
 
@@ -416,7 +408,6 @@ const Configuracoes = () => {
                 onClick={handleSaveClinica}
                 disabled={saving}
                 className="flex items-center gap-2"
-                style={{ backgroundColor: '#2C7464', color: 'white' }}
               >
                 <Save size={18} />
                 {saving ? 'Salvando...' : 'Salvar Alterações'}
@@ -429,9 +420,9 @@ const Configuracoes = () => {
         {activeTab === 'automacao' && (
           <div className="space-y-6">
             {/* Card WhatsApp */}
-            <Card className="p-8 rounded-2xl shadow-lg" style={{ backgroundColor: 'white' }}>
+            <Card className="p-6 sm:p-8">
               <div className="flex items-center justify-between mb-6">
-                <h2 className="text-xl font-semibold" style={{ color: '#2C7464' }}>
+                <h2 className="font-display text-lg font-bold text-ink">
                   Integração WhatsApp
                 </h2>
                 <div className="flex items-center gap-2">
@@ -441,7 +432,7 @@ const Configuracoes = () => {
                       {getStatusLabel(whatsappStatus.state)}
                     </span>
                   ) : (
-                    <span className="flex items-center gap-1 text-sm text-gray-500">
+                    <span className="flex items-center gap-1 text-sm text-muted-foreground">
                       <XCircle size={16} />
                       {getStatusLabel(whatsappStatus.state)}
                     </span>
@@ -450,7 +441,7 @@ const Configuracoes = () => {
               </div>
               
               {whatsappStatus.instance && (
-                <p className="text-xs text-gray-400 mb-4">
+                <p className="text-xs text-muted-foreground mb-4">
                   Instância: {whatsappStatus.instance}
                 </p>
               )}
@@ -463,23 +454,24 @@ const Configuracoes = () => {
                       alt="QR Code WhatsApp" 
                       className="w-64 h-64 mx-auto border rounded-lg"
                     />
-                    <p className="text-sm text-gray-500 mt-4">
+                    <p className="text-sm text-muted-foreground mt-4">
                       Escaneie o QR Code com seu WhatsApp
                     </p>
                   </div>
                 ) : (
                   <>
-                    <div 
-                      className="w-20 h-20 rounded-full flex items-center justify-center mb-4"
-                      style={{ backgroundColor: whatsappStatus.connected ? '#dcfce7' : '#F7F1EB' }}
+                    <div
+                      className={`mb-4 flex h-20 w-20 items-center justify-center rounded-full ${
+                        whatsappStatus.connected ? 'bg-primary/10' : 'bg-muted'
+                      }`}
                     >
                       {whatsappStatus.connected ? (
-                        <CheckCircle size={40} className="text-green-600" />
+                        <CheckCircle size={40} className="text-primary" />
                       ) : (
-                        <QrCode size={40} style={{ color: '#2C7464' }} />
+                        <QrCode size={40} className="text-primary" />
                       )}
                     </div>
-                    <p className="text-gray-500 mb-6 text-center">
+                    <p className="text-muted-foreground mb-6 text-center">
                       {whatsappStatus.connected 
                         ? 'WhatsApp conectado e pronto para enviar mensagens!' 
                         : 'Conecte seu WhatsApp para enviar lembretes automáticos'}
@@ -493,7 +485,6 @@ const Configuracoes = () => {
                       onClick={handleGenerateQRCode}
                       disabled={loadingWhatsapp}
                       className="flex items-center gap-2"
-                      style={{ backgroundColor: '#25D366', color: 'white' }}
                     >
                       {loadingWhatsapp ? <Loader2 size={18} className="animate-spin" /> : <QrCode size={18} />}
                       Gerar QR Code
@@ -526,13 +517,13 @@ const Configuracoes = () => {
             </Card>
 
             {/* Card Mensagens Modelo */}
-            <Card className="p-8 rounded-2xl shadow-lg" style={{ backgroundColor: 'white' }}>
-              <h2 className="text-xl font-semibold mb-6" style={{ color: '#2C7464' }}>
+            <Card className="p-6 sm:p-8">
+              <h2 className="mb-6 font-display text-lg font-bold text-ink">
                 Mensagens Modelo
               </h2>
               
               <div>
-                <Label className="text-sm font-medium" style={{ color: '#292726' }}>
+                <Label className="text-sm font-medium text-foreground">
                   Lembrete de Consulta
                 </Label>
                 <Textarea
@@ -540,10 +531,10 @@ const Configuracoes = () => {
                   onChange={(e) => setClinicaData({ ...clinicaData, mensagem_lembrete: e.target.value })}
                   rows={4}
                   className="mt-2"
-                  style={{ backgroundColor: '#F7F1EB', borderColor: '#E5E0DA' }}
+
                   placeholder="Use {nome}, {data} e {horario} como variáveis"
                 />
-                <p className="text-xs text-gray-500 mt-2">
+                <p className="text-xs text-muted-foreground mt-2">
                   Variáveis disponíveis: {'{nome}'}, {'{data}'}, {'{horario}'}, {'{profissional}'}, {'{procedimento}'}
                 </p>
               </div>
@@ -553,7 +544,6 @@ const Configuracoes = () => {
                   onClick={handleSaveClinica}
                   disabled={saving}
                   className="flex items-center gap-2"
-                  style={{ backgroundColor: '#2C7464', color: 'white' }}
                 >
                   <Save size={18} />
                   {saving ? 'Salvando...' : 'Salvar Mensagem'}
@@ -565,11 +555,11 @@ const Configuracoes = () => {
 
         {/* Tab: Horário de Atendimento */}
         {activeTab === 'horarios' && (
-          <Card className="p-8 rounded-2xl shadow-lg" style={{ backgroundColor: 'white' }}>
-            <h2 className="text-xl font-semibold mb-6" style={{ color: '#2C7464' }}>
+          <Card className="p-6 sm:p-8">
+            <h2 className="mb-6 font-display text-lg font-bold text-ink">
               Horário de Funcionamento
             </h2>
-            <p className="text-sm text-gray-500 mb-6">
+            <p className="text-sm text-muted-foreground mb-6">
               Defina os horários de funcionamento da clínica. A agenda respeitará esses limites.
               Você pode adicionar múltiplos turnos por dia (ex: manhã e tarde).
             </p>
@@ -581,16 +571,15 @@ const Configuracoes = () => {
                   <div 
                     key={horario.dia_semana} 
                     className="p-4 rounded-lg"
-                    style={{ backgroundColor: '#F7F1EB' }}
+                    className="bg-muted"
                   >
                     <div className="flex items-center justify-between mb-3">
-                      <span className="font-medium" style={{ color: '#292726' }}>
+                      <span className="font-medium text-foreground">
                         {dia?.label}
                       </span>
                       <button
                         onClick={() => addTurno(horario.dia_semana)}
-                        className="text-sm flex items-center gap-1 hover:opacity-80"
-                        style={{ color: '#2C7464' }}
+                        className="text-sm flex items-center gap-1 hover:opacity-80 text-primary"
                       >
                         <Plus size={14} />
                         Adicionar turno
@@ -603,7 +592,7 @@ const Configuracoes = () => {
                           value={turno.hora_inicio} 
                           onValueChange={(value) => updateTurno(horario.dia_semana, turnoIndex, 'hora_inicio', value)}
                         >
-                          <SelectTrigger className="w-28" style={{ backgroundColor: 'white', borderColor: '#E5E0DA' }}>
+                          <SelectTrigger className="w-28">
                             <SelectValue placeholder="Início" />
                           </SelectTrigger>
                           <SelectContent className="max-h-[200px]">
@@ -613,13 +602,13 @@ const Configuracoes = () => {
                           </SelectContent>
                         </Select>
                         
-                        <span className="text-gray-400">até</span>
+                        <span className="text-muted-foreground">até</span>
                         
                         <Select 
                           value={turno.hora_fim} 
                           onValueChange={(value) => updateTurno(horario.dia_semana, turnoIndex, 'hora_fim', value)}
                         >
-                          <SelectTrigger className="w-28" style={{ backgroundColor: 'white', borderColor: '#E5E0DA' }}>
+                          <SelectTrigger className="w-28">
                             <SelectValue placeholder="Fim" />
                           </SelectTrigger>
                           <SelectContent className="max-h-[200px]">
@@ -632,14 +621,14 @@ const Configuracoes = () => {
                         {horario.turnos.length > 1 && (
                           <button
                             onClick={() => removeTurno(horario.dia_semana, turnoIndex)}
-                            className="p-1 rounded hover:bg-red-100"
+                            className="p-1 rounded hover:bg-destructive/10"
                           >
-                            <Trash2 size={16} className="text-red-500" />
+                            <Trash2 size={16} className="text-destructive" />
                           </button>
                         )}
                         
                         {!turno.hora_inicio && !turno.hora_fim && turnoIndex === 0 && horario.turnos.length === 1 && (
-                          <span className="text-sm text-gray-400">Fechado</span>
+                          <span className="text-sm text-muted-foreground">Fechado</span>
                         )}
                       </div>
                     ))}
@@ -653,7 +642,6 @@ const Configuracoes = () => {
                 onClick={handleSaveHorarios}
                 disabled={saving}
                 className="flex items-center gap-2"
-                style={{ backgroundColor: '#2C7464', color: 'white' }}
               >
                 <Save size={18} />
                 {saving ? 'Salvando...' : 'Salvar Horários'}
@@ -664,30 +652,32 @@ const Configuracoes = () => {
 
         {/* Tab: Histórico */}
         {activeTab === 'historico' && (
-          <Card className="p-8 rounded-2xl shadow-lg" style={{ backgroundColor: 'white' }}>
-            <h2 className="text-xl font-semibold mb-6" style={{ color: '#2C7464' }}>
-              Histórico de Pagamentos
-            </h2>
+          <Card className="p-6 sm:p-8">
+            <h2 className="font-display text-lg font-bold text-ink">Minha assinatura</h2>
+            <p className="mb-6 mt-1 text-sm text-muted-foreground">
+              Cobranças da Agenda Magnética. Os pagamentos dos seus atendimentos ficam em Financeiro.
+            </p>
             
             {assinaturas.length === 0 ? (
-              <div className="text-center py-12">
-                <History size={48} className="mx-auto mb-4" style={{ color: '#E5E0DA' }} />
-                <p className="text-gray-500">Nenhum histórico de pagamento disponível</p>
-              </div>
+              <EmptyState
+                icon={History}
+                title="Nenhum pagamento registrado"
+                description="O histórico da sua assinatura aparecerá aqui quando houver cobrança."
+              />
             ) : (
               <div className="overflow-x-auto">
                 <table className="w-full">
                   <thead>
-                    <tr className="border-b" style={{ borderColor: '#E5E0DA' }}>
-                      <th className="text-left py-3 px-4 font-medium" style={{ color: '#6B7280' }}>Data</th>
-                      <th className="text-left py-3 px-4 font-medium" style={{ color: '#6B7280' }}>Plano</th>
-                      <th className="text-left py-3 px-4 font-medium" style={{ color: '#6B7280' }}>Valor</th>
-                      <th className="text-left py-3 px-4 font-medium" style={{ color: '#6B7280' }}>Status</th>
+                    <tr className="border-b">
+                      <th className="text-left py-3 px-4 font-medium text-muted-foreground">Data</th>
+                      <th className="text-left py-3 px-4 font-medium text-muted-foreground">Plano</th>
+                      <th className="text-left py-3 px-4 font-medium text-muted-foreground">Valor</th>
+                      <th className="text-left py-3 px-4 font-medium text-muted-foreground">Status</th>
                     </tr>
                   </thead>
                   <tbody>
                     {assinaturas.map((assinatura, index) => (
-                      <tr key={index} className="border-b" style={{ borderColor: '#E5E0DA' }}>
+                      <tr key={index} className="border-b">
                         <td className="py-3 px-4">{new Date(assinatura.started_at).toLocaleDateString('pt-BR')}</td>
                         <td className="py-3 px-4">{assinatura.plano?.nome}</td>
                         <td className="py-3 px-4">R$ {assinatura.plano?.preco?.toFixed(2)}</td>

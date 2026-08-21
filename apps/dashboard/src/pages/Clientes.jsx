@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import api from '../services/api';
 import { toast } from 'sonner';
-import { Plus, Edit, Trash2, Search, Phone, Mail } from 'lucide-react';
+import { Plus, Edit, Trash2, Search, Phone, Mail, Users } from 'lucide-react';
 import { formatPhone, unformatPhone } from '../utils/formatters';
 import { Card } from '../components/ui/card';
 import { Button } from '../components/ui/button';
@@ -10,6 +10,7 @@ import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
 import { Textarea } from '../components/ui/textarea';
+import { EmptyState, Loading, PageHeader } from '../components/PageChrome';
 
 const Clientes = () => {
   const [clientes, setClientes] = useState([]);
@@ -117,28 +118,16 @@ const Clientes = () => {
   };
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-4xl font-bold" style={{ color: '#2C7464', fontFamily: 'Playfair Display, serif' }}>
-            Clientes
-          </h1>
-          <p className="mt-2 text-base" style={{ color: '#292726' }}>
-            Gerencie seus clientes
-          </p>
-        </div>
-        <Dialog open={modalOpen} onOpenChange={setModalOpen}>
+    <div className="page-shell">
+      <Dialog open={modalOpen} onOpenChange={setModalOpen}>
+        <PageHeader title="Clientes" description="Quem você atende, com contato e histórico de interesses.">
           <DialogTrigger asChild>
-            <Button
-              data-testid="novo-cliente-button"
-              onClick={() => openModal()}
-              className="rounded-full px-6 py-6 text-white"
-              style={{ backgroundColor: '#2C7464' }}
-            >
-              <Plus className="w-5 h-5 mr-2" />
-              Novo Cliente
+            <Button data-testid="novo-cliente-button" onClick={() => openModal()} size="lg">
+              <Plus className="w-5 h-5" />
+              Novo cliente
             </Button>
           </DialogTrigger>
+        </PageHeader>
           <DialogContent className="max-w-2xl">
             <DialogHeader>
               <DialogTitle>{editingCliente ? 'Editar Cliente' : 'Novo Cliente'}</DialogTitle>
@@ -219,22 +208,17 @@ const Clientes = () => {
                 <Button type="button" variant="outline" onClick={() => setModalOpen(false)}>
                   Cancelar
                 </Button>
-                <Button
-                  type="submit"
-                  data-testid="submit-cliente"
-                  style={{ backgroundColor: '#2C7464', color: 'white' }}
-                >
+                <Button type="submit" data-testid="submit-cliente">
                   Salvar
                 </Button>
               </div>
             </form>
           </DialogContent>
-        </Dialog>
-      </div>
+      </Dialog>
 
       <div className="flex items-center space-x-4">
         <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5" style={{ color: '#2C7464' }} />
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-primary" />
           <Input
             data-testid="search-clientes"
             value={searchTerm}
@@ -246,30 +230,21 @@ const Clientes = () => {
       </div>
 
       {loading ? (
-        <div className="flex items-center justify-center py-12">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2" style={{ borderColor: '#2C7464' }} />
-        </div>
+        <Loading />
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {filteredClientes.map((cliente) => (
             <Card
               key={cliente.id}
               data-testid={`cliente-card-${cliente.id}`}
-              className="p-6 rounded-2xl shadow-lg"
-              style={{ backgroundColor: 'white' }}
+              className="p-6 transition hover:-translate-y-0.5 hover:border-primary/30"
             >
               <div className="flex items-start justify-between mb-4">
                 <div className="flex-1">
-                  <h3 className="text-lg font-bold" style={{ color: '#2C7464' }}>
+                  <h3 className="font-display text-lg font-bold text-ink">
                     {cliente.nome}
                   </h3>
-                  <span
-                    className="inline-block px-3 py-1 text-xs font-medium rounded-full mt-2"
-                    style={{
-                      backgroundColor: cliente.status === 'ativo' ? '#2C7464' : '#ccc',
-                      color: 'white'
-                    }}
-                  >
+                  <span className={`badge mt-2 ${cliente.status === 'ativo' ? 'badge-success' : 'badge-neutral'}`}>
                     {cliente.status}
                   </span>
                 </div>
@@ -277,37 +252,37 @@ const Clientes = () => {
                   <button
                     onClick={() => openModal(cliente)}
                     data-testid={`edit-cliente-${cliente.id}`}
-                    className="p-2 rounded-lg hover:bg-gray-100"
+                    className="icon-action"
                   >
-                    <Edit className="w-4 h-4" style={{ color: '#2C7464' }} />
+                    <Edit className="w-4 h-4" />
                   </button>
                   <button
                     onClick={() => handleDelete(cliente.id)}
                     data-testid={`delete-cliente-${cliente.id}`}
-                    className="p-2 rounded-lg hover:bg-gray-100"
+                    className="icon-action"
                   >
-                    <Trash2 className="w-4 h-4" style={{ color: '#FEA5A4' }} />
+                    <Trash2 className="w-4 h-4" />
                   </button>
                 </div>
               </div>
 
               <div className="space-y-2">
                 {cliente.telefone && (
-                  <div className="flex items-center text-sm" style={{ color: '#292726' }}>
-                    <Phone className="w-4 h-4 mr-2" style={{ color: '#2C7464' }} />
+                  <div className="flex items-center text-sm text-foreground">
+                    <Phone className="w-4 h-4 mr-2 text-primary" />
                     {formatPhone(cliente.telefone)}
                   </div>
                 )}
                 {cliente.email && (
-                  <div className="flex items-center text-sm" style={{ color: '#292726' }}>
-                    <Mail className="w-4 h-4 mr-2" style={{ color: '#2C7464' }} />
+                  <div className="flex items-center text-sm text-foreground">
+                    <Mail className="w-4 h-4 mr-2 text-primary" />
                     {cliente.email}
                   </div>
                 )}
               </div>
 
               {cliente.interesses && (
-                <p className="mt-4 text-sm" style={{ color: '#292726' }}>
+                <p className="mt-4 text-sm text-foreground">
                   <span className="font-medium">Interesses:</span> {cliente.interesses}
                 </p>
               )}
@@ -317,9 +292,17 @@ const Clientes = () => {
       )}
 
       {!loading && filteredClientes.length === 0 && (
-        <p className="text-center py-12" style={{ color: '#292726' }}>
-          Nenhum cliente encontrado
-        </p>
+        <Card>
+          <EmptyState
+            icon={Users}
+            title={searchTerm ? 'Nenhum cliente com esse nome' : 'Nenhum cliente cadastrado'}
+            description={
+              searchTerm
+                ? 'Tente outro termo de busca.'
+                : 'Cadastre quem você atende para que a agenda reconheça a pessoa na conversa.'
+            }
+          />
+        </Card>
       )}
     </div>
   );

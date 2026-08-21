@@ -8,6 +8,7 @@ import { Label } from '../components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
 import { format, parseISO, startOfMonth, endOfMonth } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import { Loading, PageHeader } from '../components/PageChrome';
 
 const ITEMS_PER_PAGE = 10;
 
@@ -91,22 +92,16 @@ const Pagamentos = () => {
 
   const totalValor = filteredConsultas.reduce((acc, c) => acc + (c.procedimento?.valor || 0), 0);
 
+  // Coral marca o que aguarda atenção; vermelho fica reservado a cancelamento.
   const getStatusBadge = (status) => {
     const styles = {
-      concluido: { bg: '#d1fae5', color: '#065f46', text: 'Pago' },
-      pendente: { bg: '#fef3c7', color: '#92400e', text: 'Pendente' },
-      cancelado: { bg: '#fee2e2', color: '#991b1b', text: 'Cancelado' }
+      concluido: { className: 'badge-success', text: 'Pago' },
+      pendente: { className: 'badge-attention', text: 'Pendente' },
+      cancelado: { className: 'badge-danger', text: 'Cancelado' }
     };
     const style = styles[status] || styles.pendente;
-    
-    return (
-      <span 
-        className="px-3 py-1 text-xs font-medium rounded-full"
-        style={{ backgroundColor: style.bg, color: style.color }}
-      >
-        {style.text}
-      </span>
-    );
+
+    return <span className={`badge ${style.className}`}>{style.text}</span>;
   };
 
   const formatDate = (intervalo) => {
@@ -133,7 +128,7 @@ const Pagamentos = () => {
         <meta charset="utf-8">
         <title>Recibo - Agenda Magnética</title>
         <style>
-          body { font-family: Arial, sans-serif; padding: 40px; color: #292726; }
+          body { font-family: Arial, sans-serif; padding: 40px; color: #292625; }
           .header { text-align: center; margin-bottom: 40px; border-bottom: 2px solid #2C7464; padding-bottom: 20px; }
           .header h1 { color: #2C7464; margin: 0; font-size: 28px; }
           .header p { color: #666; margin: 5px 0 0; }
@@ -141,12 +136,12 @@ const Pagamentos = () => {
           .info { margin: 20px 0; }
           .info-row { display: flex; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid #eee; }
           .info-label { font-weight: bold; color: #666; }
-          .info-value { color: #292726; }
+          .info-value { color: #292625; }
           .valor-total { background: #2C7464; color: white; padding: 20px; text-align: center; margin-top: 30px; border-radius: 8px; }
           .valor-total span { font-size: 28px; font-weight: bold; }
           .footer { text-align: center; margin-top: 50px; color: #999; font-size: 12px; }
           .assinatura { margin-top: 60px; text-align: center; }
-          .linha-assinatura { border-top: 1px solid #292726; width: 250px; margin: 0 auto; padding-top: 10px; }
+          .linha-assinatura { border-top: 1px solid #292625; width: 250px; margin: 0 auto; padding-top: 10px; }
         </style>
       </head>
       <body>
@@ -204,18 +199,14 @@ const Pagamentos = () => {
   };
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-4xl font-bold" style={{ color: '#2C7464', fontFamily: 'Playfair Display, serif' }}>
-          Pagamentos
-        </h1>
-        <p className="mt-2 text-base" style={{ color: '#292726' }}>
-          Controle financeiro dos serviços concluídos
-        </p>
-      </div>
+    <div className="page-shell">
+      <PageHeader
+        title="Financeiro"
+        description="Pagamentos recebidos pelos seus atendimentos. Não inclui a assinatura da Agenda Magnética."
+      />
 
-      <Card className="p-6 rounded-2xl shadow-lg" style={{ backgroundColor: 'white' }}>
-        <h2 className="text-lg font-semibold mb-4" style={{ color: '#2C7464' }}>Filtros</h2>
+      <Card className="p-6">
+        <h2 className="mb-4 font-display text-base font-bold text-ink">Filtros</h2>
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           <div>
             <Label>Data Início</Label>
@@ -227,7 +218,7 @@ const Pagamentos = () => {
                 setCurrentPage(1);
               }}
               className="rounded-xl"
-              style={{ borderColor: '#2C7464' }}
+
             />
           </div>
           <div>
@@ -240,7 +231,7 @@ const Pagamentos = () => {
                 setCurrentPage(1);
               }}
               className="rounded-xl"
-              style={{ borderColor: '#2C7464' }}
+
             />
           </div>
           <div>
@@ -252,7 +243,7 @@ const Pagamentos = () => {
                 setCurrentPage(1);
               }}
             >
-              <SelectTrigger className="rounded-xl" style={{ borderColor: '#2C7464' }}>
+              <SelectTrigger className="rounded-xl">
                 <SelectValue placeholder="Todos" />
               </SelectTrigger>
               <SelectContent>
@@ -272,7 +263,7 @@ const Pagamentos = () => {
                 setCurrentPage(1);
               }}
             >
-              <SelectTrigger className="rounded-xl" style={{ borderColor: '#2C7464' }}>
+              <SelectTrigger className="rounded-xl">
                 <SelectValue placeholder="Todos" />
               </SelectTrigger>
               <SelectContent>
@@ -286,62 +277,57 @@ const Pagamentos = () => {
         </div>
       </Card>
 
-      <Card className="rounded-2xl shadow-lg overflow-hidden" style={{ backgroundColor: 'white' }}>
+      <Card className="overflow-hidden">
         {loading ? (
-          <div className="flex items-center justify-center py-12">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2" style={{ borderColor: '#2C7464' }} />
-          </div>
+          <Loading />
         ) : (
           <>
             <div className="overflow-x-auto">
-              <table className="w-full">
+              <table className="table-soft">
+                <caption className="sr-only">Atendimentos concluídos no período filtrado</caption>
                 <thead>
-                  <tr style={{ backgroundColor: 'white' }}>
-                    <th className="px-6 py-4 text-left text-sm font-semibold" style={{ color: '#292726' }}>Data</th>
-                    <th className="px-6 py-4 text-left text-sm font-semibold" style={{ color: '#292726' }}>Descrição</th>
-                    <th className="px-6 py-4 text-left text-sm font-semibold" style={{ color: '#292726' }}>Valor</th>
-                    <th className="px-6 py-4 text-left text-sm font-semibold" style={{ color: '#292726' }}>Profissional</th>
-                    <th className="px-6 py-4 text-left text-sm font-semibold" style={{ color: '#292726' }}>Status</th>
-                    <th className="px-6 py-4 text-center text-sm font-semibold" style={{ color: '#292726' }}>Ações</th>
+                  <tr>
+                    <th scope="col">Data</th>
+                    <th scope="col">Descrição</th>
+                    <th scope="col">Valor</th>
+                    <th scope="col">Profissional</th>
+                    <th scope="col">Status</th>
+                    <th scope="col" className="text-center">Ações</th>
                   </tr>
                 </thead>
                 <tbody>
                   {paginatedConsultas.length === 0 ? (
                     <tr>
-                      <td colSpan={6} className="px-6 py-12 text-center" style={{ color: '#292726' }}>
-                        Nenhum registro encontrado
+                      <td colSpan={6} className="px-5 py-12 text-center text-muted-foreground">
+                        Nenhum registro no período selecionado.
                       </td>
                     </tr>
                   ) : (
                     paginatedConsultas.map((consulta) => (
-                      <tr key={consulta.id} className="border-t hover:bg-gray-50" style={{ borderColor: '#F7F1EB' }}>
-                        <td className="px-6 py-4 text-sm" style={{ color: '#292726' }}>
-                          {formatDate(consulta.intervalo)}
-                        </td>
-                        <td className="px-6 py-4">
-                          <p className="text-sm font-medium" style={{ color: '#292726' }}>
+                      <tr key={consulta.id}>
+                        <td className="whitespace-nowrap">{formatDate(consulta.intervalo)}</td>
+                        <td>
+                          <p className="font-medium text-ink">
                             {consulta.procedimento?.nome || 'Serviço'}
                           </p>
-                          <p className="text-xs" style={{ color: '#666' }}>
+                          <p className="text-xs text-muted-foreground">
                             Cliente: {consulta.cliente?.nome || '-'}
                           </p>
                         </td>
-                        <td className="px-6 py-4 text-sm font-semibold" style={{ color: '#2C7464' }}>
+                        <td className="whitespace-nowrap font-semibold text-primary">
                           R$ {(consulta.procedimento?.valor || 0).toFixed(2)}
                         </td>
-                        <td className="px-6 py-4 text-sm" style={{ color: '#292726' }}>
-                          {consulta.profissional?.nome || '-'}
-                        </td>
-                        <td className="px-6 py-4">
-                          {getStatusBadge(consulta.status)}
-                        </td>
-                        <td className="px-6 py-4 text-center">
+                        <td>{consulta.profissional?.nome || '-'}</td>
+                        <td>{getStatusBadge(consulta.status)}</td>
+                        <td className="text-center">
                           <button
+                            type="button"
                             onClick={() => gerarReciboPDF(consulta)}
-                            className="p-2 rounded-lg hover:bg-gray-100 transition-colors"
+                            className="icon-action"
+                            aria-label={`Baixar recibo de ${consulta.cliente?.nome || 'cliente'}`}
                             title="Baixar recibo"
                           >
-                            <Download className="w-4 h-4" style={{ color: '#2C7464' }} />
+                            <Download className="w-4 h-4" />
                           </button>
                         </td>
                       </tr>
@@ -351,33 +337,37 @@ const Pagamentos = () => {
               </table>
             </div>
 
-            <div className="px-6 py-4 border-t flex items-center justify-between" style={{ borderColor: '#F7F1EB' }}>
-              <p className="text-sm" style={{ color: '#292726' }}>
+            <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border/60 px-5 py-4">
+              <p className="text-sm text-muted-foreground">
                 Mostrando {((currentPage - 1) * ITEMS_PER_PAGE) + 1} a {Math.min(currentPage * ITEMS_PER_PAGE, filteredConsultas.length)} de {filteredConsultas.length} registros
-                <span className="ml-4 font-semibold" style={{ color: '#2C7464' }}>
+                <span className="ml-4 font-semibold text-primary">
                   Total: R$ {totalValor.toFixed(2)}
                 </span>
               </p>
-              <div className="flex items-center space-x-2">
+              <div className="flex items-center gap-2">
                 <button
+                  type="button"
                   onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
                   disabled={currentPage === 1}
-                  className="p-2 rounded-lg hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
+                  aria-label="Página anterior"
+                  className="icon-action disabled:cursor-not-allowed disabled:opacity-40"
                 >
-                  <ChevronLeft className="w-5 h-5" style={{ color: '#2C7464' }} />
+                  <ChevronLeft className="w-5 h-5" />
                 </button>
-                <span 
-                  className="px-4 py-2 rounded-lg text-white text-sm font-medium"
-                  style={{ backgroundColor: '#2C7464' }}
+                <span
+                  className="rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white"
+                  aria-current="page"
                 >
                   {currentPage}
                 </span>
                 <button
+                  type="button"
                   onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
                   disabled={currentPage >= totalPages}
-                  className="p-2 rounded-lg hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
+                  aria-label="Próxima página"
+                  className="icon-action disabled:cursor-not-allowed disabled:opacity-40"
                 >
-                  <ChevronRight className="w-5 h-5" style={{ color: '#2C7464' }} />
+                  <ChevronRight className="w-5 h-5" />
                 </button>
               </div>
             </div>

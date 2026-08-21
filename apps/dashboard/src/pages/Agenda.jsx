@@ -17,6 +17,7 @@ import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
 import { Textarea } from '../components/ui/textarea';
+import { Loading } from '../components/PageChrome';
 import { format, addDays, startOfWeek, endOfWeek, parseISO, isSameDay } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import {
@@ -51,18 +52,18 @@ const SortableAgendamento = ({ agendamento, onEdit, onDelete }) => {
     transition,
   };
 
+  // Coral marca atenção (pendente); verde marca sucesso. Vermelho fica só para erro.
   const getStatusColor = (status) => {
     switch (status) {
       case 'agendado':
-        return '#2C7464';
-      case 'pendente':
-        return '#FEA5A4';
+        return 'hsl(var(--am-green))';
       case 'cancelado':
-        return '#ccc';
+        return 'hsl(var(--muted-foreground))';
       case 'concluido':
-        return '#2C7464';
+        return 'hsl(var(--am-green-lum))';
+      case 'pendente':
       default:
-        return '#FEA5A4';
+        return 'hsl(var(--am-coral))';
     }
   };
 
@@ -82,16 +83,16 @@ const SortableAgendamento = ({ agendamento, onEdit, onDelete }) => {
     >
       <div className="flex items-start justify-between">
         <div className="flex-1">
-          <p className="font-medium" style={{ color: '#2C7464' }}>
+          <p className="font-medium text-primary">
             {agendamento.cliente?.nome || 'Cliente'}
           </p>
-          <p className="text-sm mt-1" style={{ color: '#292726' }}>
+          <p className="text-sm mt-1 text-foreground">
             {agendamento.procedimento?.nome || 'Procedimento'}
           </p>
-          <p className="text-xs mt-1" style={{ color: '#292726' }}>
+          <p className="text-xs mt-1 text-foreground">
             {agendamento.profissional?.nome || 'Profissional'}
           </p>
-          <div className="flex items-center mt-2 text-sm font-medium" style={{ color: '#2C7464' }}>
+          <div className="flex items-center mt-2 text-sm font-medium text-primary">
             <Clock className="w-4 h-4 mr-1" />
             {(() => {
               const intervalo = agendamento.intervalo || '';
@@ -110,9 +111,9 @@ const SortableAgendamento = ({ agendamento, onEdit, onDelete }) => {
               onEdit('consulta', agendamento);
             }}
             data-testid={`edit-agendamento-${agendamento.id}`}
-            className="p-2 rounded-lg hover:bg-gray-100"
+            className="p-2 rounded-lg hover:bg-accent"
           >
-            <Edit className="w-4 h-4" style={{ color: '#2C7464' }} />
+            <Edit className="w-4 h-4 text-primary" />
           </button>
           <button
             onClick={(e) => {
@@ -120,9 +121,9 @@ const SortableAgendamento = ({ agendamento, onEdit, onDelete }) => {
               onDelete(agendamento.id);
             }}
             data-testid={`delete-agendamento-${agendamento.id}`}
-            className="p-2 rounded-lg hover:bg-gray-100"
+            className="p-2 rounded-lg hover:bg-accent"
           >
-            <Trash2 className="w-4 h-4" style={{ color: '#FEA5A4' }} />
+            <Trash2 className="w-4 h-4 text-destructive" />
           </button>
         </div>
       </div>
@@ -329,24 +330,18 @@ const Agenda = () => {
   };
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
+    <div className="page-shell">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div>
-          <h1 className="text-4xl font-bold" style={{ color: '#2C7464', fontFamily: 'Playfair Display, serif' }}>
-            Agenda
-          </h1>
-          <p className="mt-2 text-base" style={{ color: '#292726' }}>
-            Gerencie seus agendamentos
-          </p>
+          <h1 className="page-title">Agenda</h1>
+          <p className="page-subtitle">Gerencie seus agendamentos</p>
         </div>
         <Dialog open={modalOpen} onOpenChange={setModalOpen}>
           <DialogTrigger asChild>
             <Button
               data-testid="nova-marcacao-button"
               onClick={() => openModal('consulta')}
-              className="rounded-full px-6 py-6 text-white"
-              style={{ backgroundColor: '#2C7464' }}
+              size="lg"
             >
               <Plus className="w-5 h-5 mr-2" />
               Nova Marca\u00e7\u00e3o
@@ -524,11 +519,7 @@ const Agenda = () => {
                 >
                   Cancelar
                 </Button>
-                <Button
-                  type="submit"
-                  data-testid="submit-agendamento"
-                  style={{ backgroundColor: '#2C7464', color: 'white' }}
-                >
+                <Button type="submit" data-testid="submit-agendamento">
                   Salvar
                 </Button>
               </div>
@@ -538,26 +529,26 @@ const Agenda = () => {
       </div>
 
       {/* Calend\u00e1rio Semanal */}
-      <Card className="p-6 rounded-2xl shadow-lg" style={{ backgroundColor: 'white' }}>
+      <Card className="p-6">
         <div className="flex items-center justify-between mb-6">
           <button
             onClick={() => setSelectedDate(addDays(selectedDate, -7))}
             data-testid="previous-week-button"
-            className="p-2 rounded-lg hover:bg-gray-100"
+            className="p-2 rounded-lg hover:bg-accent"
           >
-            <ChevronLeft className="w-5 h-5" style={{ color: '#2C7464' }} />
+            <ChevronLeft className="w-5 h-5 text-primary" />
           </button>
           
-          <h2 className="text-xl font-bold" style={{ color: '#2C7464' }}>
+          <h2 className="font-display text-lg font-bold text-ink">
             {format(selectedDate, "MMMM 'de' yyyy", { locale: ptBR })}
           </h2>
           
           <button
             onClick={() => setSelectedDate(addDays(selectedDate, 7))}
             data-testid="next-week-button"
-            className="p-2 rounded-lg hover:bg-gray-100"
+            className="p-2 rounded-lg hover:bg-accent"
           >
-            <ChevronRight className="w-5 h-5" style={{ color: '#2C7464' }} />
+            <ChevronRight className="w-5 h-5 text-primary" />
           </button>
         </div>
 
@@ -569,13 +560,10 @@ const Agenda = () => {
                 key={day.toString()}
                 onClick={() => setSelectedDate(day)}
                 data-testid={`day-${format(day, 'yyyy-MM-dd')}`}
-                className={`p-4 rounded-xl text-center transition-all ${
-                  isSelected ? 'shadow-md' : 'hover:bg-gray-100'
+                aria-pressed={isSelected}
+                className={`rounded-xl p-4 text-center transition ${
+                  isSelected ? 'bg-primary text-white shadow-sm' : 'text-foreground/75 hover:bg-accent'
                 }`}
-                style={{
-                  backgroundColor: isSelected ? '#2C7464' : 'transparent',
-                  color: isSelected ? 'white' : '#292726'
-                }}
               >
                 <p className="text-xs font-medium uppercase">
                   {format(day, 'EEE', { locale: ptBR })}
@@ -590,27 +578,25 @@ const Agenda = () => {
       </Card>
 
       {/* Lista de Agendamentos */}
-      <Card className="p-6 rounded-2xl shadow-lg" style={{ backgroundColor: 'white' }}>
+      <Card className="p-6">
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-xl font-bold" style={{ color: '#2C7464' }}>
+          <h2 className="font-display text-lg font-bold text-ink">
             Agendamentos do Dia
           </h2>
           <button
+            type="button"
             onClick={() => openModal('bloqueio')}
             data-testid="bloquear-horario-button"
-            className="px-4 py-2 text-sm rounded-full"
-            style={{ backgroundColor: '#FEA5A4', color: 'white' }}
+            className="rounded-full bg-coral-soft px-4 py-2 text-sm font-semibold text-coral-deep transition hover:bg-coral/30"
           >
             Bloquear Hor\u00e1rio
           </button>
         </div>
 
         {loading ? (
-          <div className="flex items-center justify-center py-12">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2" style={{ borderColor: '#2C7464' }} />
-          </div>
+          <Loading />
         ) : consultas.length === 0 ? (
-          <p className="text-center py-12" style={{ color: '#292726' }}>
+          <p className="text-center py-12 text-foreground">
             Nenhum agendamento para este dia
           </p>
         ) : (

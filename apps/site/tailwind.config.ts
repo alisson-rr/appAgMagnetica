@@ -4,19 +4,7 @@ export default {
 	darkMode: ["class"],
 	content: [
 		"./index.html",
-		"./pages/**/*.{ts,tsx}",
-		"./components/**/*.{ts,tsx}",
-		"./app/**/*.{ts,tsx}",
 		"./src/**/*.{ts,tsx}",
-	],
-	safelist: [
-		"animate-fade-in",
-		"animate-fade-up",
-		"animate-pulse-soft",
-		"delay-100",
-		"delay-150",
-		"delay-200",
-		"delay-300",
 	],
 	prefix: "",
 	theme: {
@@ -24,22 +12,29 @@ export default {
 			center: true,
 			padding: '1.5rem',
 			screens: {
-				'2xl': '1200px'
+				'2xl': '1240px'
 			}
 		},
-			extend: {
+		extend: {
 			colors: {
-				ink: '#292726',
-				coral: '#FEA5A4',
-				'coral-dark': '#9B5354',
-				'coral-soft': '#F8DFDC',
+				/* Marca — os valores vivem em src/index.css (:root) */
+				ink: 'hsl(var(--am-ink) / <alpha-value>)',
+				cream: 'hsl(var(--am-cream) / <alpha-value>)',
+				coral: 'hsl(var(--am-coral) / <alpha-value>)',
+				'coral-deep': 'hsl(var(--am-coral-deep) / <alpha-value>)',
+				'coral-soft': 'hsl(var(--am-coral-soft) / <alpha-value>)',
+				apricot: 'hsl(var(--am-apricot) / <alpha-value>)',
+				'green-lum': 'hsl(var(--am-green-lum) / <alpha-value>)',
+				'green-deep': 'hsl(var(--am-green-deep) / <alpha-value>)',
+				'green-dark': 'hsl(var(--am-green-dark) / <alpha-value>)',
+
 				border: 'hsl(var(--border))',
 				input: 'hsl(var(--input))',
 				ring: 'hsl(var(--ring))',
 				background: 'hsl(var(--background))',
 				foreground: 'hsl(var(--foreground))',
 				primary: {
-					DEFAULT: 'hsl(var(--primary))',
+					DEFAULT: 'hsl(var(--primary) / <alpha-value>)',
 					foreground: 'hsl(var(--primary-foreground))'
 				},
 				secondary: {
@@ -65,54 +60,21 @@ export default {
 				card: {
 					DEFAULT: 'hsl(var(--card))',
 					foreground: 'hsl(var(--card-foreground))'
-				},
-				sidebar: {
-					DEFAULT: 'hsl(var(--sidebar-background))',
-					foreground: 'hsl(var(--sidebar-foreground))',
-					primary: 'hsl(var(--sidebar-primary))',
-					'primary-foreground': 'hsl(var(--sidebar-primary-foreground))',
-					accent: 'hsl(var(--sidebar-accent))',
-					'accent-foreground': 'hsl(var(--sidebar-accent-foreground))',
-					border: 'hsl(var(--sidebar-border))',
-					ring: 'hsl(var(--sidebar-ring))'
 				}
 			},
 			borderRadius: {
 				lg: 'var(--radius)',
-				md: 'calc(var(--radius) - 2px)',
-				sm: 'calc(var(--radius) - 4px)'
+				md: 'calc(var(--radius) - 4px)',
+				sm: 'calc(var(--radius) - 8px)'
 			},
 			fontFamily: {
-				display: ['Red Hat Display', 'sans-serif'],
-				body: ['Montserrat', 'sans-serif'],
+				display: ['Red Hat Display', 'system-ui', 'sans-serif'],
+				body: ['Montserrat', 'system-ui', 'sans-serif'],
 			},
-			keyframes: {
-				'accordion-down': {
-					from: {
-						height: '0'
-					},
-					to: {
-						height: 'var(--radix-accordion-content-height)'
-					}
-				},
-				'accordion-up': {
-					from: {
-						height: 'var(--radix-accordion-content-height)'
-					},
-					to: {
-						height: '0'
-					}
-				},
-				'pulse-soft': {
-					'0%, 100%': { transform: 'scale(1)' },
-					'50%': { transform: 'scale(1.02)' }
-				}
+			boxShadow: {
+				soft: 'var(--shadow-soft)',
+				card: 'var(--shadow-card)',
 			},
-			animation: {
-				'accordion-down': 'accordion-down 0.2s ease-out',
-				'accordion-up': 'accordion-up 0.2s ease-out',
-				'pulse-soft': 'pulse-soft 2s ease-in-out infinite'
-			}
 		}
 	},
 	plugins: [],

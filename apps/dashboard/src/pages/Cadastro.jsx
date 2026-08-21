@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, useSearchParams, Link } from 'react-router-dom';
 import api from '../services/api';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
@@ -7,7 +7,36 @@ import { Label } from '../components/ui/label';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../components/ui/dialog';
 import { Checkbox } from '../components/ui/checkbox';
 import { toast } from 'sonner';
-import { Eye, EyeOff } from 'lucide-react';
+import { CheckCircle2, Eye, EyeOff, Sparkles } from 'lucide-react';
+import { politicaPrivacidade, termosDeUso } from '../data/legal';
+import { encontrarPlano } from '../data/planos';
+
+const vantagens = [
+  '7 dias de teste antes de qualquer cobrança',
+  'Configure seus serviços, horários e profissionais',
+  'Conecte o WhatsApp quando quiser começar',
+];
+
+const LegalDialog = ({ documento, open, onOpenChange }) => (
+  <Dialog open={open} onOpenChange={onOpenChange}>
+    <DialogContent className="max-h-[80vh] max-w-2xl overflow-y-auto">
+      <DialogHeader>
+        <DialogTitle className="font-display text-xl text-primary">{documento.titulo}</DialogTitle>
+      </DialogHeader>
+      <div className="space-y-5">
+        {documento.secoes.map((secao) => (
+          <section key={secao.titulo}>
+            <h3 className="font-display text-base font-bold text-ink">{secao.titulo}</h3>
+            <p className="mt-1.5 text-sm leading-relaxed text-muted-foreground">{secao.texto}</p>
+          </section>
+        ))}
+      </div>
+      <div className="flex justify-end">
+        <Button onClick={() => onOpenChange(false)}>Fechar</Button>
+      </div>
+    </DialogContent>
+  </Dialog>
+);
 
 const Cadastro = () => {
   const [formData, setFormData] = useState({
@@ -22,11 +51,15 @@ const Cadastro = () => {
   const [loading, setLoading] = useState(false);
   const [modalTermos, setModalTermos] = useState(false);
   const [modalPrivacidade, setModalPrivacidade] = useState(false);
+  const [searchParams] = useSearchParams();
   const navigate = useNavigate();
+
+  // Plano indicado pela landing page. Valor desconhecido é simplesmente ignorado.
+  const planoEscolhido = encontrarPlano(searchParams.get('plano'));
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
+
     if (!formData.nome.trim()) {
       toast.error('Por favor, informe seu nome');
       return;
@@ -60,7 +93,7 @@ const Cadastro = () => {
         email: formData.email,
         senha: formData.senha
       });
-      
+
       toast.success('Cadastro realizado com sucesso! Você tem 7 dias de teste grátis.');
       navigate('/login');
     } catch (error) {
@@ -72,292 +105,170 @@ const Cadastro = () => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: '#F7F1EB' }}>
-      <div className="w-full max-w-md p-8 space-y-6">
-        <div className="flex justify-center">
-          <img src="/assets/logo.png" alt="Agenda Magnética" className="h-24" />
-        </div>
+    <div className="grid min-h-screen bg-background lg:grid-cols-[1fr_1.05fr]">
+      <main className="order-2 flex items-center justify-center px-5 py-12 lg:order-1">
+        <div className="w-full max-w-md">
+          <img src="/assets/logo.png" alt="Agenda Magnética" className="mx-auto h-16 lg:hidden" />
 
-        <div className="text-center">
-          <h2 className="text-3xl font-bold" style={{ color: '#2C7464', fontFamily: 'Playfair Display, serif' }}>
-            Crie sua conta
-          </h2>
-          <p className="mt-2 text-base" style={{ color: '#292726' }}>
-            Preencha os dados abaixo para começar
-          </p>
-        </div>
-
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <Label htmlFor="nome" style={{ color: '#292726' }}>Nome completo</Label>
-            <Input
-              id="nome"
-              type="text"
-              value={formData.nome}
-              onChange={(e) => setFormData({ ...formData, nome: e.target.value })}
-              required
-              className="mt-1"
-              style={{ 
-                backgroundColor: 'white',
-                borderColor: '#2C7464',
-                color: '#292726'
-              }}
-              placeholder="Seu nome"
-            />
+          <div className="mt-8 text-center lg:mt-0 lg:text-left">
+            <h1 className="font-display text-3xl font-bold text-ink">Crie sua conta</h1>
+            <p className="mt-2 text-muted-foreground">São 7 dias de teste antes de qualquer cobrança.</p>
           </div>
 
-          <div>
-            <Label htmlFor="email" style={{ color: '#292726' }}>E-mail</Label>
-            <Input
-              id="email"
-              type="email"
-              value={formData.email}
-              onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-              required
-              className="mt-1"
-              style={{ 
-                backgroundColor: 'white',
-                borderColor: '#2C7464',
-                color: '#292726'
-              }}
-              placeholder="seu@email.com"
-            />
-          </div>
+          {planoEscolhido && (
+            <p className="mt-5 flex items-center gap-2 rounded-2xl bg-accent px-4 py-3 text-sm font-semibold text-green-deep">
+              <Sparkles className="h-4 w-4 shrink-0 text-primary" />
+              Plano escolhido: {planoEscolhido.nome}
+            </p>
+          )}
 
-          <div>
-            <Label htmlFor="senha" style={{ color: '#292726' }}>Senha</Label>
-            <div className="relative mt-1">
+          <form onSubmit={handleSubmit} className="mt-6 space-y-4">
+            <div className="space-y-1.5">
+              <Label htmlFor="nome">Nome completo</Label>
               <Input
-                id="senha"
-                type={showPassword ? 'text' : 'password'}
-                value={formData.senha}
-                onChange={(e) => setFormData({ ...formData, senha: e.target.value })}
+                id="nome"
+                type="text"
+                autoComplete="name"
+                value={formData.nome}
+                onChange={(e) => setFormData({ ...formData, nome: e.target.value })}
                 required
-                style={{ 
-                  backgroundColor: 'white',
-                  borderColor: '#2C7464',
-                  color: '#292726',
-                  paddingRight: '40px'
-                }}
-                placeholder="Mínimo 6 caracteres"
+                placeholder="Seu nome"
               />
-              <button
-                type="button"
-                onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-3 top-1/2 -translate-y-1/2"
-                style={{ color: '#2C7464' }}
-              >
-                {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
-              </button>
             </div>
-          </div>
 
-          <div>
-            <Label htmlFor="confirmarSenha" style={{ color: '#292726' }}>Confirmar senha</Label>
-            <div className="relative mt-1">
+            <div className="space-y-1.5">
+              <Label htmlFor="email">E-mail</Label>
               <Input
-                id="confirmarSenha"
-                type={showConfirmPassword ? 'text' : 'password'}
-                value={formData.confirmarSenha}
-                onChange={(e) => setFormData({ ...formData, confirmarSenha: e.target.value })}
+                id="email"
+                type="email"
+                autoComplete="email"
+                value={formData.email}
+                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                 required
-                style={{ 
-                  backgroundColor: 'white',
-                  borderColor: '#2C7464',
-                  color: '#292726',
-                  paddingRight: '40px'
-                }}
-                placeholder="Repita a senha"
+                placeholder="seu@email.com"
               />
-              <button
-                type="button"
-                onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                className="absolute right-3 top-1/2 -translate-y-1/2"
-                style={{ color: '#2C7464' }}
-              >
-                {showConfirmPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
-              </button>
             </div>
-          </div>
 
-          <div className="flex items-start space-x-3 pt-2">
-            <Checkbox
-              id="termos"
-              checked={aceitouTermos}
-              onCheckedChange={setAceitouTermos}
-              className="mt-1"
-              style={{ borderColor: '#2C7464' }}
-            />
-            <label htmlFor="termos" className="text-sm" style={{ color: '#292726' }}>
-              Li e aceito os{' '}
-              <button
-                type="button"
-                onClick={() => setModalTermos(true)}
-                className="font-medium hover:underline"
-                style={{ color: '#2C7464' }}
-              >
-                Termos de Uso
-              </button>
-              {' '}e a{' '}
-              <button
-                type="button"
-                onClick={() => setModalPrivacidade(true)}
-                className="font-medium hover:underline"
-                style={{ color: '#2C7464' }}
-              >
-                Política de Privacidade
-              </button>
-            </label>
-          </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="senha">Senha</Label>
+              <div className="relative">
+                <Input
+                  id="senha"
+                  type={showPassword ? 'text' : 'password'}
+                  autoComplete="new-password"
+                  value={formData.senha}
+                  onChange={(e) => setFormData({ ...formData, senha: e.target.value })}
+                  required
+                  placeholder="Mínimo 6 caracteres"
+                  className="pr-12"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  aria-label={showPassword ? 'Ocultar senha' : 'Mostrar senha'}
+                  className="absolute right-1.5 top-1/2 -translate-y-1/2 rounded-lg p-2 text-muted-foreground transition hover:text-primary"
+                >
+                  {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                </button>
+              </div>
+            </div>
 
-          <Button
-            type="submit"
-            disabled={loading || !aceitouTermos}
-            className="w-full py-6 text-base font-medium text-white transition-all rounded-full disabled:opacity-50"
-            style={{ backgroundColor: '#2C7464' }}
-          >
-            {loading ? 'Cadastrando...' : 'Criar conta'}
-          </Button>
+            <div className="space-y-1.5">
+              <Label htmlFor="confirmarSenha">Confirmar senha</Label>
+              <div className="relative">
+                <Input
+                  id="confirmarSenha"
+                  type={showConfirmPassword ? 'text' : 'password'}
+                  autoComplete="new-password"
+                  value={formData.confirmarSenha}
+                  onChange={(e) => setFormData({ ...formData, confirmarSenha: e.target.value })}
+                  required
+                  placeholder="Repita a senha"
+                  className="pr-12"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                  aria-label={showConfirmPassword ? 'Ocultar senha' : 'Mostrar senha'}
+                  className="absolute right-1.5 top-1/2 -translate-y-1/2 rounded-lg p-2 text-muted-foreground transition hover:text-primary"
+                >
+                  {showConfirmPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                </button>
+              </div>
+            </div>
 
-          <div className="text-center">
-            <p className="text-sm" style={{ color: '#292726' }}>
+            <div className="flex items-start gap-3 pt-1">
+              <Checkbox
+                id="termos"
+                checked={aceitouTermos}
+                onCheckedChange={setAceitouTermos}
+                className="mt-0.5"
+              />
+              <label htmlFor="termos" className="text-sm leading-relaxed text-muted-foreground">
+                Li e aceito os{' '}
+                <button
+                  type="button"
+                  onClick={() => setModalTermos(true)}
+                  className="font-semibold text-primary hover:underline"
+                >
+                  Termos de Uso
+                </button>
+                {' '}e a{' '}
+                <button
+                  type="button"
+                  onClick={() => setModalPrivacidade(true)}
+                  className="font-semibold text-primary hover:underline"
+                >
+                  Política de Privacidade
+                </button>
+              </label>
+            </div>
+
+            <Button type="submit" size="lg" disabled={loading || !aceitouTermos} className="w-full">
+              {loading ? 'Cadastrando...' : 'Criar conta'}
+            </Button>
+
+            <p className="text-center text-sm text-muted-foreground">
               Já tem uma conta?{' '}
-              <Link
-                to="/login"
-                className="font-medium hover:underline"
-                style={{ color: '#2C7464' }}
-              >
+              <Link to="/login" className="font-semibold text-primary hover:underline">
                 Faça login
               </Link>
             </p>
-          </div>
-        </form>
-      </div>
+          </form>
+        </div>
+      </main>
 
-      <Dialog open={modalTermos} onOpenChange={setModalTermos}>
-        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle style={{ color: '#2C7464' }}>Termos de Uso</DialogTitle>
-          </DialogHeader>
-          <div className="prose prose-sm" style={{ color: '#292726' }}>
-            <h3>1. Aceitação dos Termos</h3>
-            <p>
-              Ao acessar e utilizar o sistema Agenda Magnética, você concorda em cumprir e estar 
-              vinculado aos seguintes termos e condições de uso. Se você não concordar com qualquer 
-              parte destes termos, não deverá utilizar nosso serviço.
-            </p>
-            
-            <h3>2. Descrição do Serviço</h3>
-            <p>
-              O Agenda Magnética é um sistema de gestão de agendamentos para clínicas e profissionais 
-              de saúde e beleza. O serviço permite o gerenciamento de consultas, clientes, profissionais 
-              e procedimentos.
-            </p>
-            
-            <h3>3. Responsabilidades do Usuário</h3>
-            <p>
-              O usuário é responsável por manter a confidencialidade de sua conta e senha, bem como 
-              por todas as atividades realizadas em sua conta. O usuário concorda em notificar 
-              imediatamente sobre qualquer uso não autorizado de sua conta.
-            </p>
-            
-            <h3>4. Uso Adequado</h3>
-            <p>
-              O usuário concorda em utilizar o serviço apenas para fins legais e de acordo com 
-              estes termos. É proibido o uso do sistema para atividades ilegais ou não autorizadas.
-            </p>
-            
-            <h3>5. Modificações</h3>
-            <p>
-              Reservamo-nos o direito de modificar estes termos a qualquer momento. As alterações 
-              entrarão em vigor imediatamente após a publicação. O uso continuado do serviço após 
-              tais modificações constitui aceitação dos novos termos.
-            </p>
-            
-            <h3>6. Limitação de Responsabilidade</h3>
-            <p>
-              O Agenda Magnética não será responsável por quaisquer danos diretos, indiretos, 
-              incidentais ou consequenciais decorrentes do uso ou incapacidade de uso do serviço.
-            </p>
-          </div>
-          <div className="flex justify-end mt-4">
-            <Button
-              onClick={() => setModalTermos(false)}
-              style={{ backgroundColor: '#2C7464', color: 'white' }}
-            >
-              Fechar
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
+      {/* Painel da marca */}
+      <aside
+        className="relative order-1 flex flex-col justify-between overflow-hidden p-8 text-white lg:order-2 lg:p-12"
+        style={{ background: 'var(--gradient-sidebar)' }}
+      >
+        <span className="pointer-events-none absolute -right-24 top-0 h-80 w-80 rounded-full bg-coral/25 blur-3xl" />
+        <span className="pointer-events-none absolute -left-20 bottom-0 h-80 w-80 rounded-full bg-apricot/20 blur-3xl" />
 
-      <Dialog open={modalPrivacidade} onOpenChange={setModalPrivacidade}>
-        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle style={{ color: '#2C7464' }}>Política de Privacidade</DialogTitle>
-          </DialogHeader>
-          <div className="prose prose-sm" style={{ color: '#292726' }}>
-            <h3>1. Coleta de Informações</h3>
-            <p>
-              Coletamos informações que você nos fornece diretamente, como nome, e-mail e outros 
-              dados necessários para a prestação do serviço. Também podemos coletar informações 
-              automaticamente sobre seu uso do sistema.
-            </p>
-            
-            <h3>2. Uso das Informações</h3>
-            <p>
-              Utilizamos as informações coletadas para:
-            </p>
-            <ul>
-              <li>Fornecer e manter nosso serviço</li>
-              <li>Notificá-lo sobre alterações em nosso serviço</li>
-              <li>Permitir a participação em recursos interativos</li>
-              <li>Fornecer suporte ao cliente</li>
-              <li>Monitorar o uso do serviço</li>
-            </ul>
-            
-            <h3>3. Proteção de Dados</h3>
-            <p>
-              Implementamos medidas de segurança técnicas e organizacionais apropriadas para 
-              proteger suas informações pessoais contra acesso não autorizado, alteração, 
-              divulgação ou destruição.
-            </p>
-            
-            <h3>4. Compartilhamento de Informações</h3>
-            <p>
-              Não vendemos, comercializamos ou transferimos suas informações pessoais para 
-              terceiros, exceto quando necessário para fornecer o serviço ou quando exigido por lei.
-            </p>
-            
-            <h3>5. Seus Direitos</h3>
-            <p>
-              Você tem o direito de acessar, corrigir ou excluir suas informações pessoais. 
-              Para exercer esses direitos, entre em contato conosco através dos canais disponíveis.
-            </p>
-            
-            <h3>6. Cookies</h3>
-            <p>
-              Utilizamos cookies e tecnologias similares para melhorar sua experiência em nosso 
-              sistema. Você pode configurar seu navegador para recusar cookies, mas isso pode 
-              afetar a funcionalidade do serviço.
-            </p>
-            
-            <h3>7. Alterações nesta Política</h3>
-            <p>
-              Podemos atualizar nossa Política de Privacidade periodicamente. Notificaremos sobre 
-              quaisquer alterações publicando a nova política nesta página.
-            </p>
-          </div>
-          <div className="flex justify-end mt-4">
-            <Button
-              onClick={() => setModalPrivacidade(false)}
-              style={{ backgroundColor: '#2C7464', color: 'white' }}
-            >
-              Fechar
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
+        <img src="/assets/logo.png" alt="Agenda Magnética" className="relative hidden h-14 w-auto self-start lg:block" />
+
+        <div className="relative max-w-md">
+          <h2 className="font-display text-2xl font-bold leading-tight lg:text-4xl">
+            Comece hoje e veja sua agenda se organizar sozinha.
+          </h2>
+          <ul className="mt-6 space-y-3 lg:mt-8">
+            {vantagens.map((vantagem) => (
+              <li key={vantagem} className="flex items-center gap-3 rounded-2xl bg-white/10 p-3.5 text-sm">
+                <CheckCircle2 className="h-5 w-5 shrink-0 text-apricot" />
+                {vantagem}
+              </li>
+            ))}
+          </ul>
+        </div>
+
+        <p className="relative hidden text-xs text-white/70 lg:block">
+          Você mantém o controle do que a automação pode e não pode fazer.
+        </p>
+      </aside>
+
+      <LegalDialog documento={termosDeUso} open={modalTermos} onOpenChange={setModalTermos} />
+      <LegalDialog documento={politicaPrivacidade} open={modalPrivacidade} onOpenChange={setModalPrivacidade} />
     </div>
   );
 };

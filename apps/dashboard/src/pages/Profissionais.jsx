@@ -11,6 +11,7 @@ import { Label } from '../components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
 import { Textarea } from '../components/ui/textarea';
 import { Switch } from '../components/ui/switch';
+import { EmptyState, Loading, PageHeader } from '../components/PageChrome';
 
 const DIAS_SEMANA = [
   { value: 1, label: 'Segunda-feira' },
@@ -175,20 +176,16 @@ const Profissionais = () => {
   );
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-4xl font-bold" style={{ color: '#2C7464', fontFamily: 'Playfair Display, serif' }}>
-            Profissionais
-          </h1>
-          <p className="mt-2 text-base" style={{ color: '#292726' }}>Gerencie sua equipe</p>
-        </div>
-        <Dialog open={modalOpen} onOpenChange={setModalOpen}>
+    <div className="page-shell">
+      <Dialog open={modalOpen} onOpenChange={setModalOpen}>
+        <PageHeader title="Profissionais" description="Cada pessoa com seus serviços e seus horários de atendimento.">
           <DialogTrigger asChild>
-            <Button data-testid="novo-profissional-button" onClick={() => openModal()} className="rounded-full px-6 py-6 text-white" style={{ backgroundColor: '#2C7464' }}>
-              <Plus className="w-5 h-5 mr-2" />Novo Profissional
+            <Button data-testid="novo-profissional-button" onClick={() => openModal()} size="lg">
+              <Plus className="w-5 h-5" />
+              Novo profissional
             </Button>
           </DialogTrigger>
+        </PageHeader>
           <DialogContent className="max-w-2xl">
             <DialogHeader>
               <DialogTitle>{editingProfissional ? 'Editar' : 'Novo'} Profissional</DialogTitle>
@@ -261,17 +258,17 @@ const Profissionais = () => {
               
               <div>
                 <Label>Procedimentos que realiza</Label>
-                <div className="border rounded-lg p-3 max-h-48 overflow-y-auto" style={{ borderColor: '#2C7464' }}>
+                <div className="border rounded-lg p-3 max-h-48 overflow-y-auto">
                   {procedimentos.map((proc) => (
-                    <label key={proc.id} className="flex items-center space-x-2 py-2 cursor-pointer hover:bg-gray-50 px-2 rounded">
+                    <label key={proc.id} className="flex items-center space-x-2 py-2 cursor-pointer hover:bg-accent/50 px-2 rounded">
                       <input
                         type="checkbox"
                         checked={(formData.procedimentos || []).includes(proc.id)}
                         onChange={() => toggleProcedimento(proc.id)}
                         className="w-4 h-4 rounded"
-                        style={{ accentColor: '#2C7464' }}
+                        className="h-4 w-4 accent-primary"
                       />
-                      <span className="text-sm" style={{ color: '#292726' }}>
+                      <span className="text-sm text-foreground">
                         {proc.nome} ({proc.duracao_minutos}min)
                       </span>
                     </label>
@@ -291,7 +288,7 @@ const Profissionais = () => {
               <div>
                 <div className="flex items-center justify-between mb-2">
                   <Label className="flex items-center gap-2">
-                    <Clock className="w-4 h-4" style={{ color: '#2C7464' }} />
+                    <Clock className="w-4 h-4 text-primary" />
                     Horários de Trabalho
                   </Label>
                   <Button
@@ -303,17 +300,17 @@ const Profissionais = () => {
                       disponibilidades: [...(formData.disponibilidades || []), { dia_semana: 1, hora_inicio: '08:00', hora_fim: '18:00' }]
                     })}
                     className="text-xs"
-                    style={{ borderColor: '#2C7464', color: '#2C7464' }}
+
                   >
                     <Plus className="w-3 h-3 mr-1" /> Adicionar
                   </Button>
                 </div>
-                <div className="border rounded-lg p-3 max-h-48 overflow-y-auto space-y-2" style={{ borderColor: '#2C7464' }}>
+                <div className="max-h-48 space-y-2 overflow-y-auto rounded-xl border border-border/70 p-3">
                   {(!formData.disponibilidades || formData.disponibilidades.length === 0) ? (
-                    <p className="text-sm text-gray-500 text-center py-2">Nenhum horário cadastrado</p>
+                    <p className="text-sm text-muted-foreground text-center py-2">Nenhum horário cadastrado</p>
                   ) : (
                     formData.disponibilidades.map((disp, index) => (
-                      <div key={index} className="flex items-center gap-2 p-2 bg-gray-50 rounded">
+                      <div key={index} className="flex items-center gap-2 p-2 bg-muted rounded">
                         <select
                           value={disp.dia_semana}
                           onChange={(e) => {
@@ -321,8 +318,8 @@ const Profissionais = () => {
                             newDisps[index].dia_semana = parseInt(e.target.value);
                             setFormData({ ...formData, disponibilidades: newDisps });
                           }}
-                          className="flex-1 text-sm border rounded px-2 py-1"
-                          style={{ borderColor: '#ccc' }}
+                          className="h-9 flex-1 rounded-lg border border-input bg-card px-2 text-sm" aria-label="Dia da semana"
+
                         >
                           {DIAS_SEMANA.map(dia => (
                             <option key={dia.value} value={dia.value}>{dia.label}</option>
@@ -336,10 +333,10 @@ const Profissionais = () => {
                             newDisps[index].hora_inicio = e.target.value;
                             setFormData({ ...formData, disponibilidades: newDisps });
                           }}
-                          className="text-sm border rounded px-2 py-1 w-24"
-                          style={{ borderColor: '#ccc' }}
+                          className="h-9 w-24 rounded-lg border border-input bg-card px-2 text-sm"
+
                         />
-                        <span className="text-sm text-gray-500">até</span>
+                        <span className="text-sm text-muted-foreground">até</span>
                         <input
                           type="time"
                           value={disp.hora_fim}
@@ -348,8 +345,8 @@ const Profissionais = () => {
                             newDisps[index].hora_fim = e.target.value;
                             setFormData({ ...formData, disponibilidades: newDisps });
                           }}
-                          className="text-sm border rounded px-2 py-1 w-24"
-                          style={{ borderColor: '#ccc' }}
+                          className="h-9 w-24 rounded-lg border border-input bg-card px-2 text-sm"
+
                         />
                         <button
                           type="button"
@@ -357,9 +354,9 @@ const Profissionais = () => {
                             const newDisps = formData.disponibilidades.filter((_, i) => i !== index);
                             setFormData({ ...formData, disponibilidades: newDisps });
                           }}
-                          className="p-1 rounded hover:bg-gray-200"
+                          className="icon-action icon-action-danger h-8 w-8 shrink-0" aria-label="Remover horário"
                         >
-                          <X className="w-4 h-4" style={{ color: '#FEA5A4' }} />
+                          <X className="w-4 h-4" />
                         </button>
                       </div>
                     ))
@@ -374,17 +371,15 @@ const Profissionais = () => {
                 <Button
                   type="submit"
                   data-testid="submit-profissional"
-                  style={{ backgroundColor: '#2C7464', color: 'white' }}
                 >
                   Salvar
                 </Button>
               </div>
             </form>
           </DialogContent>
-        </Dialog>
-      </div>
+      </Dialog>
       <div className="relative">
-        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5" style={{ color: '#2C7464' }} />
+        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-primary" />
         <Input
           data-testid="search-profissionais"
           value={searchTerm}
@@ -395,35 +390,26 @@ const Profissionais = () => {
       </div>
 
       {loading ? (
-        <div className="flex items-center justify-center py-12">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2" style={{ borderColor: '#2C7464' }} />
-        </div>
+        <Loading />
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {filteredProfissionais.map((prof) => (
             <Card
               key={prof.id}
               data-testid={`profissional-card-${prof.id}`}
-              className="p-6 rounded-2xl shadow-lg"
-              style={{ backgroundColor: 'white' }}
+              className="p-6 transition hover:-translate-y-0.5 hover:border-primary/30"
             >
               <div className="flex items-start justify-between mb-4">
                 <div className="flex-1">
-                  <h3 className="text-lg font-bold" style={{ color: '#2C7464' }}>
+                  <h3 className="font-display text-lg font-bold text-ink">
                     {prof.nome}
                   </h3>
                   {prof.area_atuacao && (
-                    <p className="text-sm mt-1" style={{ color: '#292726' }}>
+                    <p className="text-sm mt-1 text-foreground">
                       {prof.area_atuacao.nome}
                     </p>
                   )}
-                  <span
-                    className="inline-block px-3 py-1 text-xs font-medium rounded-full mt-2"
-                    style={{
-                      backgroundColor: prof.ativo ? '#2C7464' : '#ccc',
-                      color: 'white'
-                    }}
-                  >
+                  <span className={`badge mt-2 ${prof.ativo ? 'badge-success' : 'badge-neutral'}`}>
                     {prof.ativo ? 'Ativo' : 'Inativo'}
                   </span>
                 </div>
@@ -431,28 +417,28 @@ const Profissionais = () => {
                   <button
                     onClick={() => openModal(prof)}
                     data-testid={`edit-profissional-${prof.id}`}
-                    className="p-2 rounded-lg hover:bg-gray-100"
+                    className="icon-action"
                   >
-                    <Edit className="w-4 h-4" style={{ color: '#2C7464' }} />
+                    <Edit className="w-4 h-4" />
                   </button>
                   <button
                     onClick={() => handleDelete(prof.id)}
                     data-testid={`delete-profissional-${prof.id}`}
-                    className="p-2 rounded-lg hover:bg-gray-100"
+                    className="icon-action"
                   >
-                    <Trash2 className="w-4 h-4" style={{ color: '#FEA5A4' }} />
+                    <Trash2 className="w-4 h-4" />
                   </button>
                 </div>
               </div>
 
               <div className="space-y-2">
                 {prof.email && (
-                  <p className="text-sm" style={{ color: '#292726' }}>
+                  <p className="text-sm text-foreground">
                     <span className="font-medium">Email:</span> {prof.email}
                   </p>
                 )}
                 {prof.whats && (
-                  <p className="text-sm" style={{ color: '#292726' }}>
+                  <p className="text-sm text-foreground">
                     <span className="font-medium">WhatsApp:</span> {formatPhone(prof.whats)}
                   </p>
                 )}
@@ -463,9 +449,13 @@ const Profissionais = () => {
       )}
 
       {!loading && filteredProfissionais.length === 0 && (
-        <p className="text-center py-12" style={{ color: '#292726' }}>
-          Nenhum profissional encontrado
-        </p>
+        <Card>
+          <EmptyState
+            icon={Search}
+            title={searchTerm ? 'Nenhum profissional com esse nome' : 'Nenhum profissional cadastrado'}
+            description="Cadastre quem atende para definir serviços e horários por pessoa."
+          />
+        </Card>
       )}
     </div>
   );

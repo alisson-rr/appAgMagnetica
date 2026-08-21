@@ -3,6 +3,7 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { Toaster } from './components/ui/sonner';
 import Layout from './components/Layout';
+import { Loading } from './components/PageChrome';
 import './App.css';
 
 const Login = lazy(() => import('./pages/Login'));
@@ -19,8 +20,8 @@ const EscolherPlano = lazy(() => import('./pages/EscolherPlano'));
 const Onboarding = lazy(() => import('./pages/Onboarding'));
 
 const PageLoader = () => (
-  <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: '#F7F1EB' }}>
-    <div className="animate-spin rounded-full h-12 w-12 border-b-2" style={{ borderColor: '#2C7464' }} />
+  <div className="flex min-h-screen items-center justify-center bg-background">
+    <Loading label="Carregando a Agenda Magnética" className="" />
   </div>
 );
 
@@ -74,7 +75,7 @@ function AppContent() {
           <Route path="/configuracoes" element={<PrivateRoute><Layout><Configuracoes /></Layout></PrivateRoute>} />
         </Routes>
       </Suspense>
-      <Toaster position="top-right" richColors />
+      <Toaster position="top-right" richColors theme="light" />
     </BrowserRouter>
   );
 }

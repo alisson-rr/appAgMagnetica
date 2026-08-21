@@ -16,8 +16,9 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
-import { format, addDays, startOfWeek, isSameDay, parseISO, getDay } from 'date-fns';
-import { formatInTimeZone, toZonedTime } from 'date-fns-tz';
+import { EmptyState, Loading, PageHeader } from '../components/PageChrome';
+import { format, addDays, startOfWeek, isSameDay, getDay } from 'date-fns';
+import { toZonedTime } from 'date-fns-tz';
 import { ptBR } from 'date-fns/locale';
 
 const HOUR_HEIGHT = 80; // Altura de cada bloco de hora em pixels
@@ -413,69 +414,60 @@ const AgendaNew = () => {
     return Array.from({ length: 7 }, (_, i) => addDays(start, i));
   };
 
+  // Coral marca atenção (pendente); verde marca sucesso. Vermelho fica só para erro.
   const getStatusColor = (status) => {
     switch (status) {
-      case 'pendente': return '#FEA5A4';
-      case 'confirmado': return '#2C7464';
-      case 'concluido': return '#2C7464';
-      case 'cancelado': return '#ccc';
-      default: return '#FEA5A4';
+      case 'confirmado': return 'hsl(var(--am-green))';
+      case 'concluido': return 'hsl(var(--am-green-lum))';
+      case 'cancelado': return 'hsl(var(--muted-foreground))';
+      case 'pendente':
+      default: return 'hsl(var(--am-coral))';
     }
   };
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-4xl font-bold" style={{ color: '#2C7464', fontFamily: 'Playfair Display, serif' }}>
-            Agenda
-          </h1>
-          <p className="mt-2 text-base" style={{ color: '#292726' }}>
-            Gerencie seus agendamentos
-          </p>
-        </div>
-        <Dialog open={modalOpen} onOpenChange={setModalOpen}>
+    <div className="page-shell">
+      <Dialog open={modalOpen} onOpenChange={setModalOpen}>
+        <PageHeader
+          title="Agenda"
+          description="Os horários do dia, com status visível e reposicionamento por arrastar."
+        >
           <DialogTrigger asChild>
-            <Button
-              data-testid="nova-marcacao-button"
-              onClick={() => openModal()}
-              className="rounded-full px-6 py-6 text-white"
-              style={{ backgroundColor: '#2C7464' }}
-            >
-              <Plus className="w-5 h-5 mr-2" />
-              Nova Marcação
+            <Button data-testid="nova-marcacao-button" onClick={() => openModal()} size="lg">
+              <Plus className="w-5 h-5" />
+              Nova marcação
             </Button>
           </DialogTrigger>
+        </PageHeader>
           <DialogContent className="max-w-2xl">
             <DialogHeader>
               <DialogTitle>{editingItem ? 'Editar' : 'Nova'} Marcação</DialogTitle>
             </DialogHeader>
             <form onSubmit={handleSubmit} className="space-y-4">
-              <div>
+              <div className="space-y-1.5">
                 <Label>Cliente</Label>
                 <Select value={formData.id_cliente} onValueChange={(value) => setFormData({ ...formData, id_cliente: value })} required>
-                  <SelectTrigger data-testid="select-cliente"><SelectValue placeholder="Selecione" /></SelectTrigger>
+                  <SelectTrigger data-testid="select-cliente" aria-label="Cliente"><SelectValue placeholder="Selecione" /></SelectTrigger>
                   <SelectContent className="max-h-[300px] overflow-y-auto">
                     {clientes.map((c) => (<SelectItem key={c.id} value={c.id.toString()}>{c.nome}</SelectItem>))}
                   </SelectContent>
                 </Select>
               </div>
 
-              <div>
+              <div className="space-y-1.5">
                 <Label>Profissional</Label>
                 <Select value={formData.id_profissional} onValueChange={(value) => setFormData({ ...formData, id_profissional: value })} required>
-                  <SelectTrigger data-testid="select-profissional"><SelectValue placeholder="Selecione" /></SelectTrigger>
+                  <SelectTrigger data-testid="select-profissional" aria-label="Profissional"><SelectValue placeholder="Selecione" /></SelectTrigger>
                   <SelectContent className="max-h-[300px] overflow-y-auto">
                     {profissionais.map((p) => (<SelectItem key={p.id} value={p.id.toString()}>{p.nome}</SelectItem>))}
                   </SelectContent>
                 </Select>
               </div>
 
-              <div>
+              <div className="space-y-1.5">
                 <Label>Procedimento</Label>
                 <Select value={formData.id_procedimento} onValueChange={(value) => setFormData({ ...formData, id_procedimento: value })} required>
-                  <SelectTrigger data-testid="select-procedimento"><SelectValue placeholder="Selecione" /></SelectTrigger>
+                  <SelectTrigger data-testid="select-procedimento" aria-label="Procedimento"><SelectValue placeholder="Selecione" /></SelectTrigger>
                   <SelectContent className="max-h-[300px] overflow-y-auto">
                     {procedimentos.map((p) => (<SelectItem key={p.id} value={p.id.toString()}>{p.nome} - {p.duracao_minutos}min - R$ {p.valor?.toFixed(2)}</SelectItem>))}
                   </SelectContent>
@@ -483,36 +475,34 @@ const AgendaNew = () => {
               </div>
 
               <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label>Data</Label>
-                  <Input 
-                    type="date" 
-                    data-testid="input-data" 
-                    value={formData.data_inicio} 
-                    onChange={(e) => setFormData({ ...formData, data_inicio: e.target.value })} 
-                    required 
-                    className="rounded-xl"
-                    style={{ padding: '12px 16px', borderColor: '#2C7464' }}
+                <div className="space-y-1.5">
+                  <Label htmlFor="agenda-data">Data</Label>
+                  <Input
+                    id="agenda-data"
+                    type="date"
+                    data-testid="input-data"
+                    value={formData.data_inicio}
+                    onChange={(e) => setFormData({ ...formData, data_inicio: e.target.value })}
+                    required
                   />
                 </div>
-                <div>
-                  <Label>Hora</Label>
-                  <Input 
-                    type="time" 
-                    data-testid="input-hora" 
-                    value={formData.hora_inicio} 
-                    onChange={(e) => setFormData({ ...formData, hora_inicio: e.target.value })} 
-                    required 
-                    className="rounded-xl"
-                    style={{ padding: '12px 16px', borderColor: '#2C7464' }}
+                <div className="space-y-1.5">
+                  <Label htmlFor="agenda-hora">Hora</Label>
+                  <Input
+                    id="agenda-hora"
+                    type="time"
+                    data-testid="input-hora"
+                    value={formData.hora_inicio}
+                    onChange={(e) => setFormData({ ...formData, hora_inicio: e.target.value })}
+                    required
                   />
                 </div>
               </div>
 
-              <div>
+              <div className="space-y-1.5">
                 <Label>Status</Label>
                 <Select value={formData.status} onValueChange={(value) => setFormData({ ...formData, status: value })}>
-                  <SelectTrigger data-testid="select-status"><SelectValue /></SelectTrigger>
+                  <SelectTrigger data-testid="select-status" aria-label="Status"><SelectValue /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="pendente">Pendente</SelectItem>
                     <SelectItem value="confirmado">Confirmado</SelectItem>
@@ -522,34 +512,66 @@ const AgendaNew = () => {
                 </Select>
               </div>
 
-              <div className="flex justify-end space-x-3">
+              <div className="flex justify-end gap-3 pt-2">
                 <Button type="button" variant="outline" onClick={() => setModalOpen(false)}>Cancelar</Button>
-                <Button type="submit" data-testid="submit-agendamento" style={{ backgroundColor: '#2C7464', color: 'white' }}>Salvar</Button>
+                <Button type="submit" data-testid="submit-agendamento">Salvar</Button>
               </div>
             </form>
           </DialogContent>
-        </Dialog>
-      </div>
+      </Dialog>
 
-      {/* Calendário Semanal */}
-      <Card className="p-6 rounded-2xl shadow-lg" style={{ backgroundColor: 'white' }}>
-        <div className="flex items-center justify-between mb-6">
-          <button onClick={() => setSelectedDate(addDays(selectedDate, -7))} data-testid="previous-week-button" className="p-2 rounded-lg hover:bg-gray-100">
-            <ChevronLeft className="w-5 h-5" style={{ color: '#2C7464' }} />
+      {/* Calendário semanal */}
+      <Card className="p-4 sm:p-6">
+        <div className="mb-5 flex items-center justify-between gap-3">
+          <button
+            type="button"
+            onClick={() => setSelectedDate(addDays(selectedDate, -7))}
+            data-testid="previous-week-button"
+            aria-label="Semana anterior"
+            className="icon-action"
+          >
+            <ChevronLeft className="h-5 w-5" />
           </button>
-          <h2 className="text-xl font-bold" style={{ color: '#2C7464' }}>{format(selectedDate, "MMMM 'de' yyyy", { locale: ptBR })}</h2>
-          <button onClick={() => setSelectedDate(addDays(selectedDate, 7))} data-testid="next-week-button" className="p-2 rounded-lg hover:bg-gray-100">
-            <ChevronRight className="w-5 h-5" style={{ color: '#2C7464' }} />
+          <h2 className="font-display text-lg font-bold capitalize text-ink">
+            {format(selectedDate, "MMMM 'de' yyyy", { locale: ptBR })}
+          </h2>
+          <button
+            type="button"
+            onClick={() => setSelectedDate(addDays(selectedDate, 7))}
+            data-testid="next-week-button"
+            aria-label="Próxima semana"
+            className="icon-action"
+          >
+            <ChevronRight className="h-5 w-5" />
           </button>
         </div>
 
-        <div className="grid grid-cols-7 gap-2">
+        <div className="grid grid-cols-7 gap-1.5 sm:gap-2">
           {getWeekDays().map((day) => {
             const isSelected = isSameDay(day, selectedDate);
+            const isToday = isSameDay(day, new Date());
             return (
-              <button key={day.toString()} onClick={() => setSelectedDate(day)} data-testid={`day-${format(day, 'yyyy-MM-dd')}`} className={`p-4 rounded-xl text-center transition-all ${isSelected ? 'shadow-md' : 'hover:bg-gray-100'}`} style={{ backgroundColor: isSelected ? '#2C7464' : 'transparent', color: isSelected ? 'white' : '#292726' }}>
-                <p className="text-xs font-medium uppercase">{format(day, 'EEE', { locale: ptBR })}</p>
-                <p className="text-2xl font-bold mt-1">{format(day, 'd')}</p>
+              <button
+                key={day.toString()}
+                type="button"
+                onClick={() => setSelectedDate(day)}
+                data-testid={`day-${format(day, 'yyyy-MM-dd')}`}
+                aria-pressed={isSelected}
+                className={`rounded-xl px-1 py-3 text-center transition sm:px-3 sm:py-4 ${
+                  isSelected
+                    ? 'bg-primary text-white shadow-[var(--shadow-green)]'
+                    : 'text-foreground/75 hover:bg-accent'
+                }`}
+              >
+                <span className="block text-[11px] font-semibold uppercase">
+                  {format(day, 'EEE', { locale: ptBR })}
+                </span>
+                <span className="mt-1 block font-display text-xl font-bold sm:text-2xl">{format(day, 'd')}</span>
+                <span
+                  className={`mx-auto mt-1 block h-1 w-1 rounded-full ${
+                    isToday ? (isSelected ? 'bg-apricot' : 'bg-coral') : 'bg-transparent'
+                  }`}
+                />
               </button>
             );
           })}
@@ -557,44 +579,62 @@ const AgendaNew = () => {
       </Card>
 
       {/* Timeline de Horários - Estilo Google Calendar */}
-      <Card className="p-6 rounded-2xl shadow-lg" style={{ backgroundColor: 'white' }}>
-        <h2 className="text-xl font-bold mb-4" style={{ color: '#2C7464' }}>
-          {format(selectedDate, "EEEE, d 'de' MMMM", { locale: ptBR })}
-        </h2>
+      <Card className="p-4 sm:p-6">
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+          <h2 className="font-display text-lg font-bold capitalize text-ink">
+            {format(selectedDate, "EEEE, d 'de' MMMM", { locale: ptBR })}
+          </h2>
+          <ul className="flex flex-wrap items-center gap-2" aria-label="Legenda de status">
+            {[
+              ['Pendente', 'badge-attention'],
+              ['Confirmado', 'badge-success'],
+              ['Concluído', 'badge-success'],
+              ['Cancelado', 'badge-neutral'],
+            ].map(([texto, classe]) => (
+              <li key={texto} className={`badge ${classe}`}>{texto}</li>
+            ))}
+          </ul>
+        </div>
 
         {loading ? (
-          <div className="flex items-center justify-center py-12">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2" style={{ borderColor: '#2C7464' }} />
-          </div>
+          <Loading label="Carregando agenda do dia" />
+        ) : consultas.length === 0 ? (
+          <EmptyState
+            icon={CalendarIcon}
+            title={isOpen ? 'Nenhum horário marcado neste dia' : 'Sem horário de funcionamento neste dia'}
+            description={
+              isOpen
+                ? 'Use “Nova marcação” para registrar um atendimento.'
+                : 'Configure o funcionamento do negócio em Configurações para liberar a agenda deste dia.'
+            }
+          />
         ) : (
-          <div className="flex" style={{ position: 'relative', minHeight: `${HOURS.length * HOUR_HEIGHT}px` }}>
+          <div className="flex overflow-x-auto" style={{ position: 'relative', minHeight: `${HOURS.length * HOUR_HEIGHT}px` }}>
             {/* Coluna de Horários */}
-            <div className="w-20 flex-shrink-0">
+            <div className="w-14 flex-shrink-0 sm:w-20">
               {HOURS.map((hour) => (
-                <div key={hour} style={{ height: `${HOUR_HEIGHT}px`, color: '#292726' }} className="flex items-start justify-end pr-3 text-sm">
+                <div key={hour} style={{ height: `${HOUR_HEIGHT}px` }} className="flex items-start justify-end pr-2 text-xs font-semibold text-muted-foreground sm:pr-3 sm:text-sm">
                   {String(hour).padStart(2, '0')}:00
                 </div>
               ))}
             </div>
 
             {/* Área de Agendamentos */}
-            <div className="flex-1 relative border-l" style={{ borderColor: '#F7F1EB', minHeight: `${HOURS.length * HOUR_HEIGHT}px` }} onDragOver={handleDragOver} onDrop={handleDrop}>
+            <div className="relative min-w-[260px] flex-1 border-l border-border/60" style={{ minHeight: `${HOURS.length * HOUR_HEIGHT}px` }} onDragOver={handleDragOver} onDrop={handleDrop}>
               {/* Linhas de grade */}
               <div className="absolute inset-0">
                 {HOURS.map((hour) => (
-                  <div key={hour} style={{ height: `${HOUR_HEIGHT}px`, borderColor: '#F7F1EB' }} className="border-b" />
+                  <div key={hour} style={{ height: `${HOUR_HEIGHT}px` }} className="border-b border-border/50" />
                 ))}
               </div>
 
               {/* Pré-visualização do drag */}
               {dragOverPosition && (
                 <div
-                  className="absolute left-2 right-2 rounded-lg border-2 border-dashed pointer-events-none"
+                  className="pointer-events-none absolute left-2 right-2 rounded-xl border-2 border-dashed border-primary bg-primary/10"
                   style={{
                     top: `${dragOverPosition.top}px`,
                     height: `${dragOverPosition.height}px`,
-                    borderColor: '#2C7464',
-                    backgroundColor: 'rgba(44, 116, 100, 0.1)',
                     zIndex: 5
                   }}
                 />
@@ -620,41 +660,47 @@ const AgendaNew = () => {
                     draggable
                     onDragStart={(e) => handleDragStart(e, consulta)}
                     data-testid={`agendamento-${consulta.id}`}
-                    className="absolute p-2 rounded-lg shadow-md cursor-move overflow-hidden"
+                    className="absolute cursor-move overflow-hidden rounded-xl border border-border/70 bg-card p-2 shadow-soft transition hover:shadow-card"
                     style={{
                       top: `${top}px`,
                       left: leftOffset,
                       width: columnWidth,
                       height: `${Math.max(height, 60)}px`,
-                      backgroundColor: 'white',
                       borderLeft: `4px solid ${getStatusColor(consulta.status)}`,
                       zIndex: 10
                     }}
                   >
-                    <div className="flex flex-col h-full">
+                    <div className="flex h-full flex-col">
                       <div className="flex-1 overflow-hidden">
-                        <p className="text-sm font-bold truncate" style={{ color: '#2C7464' }}>
-                          {timeStr} - {consulta.cliente?.nome}
+                        <p className="truncate text-sm font-bold text-ink">
+                          {timeStr} · {consulta.cliente?.nome}
                         </p>
-                        <p className="text-xs truncate mt-1" style={{ color: '#292726' }}>
+                        <p className="mt-0.5 truncate text-xs text-muted-foreground">
                           {consulta.procedimento?.nome}
                         </p>
-                        <p className="text-xs truncate" style={{ color: '#292726' }}>
+                        <p className="truncate text-xs text-muted-foreground">
                           {consulta.profissional?.nome}
                         </p>
                       </div>
-                      <div className="flex items-center space-x-1 mt-1">
-                        <button onClick={() => openModal(consulta)} className="p-1 rounded hover:bg-gray-100" title="Editar">
-                          <Edit className="w-3 h-3" style={{ color: '#2C7464' }} />
+                      <div className="mt-1 flex items-center gap-1">
+                        <button
+                          type="button"
+                          onClick={() => openModal(consulta)}
+                          className="rounded-lg p-1.5 text-muted-foreground transition hover:bg-accent hover:text-primary"
+                          aria-label={`Editar agendamento de ${consulta.cliente?.nome || 'cliente'}`}
+                          title="Editar"
+                        >
+                          <Edit className="h-3.5 w-3.5" />
                         </button>
                         {consulta.status !== 'concluido' && (
-                          <button 
-                            onClick={() => handleConcluir(consulta)} 
-                            className="px-1 py-0.5 text-xs font-medium rounded text-white"
-                            style={{ backgroundColor: '#2C7464' }}
+                          <button
+                            type="button"
+                            onClick={() => handleConcluir(consulta)}
+                            className="rounded-lg bg-primary px-2 py-1 text-[11px] font-semibold text-white transition hover:bg-green-deep"
+                            aria-label={`Concluir agendamento de ${consulta.cliente?.nome || 'cliente'}`}
                             title="Concluir"
                           >
-                            ✓
+                            Concluir
                           </button>
                         )}
                       </div>
