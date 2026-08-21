@@ -1,0 +1,118 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 34 38% 96%;
+    --foreground: 24 5% 16%;
+    --card: 0 0% 100%;
+    --card-foreground: 24 5% 16%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 24 5% 16%;
+    --primary: 166 45% 31%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 33 31% 92%;
+    --secondary-foreground: 24 5% 16%;
+    --muted: 33 24% 91%;
+    --muted-foreground: 24 5% 42%;
+    --accent: 359 94% 82%;
+    --accent-foreground: 24 5% 16%;
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 24 10% 86%;
+    --input: 24 10% 86%;
+    --ring: 166 45% 31%;
+    --radius: 1rem;
+    --ink: #292726;
+    --coral: #fea5a4;
+    --coral-dark: #9b5354;
+    --coral-soft: #f8dfdc;
+    --font-display: "Red Hat Display", sans-serif;
+    --font-body: "Montserrat", sans-serif;
+  }
+
+  * { @apply border-border; }
+  html { scroll-behavior: smooth; }
+  body {
+    @apply bg-background text-foreground antialiased;
+    font-family: var(--font-body);
+  }
+  button, input, select { font: inherit; }
+  button { cursor: pointer; }
+  h1, h2, h3 { text-wrap: balance; }
+  p { text-wrap: pretty; }
+  ::selection { background: rgba(254, 165, 164, .52); color: var(--ink); }
+}
+
+@layer components {
+  .font-display { font-family: var(--font-display); }
+  .section-space { @apply py-20 md:py-28; }
+  .section-title { @apply font-display text-4xl font-bold leading-[1.02] tracking-[-.045em] md:text-5xl lg:text-6xl; }
+  .section-copy { @apply max-w-2xl text-lg leading-relaxed text-foreground/60; }
+
+  .eyebrow {
+    @apply inline-flex items-center gap-2 rounded-full border border-primary/15 bg-primary/10 px-3.5 py-2 text-[11px] font-bold uppercase tracking-[.14em] text-primary;
+  }
+  .eyebrow-dark { @apply border-white/10 bg-white/5 text-coral; }
+  .eyebrow-primary { @apply border-white/15 bg-white/10 text-white; }
+
+  .brand-button {
+    @apply inline-flex items-center justify-center gap-2 rounded-full bg-primary px-5 py-3 text-sm font-bold text-white shadow-lg shadow-primary/15 transition duration-200 hover:-translate-y-0.5 hover:bg-[#225e52] hover:shadow-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2;
+  }
+  .brand-button-large { @apply px-7 py-4 text-[15px]; }
+  .secondary-button { @apply inline-flex items-center justify-center gap-1 rounded-full border border-foreground/15 bg-white/55 px-7 py-4 text-[15px] font-bold transition hover:-translate-y-0.5 hover:bg-white; }
+  .nav-link { @apply text-sm font-semibold text-foreground/60 transition hover:text-primary; }
+
+  .product-window {
+    @apply overflow-hidden rounded-[1.75rem] border border-white/90 bg-white/90 backdrop-blur-xl;
+    box-shadow: 0 40px 100px -35px rgba(41, 39, 38, .32), 0 8px 30px -15px rgba(44, 116, 100, .2);
+  }
+  .metric-card { @apply rounded-2xl border border-foreground/10 bg-background/75 p-4; }
+  .metric-label { @apply text-[11px] font-bold uppercase tracking-[.12em] text-foreground/45; }
+  .attention-card { @apply flex items-start gap-3 rounded-2xl border border-coral/40 bg-coral/10 p-4; }
+  .chat-card { @apply rounded-2xl border border-foreground/10 bg-white p-4; }
+  .live-dot { @apply relative h-2 w-2 rounded-full bg-primary; }
+  .live-dot::after { content: ""; @apply absolute -inset-1 rounded-full border border-primary/35; animation: livePulse 1.8s infinite; }
+
+  .audience-chip { @apply rounded-full border border-foreground/10 bg-white px-4 py-2 text-xs font-semibold text-foreground/60 shadow-sm; }
+  .pain-row { @apply flex items-start gap-5 rounded-2xl border border-foreground/10 bg-white/70 p-5 transition hover:border-primary/25 hover:bg-white; }
+  .pain-number { @apply font-display text-sm font-bold tracking-wider text-coral-dark; }
+
+  .flow-card { @apply rounded-3xl border border-white/10 bg-white/[.045] p-6 transition hover:-translate-y-1 hover:border-coral/35 hover:bg-white/[.065]; }
+  .feature-card { @apply rounded-3xl border border-foreground/10 bg-white p-7 shadow-[0_18px_60px_-40px_rgba(41,39,38,.5)] transition hover:-translate-y-1 hover:border-primary/25; }
+  .feature-icon { @apply flex h-11 w-11 items-center justify-center rounded-2xl bg-primary/10 text-primary; }
+  .control-panel, .lead-shell { box-shadow: 0 35px 90px -48px rgba(41, 39, 38, .55); }
+
+  .setup-step { @apply grid grid-cols-[auto_1fr] gap-5 rounded-3xl border border-foreground/10 bg-white p-6 transition hover:border-primary/25; }
+  .setup-number { @apply flex h-11 w-11 items-center justify-center rounded-2xl bg-primary text-xs font-bold tracking-wider text-white; }
+  .faq-item { @apply rounded-2xl border border-foreground/10 bg-white transition open:border-primary/25 open:shadow-[0_16px_50px_-35px_rgba(44,116,100,.45)]; }
+  .faq-plus { @apply flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary/10 font-body text-xl font-normal text-primary transition group-open:rotate-45; }
+
+  .field-label { @apply grid gap-2 text-sm font-semibold text-foreground/70; }
+  .field-input { @apply min-h-12 w-full rounded-xl border border-foreground/15 bg-background/65 px-4 py-3 text-sm text-foreground outline-none transition placeholder:text-foreground/30 focus:border-primary focus:bg-white focus:ring-4 focus:ring-primary/10; }
+}
+
+.hero-shell { background: radial-gradient(circle at 20% 15%, rgba(254,165,164,.2), transparent 28%), linear-gradient(180deg, #faf7f2 0%, #f5efe7 100%); }
+.dot-grid { background-image: radial-gradient(rgba(44,116,100,.14) 1px, transparent 1px); background-size: 28px 28px; mask-image: linear-gradient(to bottom, black, transparent 82%); }
+.magnetic-glow { position: absolute; border-radius: 999px; filter: blur(80px); pointer-events: none; }
+.magnetic-glow-left { width: 320px; height: 320px; left: -180px; top: 20%; background: rgba(254,165,164,.23); }
+.magnetic-glow-right { width: 360px; height: 360px; right: -220px; bottom: 2%; background: rgba(44,116,100,.18); }
+.bg-ink { background-color: var(--ink); }
+.bg-coral-soft { background-color: var(--coral-soft); }
+.bg-coral { background-color: var(--coral); }
+.text-coral { color: var(--coral); }
+.text-coral-dark { color: var(--coral-dark); }
+.border-coral { border-color: var(--coral); }
+
+details summary { list-style: none; }
+details summary::-webkit-details-marker { display: none; }
+
+@keyframes livePulse {
+  0% { transform: scale(.7); opacity: 1; }
+  100% { transform: scale(2); opacity: 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { scroll-behavior: auto !important; animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
+}

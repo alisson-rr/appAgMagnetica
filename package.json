@@ -1,0 +1,18 @@
+{
+  "name": "agenda-magnetica",
+  "version": "0.2.0",
+  "private": true,
+  "workspaces": [
+    "apps/*"
+  ],
+  "scripts": {
+    "dev:dashboard": "npm run dev --workspace=agenda-magnetica-app",
+    "dev:site": "npm run dev --workspace=agenda-magnetica-site",
+    "build": "npm run build --workspaces --if-present",
+    "build:dashboard": "npm run build --workspace=agenda-magnetica-app",
+    "build:site": "npm run build --workspace=agenda-magnetica-site",
+    "lint": "npm run lint --workspaces --if-present",
+    "preview:dashboard": "npm run preview --workspace=agenda-magnetica-app",
+    "preview:site": "npm run preview --workspace=agenda-magnetica-site"
+  }
+}

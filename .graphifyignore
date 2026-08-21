@@ -1,0 +1,11 @@
+.git/
+node_modules/
+dist/
+build/
+coverage/
+graphify-out/
+docs/research-private/
+package-lock.json
+pnpm-lock.yaml
+*.min.js
+*.map

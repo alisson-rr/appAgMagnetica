@@ -18,6 +18,8 @@ node_modules/
 
 # Testing
 /coverage
+.pytest_cache/
+pytest-cache-files-*/
 
 # Next.js
 /.next/
@@ -31,6 +33,9 @@ dist/
 dist
 
 # Environment files (comprehensive coverage)
+.env
+.env.local
+.env.production
 
 *token.json*
 *credentials.json*
@@ -45,6 +50,7 @@ dump.rdb
 # System files
 .DS_Store
 *.pem
+*.key
 
 # Python
 __pycache__/
@@ -77,11 +83,20 @@ agenthub/agents/youtube/db
 .cache/
 
 # Mobile development
-android-sdk/ -e 
+android-sdk/
+
 # Environment files
 *.env
 *.env.*
--e 
-# Environment files
-*.env
-*.env.*
+!.env.example
+!**/.env.example
+
+# Local research and assistant state
+docs/research-private/
+.claude/settings.local.json
+.graphify_analysis.json
+.graphify_labels.json
+graphify-out/memory/
+graphify-out/reflections/
+graphify-out/cache/
+graphify-out/.graphify_root
