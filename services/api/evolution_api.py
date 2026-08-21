@@ -45,21 +45,56 @@ async def create_instance(instance_name: str) -> dict:
     return data
 
 
-async def set_webhook(instance_name: str) -> dict:
-    _, _, webhook_url = _config()
-    try:
-        return await _request(
-            "POST",
-            f"/webhook/set/{instance_name}",
-            json={
-                "url": webhook_url,
-                "byEvents": False,
-                "base64": True,
-                "events": ["SEND_MESSAGE", "MESSAGES_UPSERT"],
-            },
+DEFAULT_WEBHOOK_HEADER_NAME = "x-agenda-magnetica-token"
+
+
+def _webhook_auth() -> tuple[str, str]:
+    """Header compartilhado que prova a autenticidade da entrega da Evolution.
+
+    Sem ele o webhook do n8n aceita qualquer POST forjado, então a ausência do
+    segredo é erro de configuração e precisa aparecer, não ser engolida.
+    """
+    secret = os.getenv("EVOLUTION_WEBHOOK_SECRET")
+    if not secret:
+        raise RuntimeError(
+            "Configuração da Evolution ausente: EVOLUTION_WEBHOOK_SECRET"
         )
-    except Exception:
-        logger.exception("Não foi possível configurar o webhook da instância %s", instance_name)
+    header_name = os.getenv("EVOLUTION_WEBHOOK_HEADER_NAME") or DEFAULT_WEBHOOK_HEADER_NAME
+    return header_name, secret
+
+
+def build_webhook_payload() -> dict:
+    """Corpo no formato da Evolution v2.3: tudo dentro do invólucro ``webhook``."""
+    _, _, webhook_url = _config()
+    header_name, secret = _webhook_auth()
+    return {
+        "webhook": {
+            "enabled": True,
+            "url": webhook_url,
+            "headers": {
+                header_name: secret,
+                "Content-Type": "application/json",
+            },
+            "byEvents": False,
+            # Este corte é só texto: sem base64 o payload retido encolhe muito.
+            "base64": False,
+            "events": ["SEND_MESSAGE", "MESSAGES_UPSERT"],
+        }
+    }
+
+
+async def set_webhook(instance_name: str) -> dict:
+    # Fora do try: configuração faltando é erro de operação, não falha de rede.
+    payload = build_webhook_payload()
+    try:
+        return await _request("POST", f"/webhook/set/{instance_name}", json=payload)
+    except Exception as error:
+        # Sem logger.exception: o corpo enviado carrega o segredo do header.
+        logger.error(
+            "Não foi possível configurar o webhook da instância %s (%s)",
+            instance_name,
+            type(error).__name__,
+        )
         return {"error": "webhook_not_configured"}
 
 

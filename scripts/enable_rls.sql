@@ -1,3 +1,9 @@
+-- APOSENTADO em 2026-08-21. NAO EXECUTE.
+-- Substituido pelo bloco de RLS e grants de scripts/bootstrap_schema.sql, que
+-- cobre 13 tabelas (inclui planos e assinaturas, ausentes aqui) e concede os
+-- privilegios que a service_role precisa. Este arquivo falha em base nova,
+-- porque referencia tabelas antes de elas existirem.
+
 -- ATENÇÃO: este arquivo antigo desabilitava a proteção entre empresas.
 -- Ele foi mantido apenas para não quebrar referências existentes e agora faz
 -- o oposto: bloqueia acesso direto das chaves públicas. A aplicação acessa os

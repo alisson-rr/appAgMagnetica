@@ -18,9 +18,12 @@ import re as regex_module
 
 ROOT_DIR = Path(__file__).parent
 
-env_path = ROOT_DIR / '.env'
-if env_path.exists():
-    load_dotenv(env_path)
+# O .env pode ficar em services/api/ ou na raiz do monorepo, que é onde as
+# credenciais do projeto estão configuradas. O local do backend tem precedência.
+for _env_path in (ROOT_DIR / '.env', ROOT_DIR.parents[1] / '.env'):
+    if _env_path.exists():
+        load_dotenv(_env_path)
+        break
 
 from settings import (
     JWT_ALGORITHM,
@@ -219,6 +222,24 @@ def assert_owned_record(table: str, record_id: int, clinica_id: int, label: str)
     )
     if not result.data:
         raise HTTPException(status_code=404, detail=f"{label} não encontrado")
+
+
+def raise_if_in_use(erro: Exception, label: str) -> None:
+    """Traduz violação de chave estrangeira em 409 explicativo.
+
+    As FKs de `consulta` são RESTRICT: excluir profissional, cliente ou serviço
+    com agendamento no histórico é recusado pelo banco. Sem esta tradução o
+    painel recebia 500 "Erro interno" e o usuário não descobria o motivo.
+    """
+    texto = str(erro)
+    if '23503' in texto or 'foreign key' in texto.lower():
+        raise HTTPException(
+            status_code=409,
+            detail=(
+                f"{label} não pode ser excluído porque tem agendamentos no histórico. "
+                "Desative o registro em vez de excluir."
+            ),
+        )
 
 # ===== AUTH ROUTES =====
 @api_router.post("/auth/login", response_model=LoginResponse)
@@ -486,6 +507,7 @@ async def delete_cliente(cliente_id: int, current_user: dict = Depends(verify_to
     except HTTPException:
         raise
     except Exception as e:
+        raise_if_in_use(e, "Cliente")
         logging.error(f"Erro ao deletar cliente: {str(e)}")
         raise HTTPException(status_code=500, detail="Erro interno")
 
@@ -596,6 +618,7 @@ async def delete_profissional(prof_id: int, current_user: dict = Depends(verify_
     except HTTPException:
         raise
     except Exception as e:
+        raise_if_in_use(e, "Profissional")
         logging.error(f"Erro ao deletar profissional: {str(e)}")
         raise HTTPException(status_code=500, detail="Erro interno")
 
@@ -619,21 +642,32 @@ async def save_disponibilidade_profissional(prof_id: int, disponibilidades: List
         clinica_id = get_user_clinica_id(current_user)
         assert_owned_record('profissional', prof_id, clinica_id, 'Profissional')
 
+        # Montar e VALIDAR tudo antes de apagar. Este endpoint é um delete
+        # seguido de insert, sem transação: se a validação acontecesse depois,
+        # um horário invertido apagaria a agenda do profissional e não gravaria
+        # nada no lugar.
+        records = []
+        for d in disponibilidades:
+            hora_inicio = d.hora_inicio if len(d.hora_inicio) == 8 else d.hora_inicio + ':00'
+            hora_fim = d.hora_fim if len(d.hora_fim) == 8 else d.hora_fim + ':00'
+            if hora_fim <= hora_inicio:
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"Horário inválido: o fim ({d.hora_fim}) precisa ser depois do início ({d.hora_inicio})",
+                )
+            if not 1 <= d.dia_semana <= 7:
+                raise HTTPException(status_code=400, detail="Dia da semana inválido")
+            records.append({
+                "id_profissional": prof_id,
+                "dia_semana": d.dia_semana,
+                "hora_inicio": hora_inicio,
+                "hora_fim": hora_fim
+            })
+
         # Deletar disponibilidades antigas
         supabase.table('disponibilidade_profissional').delete().eq('id_profissional', prof_id).execute()
-        
-        # Inserir novas disponibilidades
-        if disponibilidades:
-            records = []
-            for d in disponibilidades:
-                hora_inicio = d.hora_inicio if len(d.hora_inicio) == 8 else d.hora_inicio + ':00'
-                hora_fim = d.hora_fim if len(d.hora_fim) == 8 else d.hora_fim + ':00'
-                records.append({
-                    "id_profissional": prof_id,
-                    "dia_semana": d.dia_semana,
-                    "hora_inicio": hora_inicio,
-                    "hora_fim": hora_fim
-                })
+
+        if records:
             supabase.table('disponibilidade_profissional').insert(records).execute()
         
         return {"message": "Disponibilidade atualizada com sucesso"}
@@ -708,6 +742,7 @@ async def delete_procedimento(proc_id: int, current_user: dict = Depends(verify_
     except HTTPException:
         raise
     except Exception as e:
+        raise_if_in_use(e, "Procedimento")
         logging.error(f"Erro ao deletar procedimento: {str(e)}")
         raise HTTPException(status_code=500, detail="Erro interno")
 

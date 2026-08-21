@@ -1,357 +1,382 @@
-# Notas: start back: "python server.py"
-# Documentação do Banco de Dados - AgMagnetica
+# Banco de Dados — Agenda Magnética
 
-> **Supabase URL:** https://nkeiylfzzrqpjjlstpcj.supabase.co
+> **Projeto Supabase:** definido em `SUPABASE_URL` / `DATABASE_URL` no `.env`, que não é
+> versionado. Nenhuma URL ou identificador de projeto entra neste documento.
+> **Servidor:** PostgreSQL 17.6. **Fuso:** `America/Sao_Paulo`. **Moeda:** BRL.
+> **Estado:** aplicado e verificado no catálogo em 2026-08-21. Todas as tabelas
+> existem e estão **vazias** — nenhum dado de negócio foi inserido por script.
 
-## Visão Geral
+Este documento descreve o schema **realmente criado**, extraído do catálogo, não um
+schema pretendido. Cada coluna existe porque um consumidor real a lê ou escreve:
+`services/api/server.py`, o dashboard React, ou `AgendaMagnetica-v2.n8n.json`.
 
-Este documento contém a estrutura completa do banco de dados PostgreSQL utilizado pelo sistema AgMagnetica.
+## Scripts e ordem de execução
+
+| # | Script | Papel |
+|---|---|---|
+| 1 | `scripts/bootstrap_schema.sql` | 13 tabelas, FKs, CHECKs locais, índices de FK, RLS e grants |
+| 2 | `scripts/travas_corte_vertical.sql` | T1–T6: travas de integridade e índices por empresa |
+| 3 | `scripts/v_clinica_detalhes.sql` | view de contexto de atendimento |
+| 4 | `scripts/fn_buscar_slots.sql` | RPC de disponibilidade |
+| — | `scripts/teste_transacional.sql` | prova as garantias e termina em `ROLLBACK` |
+
+Todos são reexecutáveis: rodar duas vezes produz o mesmo estado e nenhum erro —
+verificado. Nenhum deles insere dado de negócio.
+
+**Aposentados, não executar:** `create_usuarios_table.sql` (produz `usuarios`
+incompleta), `add_telefone_cliente.sql` (não reexecutável), `enable_rls.sql`
+(substituído pelo bloco de RLS do bootstrap), `insert_disponibilidade_profissional.sql`
+(dados de exemplo com ids fixos).
 
 ---
 
 ## Tabelas
 
-### 1. `info_clinica` (Tabela Central)
-Armazena informações das clínicas cadastradas no sistema.
+Convenção: 🔑 chave primária, 🔗 chave estrangeira, **N** `NOT NULL`.
 
-| Coluna              | Tipo    | Descrição                                    |
-|---------------------|---------|----------------------------------------------|
-| `id`                | int8    | 🔑 Chave primária                            |
-| `nome`              | text    | Nome da clínica                              |
-| `telefone`          | text    | Telefone de contato                          |
-| `email`             | text    | E-mail da clínica                            |
-| `descricao`         | text    | Descrição da clínica                         |
-| `endereco`          | text    | Endereço completo                            |
-| `mensagem_lembrete` | text    | Mensagem modelo para lembretes de consulta   |
+### 1. `info_clinica` — raiz do tenant
 
----
+| Coluna | Tipo | | Observação |
+|---|---|---|---|
+| `id` | int8 | 🔑 | |
+| `nome` | text | **N** | |
+| `telefone` | text | | |
+| `email` | text | | |
+| `descricao` | text | | |
+| `endereco` | text | | |
+| `mensagem_lembrete` | text | | modelo de lembrete |
+| `onboarding_completo` | bool | **N** | default `false`; `true` ao fim do onboarding |
+| `assistente_nome` | text | | identidade da assistente; nulo usa o padrão do fluxo |
+| `assistente_tom` | text | | idem |
+| `exige_profissional` | bool | **N** | default `false` |
+| `created_at` | timestamptz | **N** | default `now()` |
 
-### 2. `usuarios`
-Usuários do sistema com autenticação.
+### 2. `usuarios` — login do painel e vínculo com a instância do WhatsApp
 
-| Coluna            | Tipo        | Descrição                    |
-|-------------------|-------------|------------------------------|
-| `id`              | int8        | 🔑 Chave primária            |
-| `email`           | text        | 🔒 E-mail único (login)      |
-| `senha_hash`      | text        | Hash da senha                |
-| `nome`            | text        | Nome do usuário              |
-| `created_at`      | timestamptz | Data de criação              |
-| `id_info_clinica` | int8        | 🔗 FK → info_clinica         |
-| `role`            | text        | Papel do usuário (default: 'owner') |
-| `instance_name`   | text        | Nome da instância Evolution API |
-| `trial_inicio`    | timestamptz | Data de início do período de trial |
-| `trial_fim`       | timestamptz | Data de fim do período de trial (7 dias) |
-| `status_assinatura` | text      | Status: 'trial', 'ativo', 'expirado', 'cancelado' |
+| Coluna | Tipo | | Observação |
+|---|---|---|---|
+| `id` | int8 | 🔑 | |
+| `email` | text | **N** | `UNIQUE` |
+| `senha_hash` | text | **N** | bcrypt |
+| `nome` | text | **N** | |
+| `id_info_clinica` | int8 | 🔗 | **nulo é válido**: entre o cadastro e o fim do onboarding |
+| `role` | text | **N** | default `'owner'` |
+| `instance_name` | text | | único quando preenchido (T1) |
+| `trial_inicio` | timestamptz | | |
+| `trial_fim` | timestamptz | | |
+| `status_assinatura` | text | **N** | default `'trial'`; CHECK `trial \| ativo \| expirado \| cancelado` |
+| `created_at` | timestamptz | **N** | default `now()` |
 
----
+`trial_expirado` e `dias_restantes` **não são colunas**: são calculados na resposta do
+login a partir de `trial_fim`.
 
 ### 3. `cliente`
-Pacientes/clientes cadastrados.
 
-| Coluna            | Tipo        | Descrição                    |
-|-------------------|-------------|------------------------------|
-| `id`              | int8        | 🔑 Chave primária            |
-| `nome`            | text        | Nome completo                |
-| `whats`           | text        | WhatsApp (uso exclusivo N8N) |
-| `telefone`        | text        | Telefone (uso no sistema)    |
-| `status`          | text        | Status do cliente            |
-| `interesses`      | text        | Interesses/preferências      |
-| `created_at`      | timestamptz | Data de cadastro             |
-| `id_plano_saude`  | int8        | FK → plano de saúde          |
-| `email`           | text        | E-mail                       |
-| `data_nascimento` | date        | Data de nascimento           |
-| `id_info_clinica` | int8        | 🔗 FK → info_clinica         |
+| Coluna | Tipo | | Observação |
+|---|---|---|---|
+| `id` | int8 | 🔑 | |
+| `nome` | text | **N** | |
+| `whats` | text | | telefone que a **automação** usa para identificar o contato |
+| `telefone` | text | | telefone de **exibição** no painel |
+| `email` | text | | |
+| `data_nascimento` | date | | |
+| `interesses` | text | | |
+| `status` | text | **N** | default `'ativo'` |
+| `id_plano_saude` | int8 | | **sem FK**: não existe tabela de plano de saúde |
+| `id_info_clinica` | int8 | 🔗 **N** | |
+| `created_at` | timestamptz | **N** | default `now()` |
 
----
+`whats` e `telefone` são colunas distintas de propósito. Único por
+`(id_info_clinica, dígitos de whats)` — ver T2.
 
 ### 4. `profissional`
-Profissionais de saúde (médicos, dentistas, etc).
 
-| Coluna            | Tipo  | Descrição                         |
-|-------------------|-------|-----------------------------------|
-| `id`              | int8  | 🔑 Chave primária                 |
-| `nome`            | text  | Nome do profissional              |
-| `ativo`           | bool  | Se está ativo                     |
-| `observacoes`     | text  | Observações gerais                |
-| `id_especialidade`| int8  | FK → especialidade                |
-| `id_area_atuacao` | int8  | FK → area_atuacao                 |
-| `whats`           | text  | WhatsApp                          |
-| `email`           | text  | E-mail                            |
-| `id_info_clinica` | int8  | 🔗 FK → info_clinica              |
+| Coluna | Tipo | | Observação |
+|---|---|---|---|
+| `id` | int8 | 🔑 | |
+| `nome` | text | **N** | |
+| `ativo` | bool | **N** | default `true`; inativo não é ofertado no atendimento |
+| `observacoes` | text | | |
+| `whats` | text | | |
+| `email` | text | | |
+| `id_area_atuacao` | int8 | 🔗 | → `area_atuacao.id` |
+| `id_info_clinica` | int8 | 🔗 **N** | |
+| `created_at` | timestamptz | **N** | default `now()` |
 
----
+### 5. `procedimento` (serviço)
 
-### 5. `procedimento`
-Procedimentos/serviços oferecidos.
+| Coluna | Tipo | | Observação |
+|---|---|---|---|
+| `id` | int8 | 🔑 | |
+| `nome` | text | **N** | |
+| `descricao` | text | | |
+| `duracao_minutos` | int4 | **N** | CHECK `> 0` |
+| `valor` | numeric(10,2) | **N** | CHECK `>= 0` |
+| `orientacoes` | text | | |
+| `id_info_clinica` | int8 | 🔗 **N** | |
+| `created_at` | timestamptz | **N** | default `now()` |
 
-| Coluna            | Tipo    | Descrição                       |
-|-------------------|---------|---------------------------------|
-| `id`              | int8    | 🔑 Chave primária               |
-| `nome`            | text    | Nome do procedimento            |
-| `descricao`       | text    | Descrição detalhada             |
-| `duracao_minutos` | int2    | Duração em minutos              |
-| `valor`           | numeric | Valor do procedimento           |
-| `orientacoes`     | text    | Orientações ao paciente         |
-| `id_info_clinica` | int8    | 🔗 FK → info_clinica            |
+### 6. `area_atuacao` — lista de rótulos
 
----
+| Coluna | Tipo | | |
+|---|---|---|---|
+| `id` | int8 | 🔑 | |
+| `nome` | text | **N** | |
+| `created_at` | timestamptz | **N** | default `now()` |
 
-### 6. `area_atuacao`
-Áreas de atuação dos profissionais.
+**Sem coluna de empresa, de propósito.** A API lê todas sem filtro e insere sem tenant.
+Consequência conhecida: é um catálogo compartilhado entre todas as empresas, e
+`POST /areas-atuacao` não verifica empresa nem papel. Separar por empresa exige mudar o
+backend e o dashboard primeiro — não é uma decisão de banco.
 
-| Coluna | Tipo | Descrição           |
-|--------|------|---------------------|
-| `id`   | int8 | 🔑 Chave primária   |
-| `nome` | text | Nome da área        |
+### 7. `profissional_procedimento` — quem executa o quê
 
----
+| Coluna | Tipo | | |
+|---|---|---|---|
+| `id` | int8 | 🔑 | |
+| `id_profissional` | int8 | 🔗 **N** | `ON DELETE CASCADE` |
+| `id_procedimento` | int8 | 🔗 **N** | `ON DELETE CASCADE` |
+| `especialista` | bool | **N** | default `false` |
 
-### 7. `profissional_procedimento`
-Relação N:N entre profissionais e procedimentos.
+`UNIQUE (id_profissional, id_procedimento)`. Sem coluna de empresa: o tenant chega por
+`profissional`.
 
-| Coluna           | Tipo | Descrição                    |
-|------------------|------|------------------------------|
-| `id`             | int8 | 🔑 Chave primária            |
-| `id_profissional`| int8 | FK → profissional            |
-| `id_procedimento`| int8 | FK → procedimento            |
-| `especialista`   | bool | Se é especialista            |
+### 8. `horario_clinica` — funcionamento da empresa
 
----
+| Coluna | Tipo | | |
+|---|---|---|---|
+| `id` | int8 | 🔑 | |
+| `dia_semana` | int4 | **N** | CHECK 1–7 (1=segunda … 7=domingo) |
+| `hora_inicio` | time | **N** | |
+| `hora_fim` | time | **N** | CHECK `hora_fim > hora_inicio` |
+| `id_info_clinica` | int8 | 🔗 **N** | |
 
-### 8. `horario_clinica`
-Horários de funcionamento da clínica.
-
-| Coluna            | Tipo | Descrição                       |
-|-------------------|------|---------------------------------|
-| `id`              | int8 | 🔑 Chave primária               |
-| `dia_semana`      | int4 | Dia da semana (1-7)             |
-| `hora_inicio`     | time | Hora de abertura                |
-| `hora_fim`        | time | Hora de fechamento              |
-| `id_info_clinica` | int8 | 🔗 FK → info_clinica            |
-
----
+Nada impede duas faixas **sobrepostas** no mesmo dia. `fn_buscar_slots` usa `DISTINCT`
+para não ofertar o mesmo horário duas vezes por causa disso.
 
 ### 9. `disponibilidade_profissional`
-Horários de disponibilidade de cada profissional.
 
-| Coluna           | Tipo | Descrição                    |
-|------------------|------|------------------------------|
-| `id`             | int8 | 🔑 Chave primária            |
-| `dia_semana`     | int4 | Dia da semana (1-7)          |
-| `hora_inicio`    | time | Hora de início               |
-| `hora_fim`       | time | Hora de fim                  |
-| `id_profissional`| int8 | FK → profissional            |
+| Coluna | Tipo | | |
+|---|---|---|---|
+| `id` | int8 | 🔑 | |
+| `dia_semana` | int4 | **N** | CHECK 1–7 |
+| `hora_inicio` | time | **N** | |
+| `hora_fim` | time | **N** | CHECK `hora_fim > hora_inicio` |
+| `id_profissional` | int8 | 🔗 **N** | `ON DELETE CASCADE` |
 
----
+Sem coluna de empresa: o tenant chega por `profissional`.
 
 ### 10. `agenda_bloqueio`
-Bloqueios na agenda (feriados, folgas, etc).
 
-| Coluna           | Tipo      | Descrição                    |
-|------------------|-----------|------------------------------|
-| `id`             | int8      | 🔑 Chave primária            |
-| `motivo`         | text      | Motivo do bloqueio           |
-| `intervalo`      | tstzrange | Período bloqueado            |
-| `id_profissional`| int8      | FK → profissional            |
+| Coluna | Tipo | | |
+|---|---|---|---|
+| `id` | int8 | 🔑 | |
+| `motivo` | text | | |
+| `intervalo` | tstzrange | **N** | CHECK não vazio |
+| `id_profissional` | int8 | 🔗 **N** | `ON DELETE CASCADE` |
+| `id_info_clinica` | int8 | 🔗 **N** | a API grava; a documentação antiga não tinha |
+| `created_at` | timestamptz | **N** | default `now()` |
 
----
+### 11. `consulta` — o agendamento
 
-### 11. `consulta`
-Agendamentos/consultas marcadas.
+| Coluna | Tipo | | Observação |
+|---|---|---|---|
+| `id` | int8 | 🔑 | |
+| `intervalo` | tstzrange | **N** | a API monta a partir de `data_inicio` + `duracao_minutos` |
+| `status` | text | **N** | default `'pendente'`; CHECK dos cinco valores (T5) |
+| `id_profissional` | int8 | 🔗 **N** | |
+| `id_cliente` | int8 | 🔗 **N** | |
+| `id_procedimento` | int8 | 🔗 **N** | |
+| `confirmado_em` | date | | |
+| `cancelado_em` | date | | |
+| `motivo_cancelamento` | text | | |
+| `id_info_clinica` | int8 | 🔗 **N** | |
+| `created_at` | timestamptz | **N** | default `now()` |
+| `chave_idempotencia` | text | | criada por T4; única quando preenchida |
 
-| Coluna               | Tipo      | Descrição                    |
-|----------------------|-----------|------------------------------|
-| `id`                 | int8      | 🔑 Chave primária            |
-| `intervalo`          | tstzrange | Período da consulta          |
-| `status`             | text      | Status (agendada, etc)       |
-| `id_profissional`    | int8      | FK → profissional            |
-| `id_cliente`         | int8      | FK → cliente                 |
-| `id_procedimento`    | int8      | FK → procedimento            |
-| `confirmado_em`      | date      | Data de confirmação          |
-| `cancelado_em`       | date      | Data de cancelamento         |
-| `motivo_cancelamento`| text      | Motivo do cancelamento       |
-| `id_info_clinica`    | int8      | 🔗 FK → info_clinica         |
+`data_inicio` e `duracao_minutos` **não são colunas**: são campos de entrada da API,
+convertidos em `intervalo` e removidos antes do `INSERT`.
 
----
+`id_profissional` é `NOT NULL` de propósito — é o que faz a trava de sobreposição
+proteger de fato. Com nulo, `EXCLUDE` não compara nada e o agendamento duplo passa.
 
-### 12. `planos`
-Planos disponíveis no sistema.
+### 12. `planos` — catálogo comercial (vazio)
 
-| Coluna      | Tipo        | Descrição                         |
-|-------------|-------------|-----------------------------------|
-| `id`        | int8        | 🔑 Chave primária                 |
-| `codigo`    | text        | 🔒 Código único do plano          |
-| `nome`      | text        | Nome do plano                     |
-| `preco`     | numeric     | Valor do plano                    |
-| `intervalo` | text        | Intervalo (mensal \| anual)       |
-| `ativo`     | bool        | Se o plano está ativo             |
-| `created_at`| timestamptz | Data de criação                   |
-
----
+| Coluna | Tipo | | |
+|---|---|---|---|
+| `id` | int8 | 🔑 | |
+| `codigo` | text | **N** | `UNIQUE` |
+| `nome` | text | **N** | |
+| `preco` | numeric(10,2) | **N** | CHECK `>= 0` |
+| `intervalo` | text | **N** | CHECK `mensal \| anual` — **texto**, não é range |
+| `ativo` | bool | **N** | default `true` |
+| `created_at` | timestamptz | **N** | default `now()` |
 
 ### 13. `assinaturas`
-Controle de assinaturas de planos por clínica.
 
-| Coluna                    | Tipo        | Descrição                              |
-|---------------------------|-------------|----------------------------------------|
-| `id`                      | int8        | 🔑 Chave primária                      |
-| `id_info_clinica`         | int8        | 🔗 FK → info_clinica                   |
-| `id_plano`                | int8        | 🔗 FK → planos                         |
-| `status`                  | text        | Status (active, past_due, canceled)    |
-| `started_at`              | timestamptz | Data de início                         |
-| `current_period_end`      | timestamptz | Fim do período atual                   |
-| `cancel_at_period_end`    | bool        | Cancelar ao fim do período             |
-| `provider`                | text        | Provedor de pagamento                  |
-| `provider_customer_id`    | text        | ID do cliente no provedor              |
-| `provider_subscription_id`| text        | ID da assinatura no provedor           |
-| `created_at`              | timestamptz | Data de criação                        |
+| Coluna | Tipo | | |
+|---|---|---|---|
+| `id` | int8 | 🔑 | |
+| `id_info_clinica` | int8 | 🔗 **N** | |
+| `id_plano` | int8 | 🔗 **N** | → `planos.id` |
+| `status` | text | **N** | vocabulário do Stripe (abaixo) |
+| `started_at` | timestamptz | **N** | default `now()` |
+| `current_period_end` | timestamptz | | |
+| `cancel_at_period_end` | bool | **N** | default `false` |
+| `provider` | text | | |
+| `provider_customer_id` | text | | |
+| `provider_subscription_id` | text | | único quando preenchido |
+| `created_at` | timestamptz | **N** | default `now()` |
 
----
+`status` aceita `trialing`, `active`, `past_due`, `canceled`, `incomplete`,
+`incomplete_expired`, `unpaid`, `paused` — o espaço de estados do Stripe, que é quem vai
+preencher a coluna. Restringir a três valores recusaria `trialing` e `incomplete`, que a
+integração recebe por webhook desde o primeiro dia.
 
-## Diagrama de Relacionamentos
-
-```
-                         ┌─────────────────┐
-                         │  info_clinica   │
-                         │   (TENANT)      │
-                         └────────┬────────┘
-                                  │
-    ┌──────────┬──────────┬───────┼───────┬──────────┬──────────┐
-    │          │          │       │       │          │          │
-    ▼          ▼          ▼       ▼       ▼          ▼          ▼
-┌────────┐┌────────┐┌─────────┐┌──────┐┌───────┐┌────────┐┌──────────┐
-│usuarios││cliente ││consulta ││prof. ││proced.││horario ││assinat.  │
-└────────┘└────────┘└─────────┘└──────┘└───────┘└────────┘└────┬─────┘
-                                                               │
-                                                               ▼
-                                                         ┌──────────┐
-                                                         │  planos  │
-                                                         └──────────┘
-```
+`UNIQUE` parcial em `provider_subscription_id` é o que impede o mesmo webhook
+reprocessado virar duas assinaturas.
 
 ---
 
-## SQL de Alterações
+## Vocabulário de status de `consulta`
 
-### Adicionar FK `id_info_clinica` nas tabelas
+Cinco valores, todos verificados no código:
 
-```sql
--- 1. Adicionar coluna em horario_clinica
-ALTER TABLE horario_clinica 
-ADD COLUMN id_info_clinica INT8 REFERENCES info_clinica(id);
+| Status | Quem entende |
+|---|---|
+| `pendente` | select de `Agenda.jsx`, valor a receber em `server.py:393` |
+| `agendado` | select de `Agenda.jsx` |
+| `confirmado` | `server.py:379` e cor própria no Dashboard |
+| `cancelado` | select de `Agenda.jsx`, `server.py:375` |
+| `concluido` | select de `Agenda.jsx`, `server.py:391` |
 
--- 2. Adicionar coluna em profissional
-ALTER TABLE profissional 
-ADD COLUMN id_info_clinica INT8 REFERENCES info_clinica(id);
+Backfill inequívoco aplicado por T5: `cancelada → cancelado`,
+`confirmada → confirmado`. Nenhum outro valor recebe correspondência automática.
 
--- 3. Adicionar coluna em procedimento
-ALTER TABLE procedimento 
-ADD COLUMN id_info_clinica INT8 REFERENCES info_clinica(id);
-```
-
-### Criar índices para performance
-
-```sql
-CREATE INDEX idx_horario_clinica_info ON horario_clinica(id_info_clinica);
-CREATE INDEX idx_profissional_info ON profissional(id_info_clinica);
-CREATE INDEX idx_procedimento_info ON procedimento(id_info_clinica);
-CREATE INDEX idx_usuarios_info ON usuarios(id_info_clinica);
-CREATE INDEX idx_cliente_info ON cliente(id_info_clinica);
-CREATE INDEX idx_consulta_info ON consulta(id_info_clinica);
-```
-
-### Adicionar FK nas novas tabelas
-
-```sql
--- Adicionar id_info_clinica em usuarios
-ALTER TABLE usuarios 
-ADD COLUMN id_info_clinica INT8 REFERENCES info_clinica(id),
-ADD COLUMN role TEXT DEFAULT 'owner';
-
--- Adicionar id_info_clinica em cliente
-ALTER TABLE cliente 
-ADD COLUMN id_info_clinica INT8 REFERENCES info_clinica(id);
-
--- Adicionar id_info_clinica em consulta
-ALTER TABLE consulta 
-ADD COLUMN id_info_clinica INT8 REFERENCES info_clinica(id);
-
--- Criar tabela planos
-CREATE TABLE planos (
-  id BIGSERIAL PRIMARY KEY,
-  codigo TEXT UNIQUE NOT NULL,
-  nome TEXT NOT NULL,
-  preco NUMERIC NOT NULL,
-  intervalo TEXT CHECK (intervalo IN ('mensal', 'anual')),
-  ativo BOOLEAN DEFAULT true,
-  created_at TIMESTAMPTZ DEFAULT NOW()
-);
-
--- Criar tabela assinaturas
-CREATE TABLE assinaturas (
-  id BIGSERIAL PRIMARY KEY,
-  id_info_clinica INT8 REFERENCES info_clinica(id),
-  id_plano INT8 REFERENCES planos(id),
-  status TEXT CHECK (status IN ('active', 'past_due', 'canceled')),
-  started_at TIMESTAMPTZ DEFAULT NOW(),
-  current_period_end TIMESTAMPTZ,
-  cancel_at_period_end BOOLEAN DEFAULT false,
-  provider TEXT,
-  provider_customer_id TEXT,
-  provider_subscription_id TEXT,
-  created_at TIMESTAMPTZ DEFAULT NOW()
-);
-```
+**Pendência para a automação:** o workflow v2 grava `cancelada` e filtra por `agendada`.
+Com o CHECK aplicado, o cancelamento pelo WhatsApp passa a ser recusado pelo banco.
 
 ---
 
-## Histórico de Alterações
+## Travas (`scripts/travas_corte_vertical.sql`)
 
-| Data       | Alteração                                              |
-|------------|--------------------------------------------------------|
-| 2025-12-18 | Documento criado com schema inicial                    |
-| 2025-12-18 | Adicionado id_info_clinica em horario_clinica          |
-| 2025-12-18 | Adicionado id_info_clinica em profissional             |
-| 2025-12-18 | Adicionado id_info_clinica em procedimento             |
-| 2026-01-31 | Adicionado id_info_clinica e role em usuarios          |
-| 2026-01-31 | Adicionado id_info_clinica em cliente                  |
-| 2026-01-31 | Adicionado id_info_clinica em consulta                 |
-| 2026-01-31 | Criada tabela planos                                   |
-| 2026-01-31 | Criada tabela assinaturas                              |
-| 2026-02-04 | Adicionado instance_name em usuarios (Evolution API)   |
-| 2026-02-05 | Adicionado mensagem_lembrete em info_clinica           |
-| 2026-02-05 | Adicionado campos de trial em usuarios                 |
-| 2026-02-05 | Adicionado campo telefone em cliente                   |
+| Trava | Objeto |
+|---|---|
+| T1 | `ux_usuarios_instance_name` — único parcial, ignora nulo e vazio |
+| T2 | `ux_cliente_empresa_whats` — único em `(id_info_clinica, regexp_replace(whats,'[^0-9]','','g'))` |
+| T3 | `consulta_sem_sobreposicao` — `EXCLUDE USING gist (id_profissional WITH =, intervalo WITH &&)` para `pendente`, `agendado`, `confirmado` |
+| T4 | `consulta.chave_idempotencia` + `ux_consulta_chave_idempotencia` |
+| T5 | `consulta_status_valido` — CHECK dos cinco status, após backfill |
+| T6 | `ix_<tabela>_info_clinica` em 8 tabelas + `ix_consulta_profissional_intervalo` (GiST) |
+
+`btree_gist` é instalada no schema `extensions`, não em `public`: em `public` ela
+despeja ~140 funções `gbt_*` que o PostgREST passaria a expor como API.
 
 ---
 
-### SQL: Adicionar instance_name em usuarios
+## View `v_clinica_detalhes`
 
-```sql
-ALTER TABLE usuarios ADD COLUMN instance_name TEXT;
-```
+Uma linha por empresa, `security_invoker = true`. Contrato conferido no nó
+`montar contexto` da automação:
 
-### SQL: Adicionar mensagem_lembrete em info_clinica
+| Campo | Tipo | Conteúdo |
+|---|---|---|
+| `id_info_clinica` | int8 | filtro obrigatório |
+| `clinica_nome`, `clinica_telefone`, `clinica_email`, `clinica_endereco` | text | identificação pública |
+| `assistente_nome`, `assistente_tom` | text | nulo usa o padrão do fluxo |
+| `exige_profissional` | bool | |
+| `procedimentos` | jsonb | `[{id, nome, valor, duracao_minutos, agendavel}]`, ordenado por nome |
+| `profissionais` | jsonb | `[{id, nome, area}]`, **somente ativos**, ordenado por nome |
+| `horarios` | jsonb | `[{dia_semana, hora_inicio, hora_fim}]`, hora em `HH:MM` |
 
-```sql
-ALTER TABLE info_clinica ADD COLUMN mensagem_lembrete TEXT;
-```
+Arrays nunca vêm `null`: empresa sem catálogo recebe `[]`. Não expõe nada de
+`usuarios`, `cliente` ou `consulta`, e nenhuma credencial.
 
-### SQL: Adicionar campos de trial em usuarios
-
-```sql
-ALTER TABLE usuarios ADD COLUMN trial_inicio TIMESTAMPTZ;
-ALTER TABLE usuarios ADD COLUMN trial_fim TIMESTAMPTZ;
-ALTER TABLE usuarios ADD COLUMN status_assinatura TEXT DEFAULT 'trial';
-```
-
-### SQL: Adicionar telefone em cliente
-
-```sql
-ALTER TABLE cliente ADD COLUMN telefone TEXT;
-CREATE INDEX idx_cliente_telefone ON cliente(telefone);
-```
+`agendavel` é `true` só quando existe pelo menos um profissional **ativo** da empresa
+habilitado naquele serviço. Serviço com `agendavel: false` tem preço e duração para
+responder a uma pergunta, mas `fn_buscar_slots` devolveria zero horário para sempre —
+sem essa marca o fluxo trataria a lista vazia como "sem vaga hoje" e voltaria a
+oferecer o mesmo serviço no turno seguinte, em vez de transferir para uma pessoa.
 
 ---
 
-*Documento gerado automaticamente. Manter atualizado conforme alterações no banco.*
+## Função `fn_buscar_slots`
+
+`SECURITY INVOKER`, `STABLE`, `search_path` fixo em `public, pg_temp`.
+
+**Parâmetros** (nomeados, via corpo JSON do PostgREST):
+
+| Parâmetro | Tipo | |
+|---|---|---|
+| `p_id_info_clinica` | int8 | **obrigatório** — a empresa é dada, nunca deduzida |
+| `p_procedimento_id` | int8 | **obrigatório** |
+| `p_inicio` | timestamptz | início da janela |
+| `p_fim` | timestamptz | fim da janela |
+| `p_profissional_id` | int8 | opcional; nulo = qualquer profissional apto |
+| `p_step_minutos` | int | padrão 30 |
+| `p_duracao_minutos` | int | nulo usa a duração do procedimento |
+
+**Retorno:** `id_info_clinica`, `id_profissional`, `id_procedimento`, `inicio`, `fim`,
+`profissional_nome`. **Toda linha traz `id_profissional`** — slot sem profissional não
+existe.
+
+**Isolamento em três pontos:** o procedimento tem de ser da empresa (senão levanta
+exceção), o profissional tem de ser da empresa, e o profissional tem de executar aquele
+procedimento. Como `disponibilidade_profissional` e `profissional_procedimento` não têm
+coluna de empresa, o tenant chega nelas passando por `profissional.id_info_clinica`.
+
+**Respeita:** horário da empresa, disponibilidade do profissional, `agenda_bloqueio` e
+consultas vivas (mesmo conjunto de status da constraint T3). Nunca oferta passado.
+
+---
+
+## RLS
+
+RLS está **habilitado nas 13 tabelas**, com **zero políticas**. Não é omissão:
+
+- O frontend não fala com o Supabase; ele chama a API.
+- A API e a automação usam `service_role`, que tem `rolbypassrls = true` — verificado no
+  catálogo. Ligar RLS não afeta nenhuma das duas.
+- `anon` e `authenticated` **não** têm bypass. Com RLS ligado e nenhuma política, ficam
+  sem acesso — reforçado por `REVOKE ALL` explícito.
+- Política com `auth.uid()` só faz sentido quando existir autenticação de usuário final
+  no Supabase, que o produto não usa. Escrever política agora seria regra para um modelo
+  de sessão inexistente.
+
+**O isolamento principal entre empresas é validado pela API**, em
+`get_user_clinica_id()` (`server.py:200`) e `assert_owned_record()` (`server.py:211`),
+que filtram por `id_info_clinica` em toda operação. O RLS é a segunda barreira.
+
+---
+
+## Histórico
+
+| Data | Alteração |
+|---|---|
+| 2025-12-18 → 2026-02-05 | Histórico do schema anterior, em outro projeto Supabase |
+| 2026-08-21 | Projeto novo adotado como fonte oficial; `public` estava vazio |
+| 2026-08-21 | `bootstrap_schema.sql`: 13 tabelas, FKs, CHECKs, RLS e grants |
+| 2026-08-21 | `travas_corte_vertical.sql`: T1–T6 aplicadas |
+| 2026-08-21 | `v_clinica_detalhes` e `fn_buscar_slots` criadas do zero |
+| 2026-08-21 | `btree_gist` movida de `public` para `extensions` |
+| 2026-08-21 | Quatro scripts antigos marcados como aposentados |
+| 2026-08-21 | URL de projeto removida deste documento |
+
+---
+
+## Diferenças em relação ao schema antigo
+
+| Diferença | Por quê |
+|---|---|
+| `info_clinica.onboarding_completo` **nova** | a API grava; faltava na documentação |
+| `info_clinica.assistente_nome`, `assistente_tom`, `exige_profissional` **novas** | a automação lê pela view |
+| `agenda_bloqueio.id_info_clinica` **documentada** | a API sempre gravou; faltava no documento |
+| `consulta.chave_idempotencia` **nova** | T4 |
+| `profissional.id_especialidade` **removida** | nenhum código usa |
+| `consulta.motivo` **não criada** | lida só por uma tela que não está roteada |
+| `area_atuacao.created_at` **nova** | consistência |
+| `assinaturas.status` com 8 valores | o espaço de estados do Stripe |
+| `procedimento.duracao_minutos` int4 em vez de int2 | a API aceita int sem limite |
+| `usuarios.status_assinatura` com CHECK | vocabulário fechado |
+| FKs **explícitas** em toda relação | os joins embutidos do PostgREST (`cliente(*)`, `area_atuacao(*)`) só funcionam com FK real |
+| `NOT NULL` em `id_info_clinica` das tabelas de negócio | linha órfã de empresa não deveria existir |

@@ -1,3 +1,8 @@
+-- APOSENTADO em 2026-08-21. NAO EXECUTE EM BASE REAL.
+-- Contem dados de exemplo com ids fixos (1..4) que nao correspondem a
+-- profissional algum. Serve apenas como referencia da convencao
+-- dia_semana 1=segunda .. 7=domingo.
+
 -- INSERT para disponibilidade de profissionais
 -- Ajuste os horários conforme a necessidade da sua clínica
 
