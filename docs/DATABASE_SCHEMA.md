@@ -17,11 +17,20 @@ schema pretendido. Cada coluna existe porque um consumidor real a lê ou escreve
 | 1 | `scripts/bootstrap_schema.sql` | 13 tabelas, FKs, CHECKs locais, índices de FK, RLS e grants |
 | 2 | `scripts/travas_corte_vertical.sql` | T1–T6: travas de integridade e índices por empresa |
 | 3 | `scripts/v_clinica_detalhes.sql` | view de contexto de atendimento |
-| 4 | `scripts/fn_buscar_slots.sql` | RPC de disponibilidade |
+| 4 | `scripts/fn_buscar_slots.sql` | RPC de disponibilidade (v2) |
+| 5 | `scripts/ajustes_ai_api.sql` | A1–A5: correções para `/api/ai/*` |
+| 6 | `scripts/integridade_tenant.sql` | I1–I4: integridade entre empresas no próprio banco |
 | — | `scripts/teste_transacional.sql` | prova as garantias e termina em `ROLLBACK` |
 
 Todos são reexecutáveis: rodar duas vezes produz o mesmo estado e nenhum erro —
-verificado. Nenhum deles insere dado de negócio.
+verificado. Nenhum deles insere dado de **tenant**; o único dado inserido é o
+catálogo global de `area_atuacao` (A5), que não pertence a empresa alguma.
+
+**A ordem importa e é circular em um ponto:** T2 recria
+`ux_cliente_empresa_whats` e A4 o remove de novo, porque a coluna gerada
+`cliente.whats_normalizado` indexa a mesma expressão. Rodar a sequência inteira
+sempre termina no mesmo estado; rodar só o passo 2 deixa um índice redundante,
+sem consequência funcional.
 
 **Aposentados, não executar:** `create_usuarios_table.sql` (produz `usuarios`
 incompleta), `add_telefone_cliente.sql` (não reexecutável), `enable_rls.sql`
@@ -83,11 +92,23 @@ login a partir de `trial_fim`.
 | `interesses` | text | | |
 | `status` | text | **N** | default `'ativo'` |
 | `id_plano_saude` | int8 | | **sem FK**: não existe tabela de plano de saúde |
+| `whats_normalizado` | text | | **coluna gerada** (A4): só os dígitos de `whats` |
 | `id_info_clinica` | int8 | 🔗 **N** | |
 | `created_at` | timestamptz | **N** | default `now()` |
 
-`whats` e `telefone` são colunas distintas de propósito. Único por
-`(id_info_clinica, dígitos de whats)` — ver T2.
+`whats` e `telefone` são colunas distintas de propósito.
+
+`whats_normalizado` é `GENERATED ALWAYS AS (nullif(regexp_replace(whats,
+'[^0-9]', '', 'g'), ''))`. Existe porque a API precisa **filtrar** por telefone
+normalizado, e o PostgREST não consulta expressão indexada — só coluna. A
+unicidade por empresa mudou de T2 para `ux_cliente_empresa_whats_norm`
+(`id_info_clinica, whats_normalizado`), que indexa a mesma coisa e ainda serve
+de filtro. O mesmo telefone em empresas diferentes continua sendo legítimo.
+
+A equivalência entre formas do mesmo número (com e sem `55`, com e sem o nono
+dígito) fica na API, em `dominio.telefones_equivalentes`: é heurística de
+numeração, e prendê-la numa coluna gerada obrigaria a recriar a coluna a cada
+ajuste.
 
 ### 4. `profissional`
 
@@ -124,10 +145,17 @@ login a partir de `trial_fim`.
 | `nome` | text | **N** | |
 | `created_at` | timestamptz | **N** | default `now()` |
 
-**Sem coluna de empresa, de propósito.** A API lê todas sem filtro e insere sem tenant.
-Consequência conhecida: é um catálogo compartilhado entre todas as empresas, e
-`POST /areas-atuacao` não verifica empresa nem papel. Separar por empresa exige mudar o
-backend e o dashboard primeiro — não é uma decisão de banco.
+**Sem coluna de empresa, de propósito:** é catálogo global, compartilhado por
+todas as empresas.
+
+`ux_area_atuacao_nome` (A5) garante unicidade por `lower(btrim(nome))`. O
+catálogo inicial tem 24 rótulos do público da Agenda Magnética (estética,
+odontologia, podologia, quiropraxia, fisioterapia, massoterapia, psicologia,
+nutrição, beleza, barbearia, terapias e afins).
+
+`POST /areas-atuacao` **foi removido do backend**: qualquer usuário autenticado
+escrevia numa lista que todos os clientes enxergam (P3). Só `GET` continua
+exposto. Incluir rótulo novo é operação de banco, pela lista de A5.
 
 ### 7. `profissional_procedimento` — quem executa o quê
 
@@ -172,8 +200,8 @@ Sem coluna de empresa: o tenant chega por `profissional`.
 |---|---|---|---|
 | `id` | int8 | 🔑 | |
 | `motivo` | text | | |
-| `intervalo` | tstzrange | **N** | CHECK não vazio |
-| `id_profissional` | int8 | 🔗 **N** | `ON DELETE CASCADE` |
+| `intervalo` | tstzrange | **N** | CHECK não vazio e **com as duas pontas finitas** (I4) |
+| `id_profissional` | int8 | 🔗 **N** | FK **composta** com `id_info_clinica` (I3); `ON DELETE CASCADE` |
 | `id_info_clinica` | int8 | 🔗 **N** | a API grava; a documentação antiga não tinha |
 | `created_at` | timestamptz | **N** | default `now()` |
 
@@ -182,23 +210,40 @@ Sem coluna de empresa: o tenant chega por `profissional`.
 | Coluna | Tipo | | Observação |
 |---|---|---|---|
 | `id` | int8 | 🔑 | |
-| `intervalo` | tstzrange | **N** | a API monta a partir de `data_inicio` + `duracao_minutos` |
+| `intervalo` | tstzrange | **N** | a API monta a partir de `data_inicio` + `duracao_minutos`; CHECK não vazio e **com as duas pontas finitas** (I4) |
 | `status` | text | **N** | default `'pendente'`; CHECK dos cinco valores (T5) |
-| `id_profissional` | int8 | 🔗 **N** | |
-| `id_cliente` | int8 | 🔗 **N** | |
-| `id_procedimento` | int8 | 🔗 **N** | |
-| `confirmado_em` | date | | |
-| `cancelado_em` | date | | |
+| `id_profissional` | int8 | 🔗 **N** | FK **composta** com `id_info_clinica` (I2) |
+| `id_cliente` | int8 | 🔗 **N** | FK **composta** com `id_info_clinica` (I2) |
+| `id_procedimento` | int8 | 🔗 **N** | FK **composta** com `id_info_clinica` (I2) |
+| `confirmado_em` | timestamptz | | instante, não dia (A1) |
+| `cancelado_em` | timestamptz | | instante, não dia (A2) |
 | `motivo_cancelamento` | text | | |
+| `valor_cobrado` | numeric(10,2) | | preço congelado no ato (A3); CHECK `>= 0` ou nulo |
 | `id_info_clinica` | int8 | 🔗 **N** | |
 | `created_at` | timestamptz | **N** | default `now()` |
 | `chave_idempotencia` | text | | criada por T4; única quando preenchida |
+
+`valor_cobrado` é o preço acertado no dia do agendamento. `procedimento.valor` é
+o preço de **hoje**: sem a cópia, reajustar um serviço reescreveria o histórico
+financeiro já emitido. A API grava na criação (painel e automação) e relê nos
+totais de `/api/dashboard/stats`, caindo em `procedimento.valor` só quando a
+coluna é nula — o caso de consultas anteriores a A3.
+
+`chave_idempotencia` é gravada pela automação no formato `emp<id>:<chave>`. O
+índice único é global; sem o prefixo de empresa, duas empresas que usassem o
+mesmo identificador de ação colidiriam entre si.
 
 `data_inicio` e `duracao_minutos` **não são colunas**: são campos de entrada da API,
 convertidos em `intervalo` e removidos antes do `INSERT`.
 
 `id_profissional` é `NOT NULL` de propósito — é o que faz a trava de sobreposição
 proteger de fato. Com nulo, `EXCLUDE` não compara nada e o agendamento duplo passa.
+
+As três chaves estrangeiras são **compostas** com `id_info_clinica`
+(`integridade_tenant.sql`): elas provam que o cadastro existe **e** que é da
+mesma empresa da consulta. A forma de uma coluna, que provava só a existência,
+foi substituída — não somada. Com as duas, o PostgREST encontraria duas relações
+entre as mesmas tabelas e recusaria o join embutido (`PGRST201`).
 
 ### 12. `planos` — catálogo comercial (vazio)
 
@@ -244,17 +289,19 @@ Cinco valores, todos verificados no código:
 
 | Status | Quem entende |
 |---|---|
-| `pendente` | select de `Agenda.jsx`, valor a receber em `server.py:393` |
+| `pendente` | select de `Agenda.jsx`, valor a receber; é o status que `POST /api/ai/agendamentos` grava |
 | `agendado` | select de `Agenda.jsx` |
-| `confirmado` | `server.py:379` e cor própria no Dashboard |
-| `cancelado` | select de `Agenda.jsx`, `server.py:375` |
-| `concluido` | select de `Agenda.jsx`, `server.py:391` |
+| `confirmado` | `/api/dashboard/stats` e cor própria no Dashboard |
+| `cancelado` | select de `Agenda.jsx`; é o que `POST /api/ai/agendamentos/cancelar` grava |
+| `concluido` | select de `Agenda.jsx`, total recebido do mês |
 
 Backfill inequívoco aplicado por T5: `cancelada → cancelado`,
 `confirmada → confirmado`. Nenhum outro valor recebe correspondência automática.
 
 **Pendência para a automação:** o workflow v2 grava `cancelada` e filtra por `agendada`.
-Com o CHECK aplicado, o cancelamento pelo WhatsApp passa a ser recusado pelo banco.
+Com o CHECK aplicado, o cancelamento pelo WhatsApp é recusado pelo banco. A rota
+`/api/ai/agendamentos/cancelar` já grava `cancelado`; migrar o nó para ela
+resolve sem o fluxo precisar conhecer o vocabulário.
 
 ---
 
@@ -271,6 +318,55 @@ Com o CHECK aplicado, o cancelamento pelo WhatsApp passa a ser recusado pelo ban
 
 `btree_gist` é instalada no schema `extensions`, não em `public`: em `public` ela
 despeja ~140 funções `gbt_*` que o PostgREST passaria a expor como API.
+
+## Ajustes (`scripts/ajustes_ai_api.sql`)
+
+Migração corretiva aplicada depois das travas. Resolve P3, P4 e P5 e prepara a
+normalização de telefone que `/api/ai/*` exige.
+
+| Ajuste | Objeto | Pendência que fecha |
+|---|---|---|
+| A1 | `consulta.confirmado_em` → `timestamptz` | P4 |
+| A2 | `consulta.cancelado_em` → `timestamptz` | P4 |
+| A3 | `consulta.valor_cobrado` + `consulta_valor_cobrado_nao_negativo` | P5 |
+| A4 | `cliente.whats_normalizado` + `ux_cliente_empresa_whats_norm`; remove `ux_cliente_empresa_whats` | isolamento e busca por telefone |
+| A5 | `ux_area_atuacao_nome` + 24 rótulos do catálogo global | P3 (metade de banco) |
+
+Termina com `notify pgrst, 'reload schema'`: sem isso as colunas novas só
+aparecem na API no próximo reinício do PostgREST.
+
+## Integridade entre empresas (`scripts/integridade_tenant.sql`)
+
+As FKs do bootstrap provavam que o id **existia**, não que ele pertencia à mesma
+empresa da linha que o referencia. Nada no banco impedia uma `consulta` da
+empresa A apontar para um cliente da empresa B — o isolamento ficava inteiro na
+aplicação, e qualquer caminho novo (script de manutenção, correção manual,
+restauração de backup) podia cruzar as duas empresas sem encontrar resistência.
+
+| Trava | Objeto |
+|---|---|
+| I1 | `ux_cliente_id_empresa`, `ux_profissional_id_empresa`, `ux_procedimento_id_empresa` — `UNIQUE (id, id_info_clinica)` |
+| I2 | `consulta_cliente_da_empresa`, `consulta_profissional_da_empresa`, `consulta_procedimento_da_empresa` — FKs compostas; substituem `consulta_id_*_fkey` |
+| I3 | `agenda_bloqueio_profissional_da_empresa` — FK composta com `ON DELETE CASCADE`; substitui `agenda_bloqueio_id_profissional_fkey` |
+| I4 | `consulta_intervalo_limitado`, `agenda_bloqueio_intervalo_limitado` — `lower`/`upper` do `intervalo` não nulos |
+
+I1 é redundante como unicidade (`id` já é chave primária) e existe por um motivo
+só: o PostgreSQL exige restrição única sobre as colunas referenciadas por uma FK.
+
+As FKs de uma coluna foram **substituídas na mesma transação**, não duplicadas —
+duas relações entre as mesmas tabelas fazem o PostgREST recusar o join embutido
+(`PGRST201`), e `consulta?select=*,cliente(*),...` é o que o painel e `/api/ai/*`
+usam. Verificado depois de aplicar: os três `select` embutidos do produto
+continuam resolvendo.
+
+I4 fecha um buraco que `not isempty(...)` não cobre: `[2026-08-28 14:00,)` é um
+intervalo válido, não vazio e **sem fim**. Um único registro assim sobrepõe toda
+a agenda futura do profissional — a constraint de exclusão passaria a recusar
+qualquer agendamento novo — e `ler_intervalo` não consegue interpretá-lo,
+devolvendo `FALHA_TEMPORARIA` em toda leitura daquela linha.
+
+Encontrando linha que viola, o script **para**, lista os ids e não aplica nada.
+Nenhuma linha é apagada, mesclada ou reatribuída.
 
 ---
 
@@ -315,6 +411,7 @@ oferecer o mesmo serviço no turno seguinte, em vez de transferir para uma pesso
 | `p_profissional_id` | int8 | opcional; nulo = qualquer profissional apto |
 | `p_step_minutos` | int | padrão 30 |
 | `p_duracao_minutos` | int | nulo usa a duração do procedimento |
+| `p_ignorar_consulta_id` | int8 | v2; ignora esta consulta ao calcular ocupação |
 
 **Retorno:** `id_info_clinica`, `id_profissional`, `id_procedimento`, `inicio`, `fim`,
 `profissional_nome`. **Toda linha traz `id_profissional`** — slot sem profissional não
@@ -324,6 +421,17 @@ existe.
 exceção), o profissional tem de ser da empresa, e o profissional tem de executar aquele
 procedimento. Como `disponibilidade_profissional` e `profissional_procedimento` não têm
 coluna de empresa, o tenant chega nelas passando por `profissional.id_info_clinica`.
+
+**`p_ignorar_consulta_id` (v2)** é nulo em toda busca normal e só é preenchido na
+revalidação de reagendamento. Sem ele, a consulta que está sendo movida ocupa o
+horário antigo e a função devolve zero slot quando o horário novo encosta no
+atual — a API recusaria uma remarcação válida. A alternativa seria reimplementar
+a regra de disponibilidade dentro do backend, criando duas fontes de verdade.
+
+A v1 tinha 7 parâmetros; `create or replace` com 8 criaria uma **sobrecarga**, e
+o PostgREST ficaria com duas candidatas para a mesma chamada nomeada. Por isso o
+script derruba a assinatura antiga antes de recriar, e `teste_transacional.sql`
+verifica que existe uma única `fn_buscar_slots` em `public`.
 
 **Respeita:** horário da empresa, disponibilidade do profissional, `agenda_bloqueio` e
 consultas vivas (mesmo conjunto de status da constraint T3). Nunca oferta passado.
@@ -343,9 +451,16 @@ RLS está **habilitado nas 13 tabelas**, com **zero políticas**. Não é omiss�
   no Supabase, que o produto não usa. Escrever política agora seria regra para um modelo
   de sessão inexistente.
 
-**O isolamento principal entre empresas é validado pela API**, em
-`get_user_clinica_id()` (`server.py:200`) e `assert_owned_record()` (`server.py:211`),
-que filtram por `id_info_clinica` em toda operação. O RLS é a segunda barreira.
+**O isolamento principal entre empresas é validado pela API**: no painel, por
+`get_user_clinica_id()` e `assert_owned_record()` (`services/api/server.py`); na
+automação, por `resolver_empresa()`, `obter_procedimento()`,
+`obter_profissional()` e `consulta_do_cliente()`
+(`services/api/ai_api.py`), que derivam a empresa de `usuarios.instance_name` e
+conferem cada id contra ela. O RLS é a segunda barreira.
+
+Enquanto o workflow n8n falar direto com o PostgREST usando `service_role`, essa
+barreira não vale para ele — é a razão de `/api/ai/*` existir. Ver
+`docs/planning/BACKEND_AI_API_HANDOFF.md`.
 
 ---
 
@@ -361,6 +476,10 @@ que filtram por `id_info_clinica` em toda operação. O RLS é a segunda barreir
 | 2026-08-21 | `btree_gist` movida de `public` para `extensions` |
 | 2026-08-21 | Quatro scripts antigos marcados como aposentados |
 | 2026-08-21 | URL de projeto removida deste documento |
+| 2026-08-21 | `ajustes_ai_api.sql`: A1–A5 aplicadas (P3, P4, P5) |
+| 2026-08-21 | `fn_buscar_slots` v2 com `p_ignorar_consulta_id` |
+| 2026-08-21 | `POST /areas-atuacao` removido do backend |
+| 2026-08-21 | `integridade_tenant.sql`: I1–I4 aplicadas; FKs de `consulta` e `agenda_bloqueio` passam a ser compostas com a empresa |
 
 ---
 

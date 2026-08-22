@@ -5,8 +5,8 @@ Uso:
     python automation/n8n/validar_workflow.py caminho/para/workflow.json
 
 Verifica JSON válido, estado inativo, nós obrigatórios, rotas sem destino,
-ausência de segredos e de dados pessoais, e as guardas de empresa e cliente nas
-operações de escrita.
+ausência de segredos e de dados pessoais, e que toda operação de agenda passa
+por `/api/ai/*` com token de automação — nunca pelo PostgREST.
 """
 
 import json
@@ -24,6 +24,7 @@ NOS_OBRIGATORIOS = [
     "mensagem duplicada?",
     "Redis - atendimento humano ativo?",
     "agrupar mensagens",
+    "contexto da empresa",
     "montar contexto",
     "IA interpretadora",
     "validar interpretação",
@@ -33,23 +34,43 @@ NOS_OBRIGATORIOS = [
     "avaliar horários",
     "consultas do cliente",
     "decidir sobre consultas",
-    "revalidar horário",
-    "conferir revalidação",
     "criar consulta",
     "reagendar consulta",
     "cancelar consulta",
+    "repetir escrita",
     "verificar resultado",
     "montar resposta",
     "evo enviar mensagem",
     "registrar decisão",
 ]
 
-# Nós de escrita e o filtro que o sistema precisa impor em cada um.
-ESCRITAS = {
-    "criar consulta": ["id_cliente", "id_info_clinica"],
-    "reagendar consulta": ["id_cliente", "id_info_clinica"],
-    "cancelar consulta": ["id_cliente", "id_info_clinica"],
-    "atualizar cadastro": ["id_info_clinica"],
+# Nada mais fala com o banco: quem tem `SUPABASE_SERVICE_ROLE_KEY` é o backend.
+# Um destes literais de volta ao JSON significa acesso direto ao PostgREST,
+# vocabulário de status errado ou filtro montado no fluxo.
+PROIBIDOS = [
+    (r"SUPABASE_SERVICE_ROLE_KEY", "chave administrativa do banco no workflow"),
+    (r"SUPABASE_URL", "acesso direto ao Supabase"),
+    (r"rest/v1", "chamada direta ao PostgREST"),
+    (r"id_info_clinica", "id de empresa no fluxo (a API deriva pela instância)"),
+    (r"senha_hash", "coluna de senha exposta ao fluxo"),
+    (r"cancelada", "status inexistente no banco (a API grava 'cancelado')"),
+    (r"status=neq", "filtro do PostgREST montado no fluxo"),
+    (r"n8n-nodes-base\.supabase", "nó Supabase (a agenda passa por /api/ai/*)"),
+    (r"\$fromAI", "valor escolhido pela IA"),
+]
+
+# Cada nó de agenda e a rota que ele precisa chamar.
+NOS_API = {
+    "contexto da empresa": "/api/ai/contexto",
+    "buscar horários": "/api/ai/disponibilidade",
+    "consultas do cliente": "/api/ai/agendamentos/buscar",
+    "criar consulta": "/api/ai/agendamentos",
+    "reagendar consulta": "/api/ai/agendamentos/reagendar",
+    "cancelar consulta": "/api/ai/agendamentos/cancelar",
+    "atualizar cadastro": "/api/ai/cliente",
+    # A repetição reusa o caminho e o corpo já montados: mesma chave de
+    # idempotência, então repetir não cria um segundo agendamento.
+    "repetir escrita": None,
 }
 
 SEGREDOS = [
@@ -86,8 +107,8 @@ def falhas_do_workflow(caminho):
     if wf.get("pinData"):
         erros.append("pinData deve ficar vazio (pode conter payload real)")
 
-    if wf.get("settings", {}).get("saveDataSuccessExecution") == "all":
-        erros.append("saveDataSuccessExecution: all guarda dados pessoais em toda execução")
+    if wf.get("settings", {}).get("saveDataSuccessExecution") != "none":
+        erros.append("saveDataSuccessExecution precisa ser 'none' (evita guardar dados pessoais)")
 
     nos = wf.get("nodes", [])
     por_nome = {n["name"]: n for n in nos}
@@ -139,18 +160,69 @@ def falhas_do_workflow(caminho):
             if referencia not in nomes:
                 erros.append(f"'{no['name']}' referencia o nó inexistente '{referencia}'")
 
-    for nome, filtros in ESCRITAS.items():
+    # Toda chave do Redis inclui a instância: o mesmo telefone falando com duas
+    # empresas nunca compartilha buffer, estado nem pausa.
+    for no in nos:
+        if no.get("type") != "n8n-nodes-base.redis":
+            continue
+        parametros = no.get("parameters", {})
+        # `push` nomeia a chave de `list`; as outras operações usam `key`.
+        chave = parametros.get("key") or parametros.get("list") or ""
+        if ".instance" not in chave:
+            erros.append(f"chave do Redis sem instância em '{no['name']}'")
+
+    for nome, rota in NOS_API.items():
         no = por_nome.get(nome)
         if not no:
+            erros.append(f"nó de API ausente: {nome}")
             continue
+        if no.get("type") != "n8n-nodes-base.httpRequest":
+            erros.append(f"'{nome}' precisa ser um nó HTTP Request")
+            continue
+        parametros = no.get("parameters", {})
+        url = parametros.get("url", "")
         texto = json.dumps(no, ensure_ascii=False)
-        for filtro in filtros:
-            if filtro not in texto:
-                erros.append(f"'{nome}' não impõe o filtro {filtro}")
+        if "$env.AGENDA_API_BASE_URL" not in url:
+            erros.append(f"'{nome}' não usa $env.AGENDA_API_BASE_URL")
+        cabecalhos = {
+            c.get("name"): c.get("value", "")
+            for c in parametros.get("headerParameters", {}).get("parameters", [])
+        }
+        if "$env.AGENDA_AUTOMATION_TOKEN" not in cabecalhos.get("X-Automation-Token", ""):
+            erros.append(f"'{nome}' não envia X-Automation-Token de $env.AGENDA_AUTOMATION_TOKEN")
+        if rota and rota not in url:
+            erros.append(f"'{nome}' não chama {rota}")
+        # A API devolve 4xx/5xx COM envelope: sem neverError o código de erro se
+        # perde e o fluxo não sabe se reoferta, lista de novo ou chama uma pessoa.
+        resposta = parametros.get("options", {}).get("response", {}).get("response", {})
+        if resposta.get("neverError") is not True:
+            erros.append(f"'{nome}' não lê o corpo em erro HTTP (neverError)")
+        if not parametros.get("options", {}).get("timeout"):
+            erros.append(f"'{nome}' sem timeout")
+        if "AGENDA_AUTOMATION_TOKEN" in url:
+            erros.append(f"'{nome}' coloca o token na URL")
         if "$fromAI" in texto:
             erros.append(f"'{nome}' aceita valor escolhido pela IA ($fromAI)")
-        if "Prefer" not in texto or "return=representation" not in texto:
-            erros.append(f"'{nome}' não pede retorno do registro (Prefer: return=representation)")
+
+    # A repetição precisa repetir o MESMO pedido, senão a chave muda.
+    repetir = por_nome.get("repetir escrita")
+    if repetir:
+        texto = json.dumps(repetir, ensure_ascii=False)
+        if "escrita.caminho" not in texto or "escrita.corpo" not in texto:
+            erros.append("'repetir escrita' não reusa escrita.caminho e escrita.corpo")
+
+    decisor = por_nome.get("resolver e decidir", {}).get("parameters", {}).get("jsCode", "")
+    if "chave_idempotencia" not in decisor:
+        erros.append("'resolver e decidir' não envia chave_idempotencia na criação")
+    if "/api/ai/agendamentos/reagendar" in decisor:
+        bloco = decisor.split("/api/ai/agendamentos/reagendar", 1)[1].split("/api/ai/agendamentos", 1)[0]
+        if "chave_idempotencia" in bloco:
+            erros.append("reagendar não pode enviar chave_idempotencia (a API recusa)")
+
+    for padrao, descricao in PROIBIDOS:
+        achado = re.search(padrao, bruto)
+        if achado:
+            erros.append(f"{descricao}: literal '{achado.group(0)}' no JSON")
 
     for padrao, descricao in SEGREDOS:
         achado = re.search(padrao, bruto)

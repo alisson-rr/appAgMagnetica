@@ -1,12 +1,13 @@
 -- =============================================================================
 -- Teste transacional do schema — Agenda Magnética
--- Versão: 1 (2026-08-21)
+-- Versão: 2 (2026-08-21)
 --
 -- Cria duas empresas de mentira, prova todas as garantias e termina em ROLLBACK.
 -- NADA persiste. Pode rodar quantas vezes quiser, inclusive no banco oficial.
 --
 -- Rodar DEPOIS de: bootstrap_schema.sql, travas_corte_vertical.sql,
---                  v_clinica_detalhes.sql, fn_buscar_slots.sql
+--                  v_clinica_detalhes.sql, fn_buscar_slots.sql,
+--                  ajustes_ai_api.sql
 --
 -- Cada verificação emite NOTICE 'OK: ...'. Qualquer falha levanta exceção e
 -- aborta — silêncio no fim significa que algo não rodou.
@@ -482,6 +483,54 @@ begin
 end $$;
 
 -- -----------------------------------------------------------------------------
+-- 10b. Revalidacao de REAGENDAMENTO ignora a propria consulta
+-- Sem p_ignorar_consulta_id a consulta que esta sendo movida bloqueia o proprio
+-- reagendamento, e a API recusaria um horario valido.
+-- -----------------------------------------------------------------------------
+do $$
+declare
+  v_a        int8 := (select valor from t_ids where chave = 'empresa_a');
+  v_proc_a   int8 := (select valor from t_ids where chave = 'proc_a');
+  v_dia      date := (select dia from t_dia);
+  v_consulta int8;
+  v_com      int;
+  v_sem      int;
+begin
+  select id into v_consulta
+  from public.consulta
+  where id_info_clinica = v_a
+    and intervalo && tstzrange(
+          (v_dia + time '14:00') at time zone 'America/Sao_Paulo',
+          (v_dia + time '15:00') at time zone 'America/Sao_Paulo', '[)')
+  limit 1;
+
+  if v_consulta is null then
+    raise exception 'FALHOU 10b: fixture da consulta das 14:00 nao encontrada';
+  end if;
+
+  select count(*) into v_sem
+  from public.fn_buscar_slots(
+         v_a, v_proc_a,
+         (v_dia + time '14:00') at time zone 'America/Sao_Paulo',
+         (v_dia + time '15:00') at time zone 'America/Sao_Paulo') s;
+
+  select count(*) into v_com
+  from public.fn_buscar_slots(
+         v_a, v_proc_a,
+         (v_dia + time '14:00') at time zone 'America/Sao_Paulo',
+         (v_dia + time '15:00') at time zone 'America/Sao_Paulo',
+         null, 30, null, v_consulta) s;
+
+  if v_sem <> 0 then
+    raise exception 'FALHOU 10b: horario ocupado foi ofertado na busca normal';
+  end if;
+  if v_com = 0 then
+    raise exception 'FALHOU 10b: o proprio agendamento continuou bloqueando o reagendamento';
+  end if;
+  raise notice 'OK 10b. revalidacao de reagendamento ignora a propria consulta';
+end $$;
+
+-- -----------------------------------------------------------------------------
 -- 11. RLS realmente nega quem não é o backend
 -- -----------------------------------------------------------------------------
 do $$
@@ -502,6 +551,100 @@ begin
       if v_erro like 'FALHOU%' then raise exception '%', v_erro; end if;
       raise notice 'OK 11. anon barrado em cliente (%)', v_erro;
   end;
+end $$;
+
+-- -----------------------------------------------------------------------------
+-- 12. A consulta não pode misturar empresas (integridade_tenant.sql, I2)
+-- As FKs de uma coluna só provavam que o id existia. As compostas provam que
+-- ele é da MESMA empresa da consulta — o isolamento deixa de depender só da
+-- aplicação. As três pontas são testadas: cliente, profissional e serviço.
+-- -----------------------------------------------------------------------------
+do $$
+declare
+  v_ini       timestamptz := ((select dia from t_dia) + time '09:00') at time zone 'America/Sao_Paulo';
+  v_a         int8 := (select valor from t_ids where chave = 'empresa_a');
+  v_cliente_a int8;
+  v_recusadas int := 0;
+begin
+  select id into v_cliente_a from public.cliente where id_info_clinica = v_a limit 1;
+
+  -- cliente da empresa B em uma consulta da empresa A
+  begin
+    insert into public.consulta (intervalo, status, id_profissional, id_cliente,
+                                 id_procedimento, id_info_clinica)
+    values (tstzrange(v_ini, v_ini + interval '60 min', '[)'), 'agendado',
+            (select valor from t_ids where chave = 'prof_a'),
+            (select valor from t_ids where chave = 'cliente_b'),
+            (select valor from t_ids where chave = 'proc_a'), v_a);
+    raise exception 'FALHOU 12: consulta com cliente de outra empresa foi aceita';
+  exception when foreign_key_violation then
+    v_recusadas := v_recusadas + 1;
+  end;
+
+  -- profissional da empresa B
+  begin
+    insert into public.consulta (intervalo, status, id_profissional, id_cliente,
+                                 id_procedimento, id_info_clinica)
+    values (tstzrange(v_ini, v_ini + interval '60 min', '[)'), 'agendado',
+            (select valor from t_ids where chave = 'prof_b'), v_cliente_a,
+            (select valor from t_ids where chave = 'proc_a'), v_a);
+    raise exception 'FALHOU 12b: consulta com profissional de outra empresa foi aceita';
+  exception when foreign_key_violation then
+    v_recusadas := v_recusadas + 1;
+  end;
+
+  -- serviço da empresa B
+  begin
+    insert into public.consulta (intervalo, status, id_profissional, id_cliente,
+                                 id_procedimento, id_info_clinica)
+    values (tstzrange(v_ini, v_ini + interval '60 min', '[)'), 'agendado',
+            (select valor from t_ids where chave = 'prof_a'), v_cliente_a,
+            (select valor from t_ids where chave = 'proc_b'), v_a);
+    raise exception 'FALHOU 12c: consulta com servico de outra empresa foi aceita';
+  exception when foreign_key_violation then
+    v_recusadas := v_recusadas + 1;
+  end;
+
+  if v_recusadas <> 3 then
+    raise exception 'FALHOU 12: esperava 3 recusas de mistura de empresas, houve %', v_recusadas;
+  end if;
+  raise notice 'OK 12. consulta misturando empresas recusada nas tres pontas';
+end $$;
+
+-- -----------------------------------------------------------------------------
+-- 12b. Intervalo sem limite é recusado (integridade_tenant.sql, I4)
+-- `not isempty(...)` aceita `[inicio,)`: um registro assim sobrepõe toda a
+-- agenda futura do profissional e a API não consegue nem lê-lo de volta.
+-- -----------------------------------------------------------------------------
+do $$
+declare
+  v_ini       timestamptz := ((select dia from t_dia) + time '09:00') at time zone 'America/Sao_Paulo';
+  v_a         int8 := (select valor from t_ids where chave = 'empresa_a');
+  v_cliente_a int8;
+begin
+  select id into v_cliente_a from public.cliente where id_info_clinica = v_a limit 1;
+
+  begin
+    insert into public.consulta (intervalo, status, id_profissional, id_cliente,
+                                 id_procedimento, id_info_clinica)
+    values (tstzrange(v_ini, null, '[)'), 'agendado',
+            (select valor from t_ids where chave = 'prof_a'), v_cliente_a,
+            (select valor from t_ids where chave = 'proc_a'), v_a);
+    raise exception 'FALHOU 12b: consulta com intervalo sem fim foi aceita';
+  exception when check_violation then
+    null;
+  end;
+
+  begin
+    insert into public.agenda_bloqueio (motivo, intervalo, id_profissional, id_info_clinica)
+    values ('Bloqueio sem inicio', tstzrange(null, v_ini, '[)'),
+            (select valor from t_ids where chave = 'prof_a'), v_a);
+    raise exception 'FALHOU 12b: bloqueio com intervalo sem inicio foi aceito';
+  exception when check_violation then
+    null;
+  end;
+
+  raise notice 'OK 12b. intervalo sem limite recusado em consulta e em bloqueio';
 end $$;
 
 rollback;

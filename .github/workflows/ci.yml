@@ -1,0 +1,53 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+# Uma execução por ref: push novo cancela a anterior ainda em andamento.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  api:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip install -r services/api/requirements.txt
+      # Sem segredo nenhum: `psycopg2` não está em requirements.txt e o `.env` do
+      # monorepo não é versionado, então os testes de banco ficam skipped.
+      - run: cd services/api && python -m pytest tests -q
+
+  automacao:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      # O validador usa só a biblioteca padrão; não há o que instalar.
+      - run: python automation/n8n/validar_workflow.py
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - run: node automation/n8n/tests/test_regras.mjs
+
+  web:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - run: npm ci
+      - run: npm run build
+      - run: npm run lint --if-present

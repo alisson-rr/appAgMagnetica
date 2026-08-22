@@ -75,7 +75,6 @@ MODELOS = [
     ("BloqueioCreate", "agenda_bloqueio", {"data_inicio", "data_fim"}),
     ("HorarioClinicaCreate", "horario_clinica", set()),
     ("DisponibilidadeItem", "disponibilidade_profissional", set()),
-    ("AreaAtuacaoCreate", "area_atuacao", set()),
     ("InfoClinicaCreate", "info_clinica", set()),
     ("InfoClinicaUpdate", "info_clinica", set()),
     # `senha` é trocada por `senha_hash` antes do insert (server.py:302).
@@ -165,6 +164,7 @@ def test_view_de_atendimento_cumpre_o_contrato(cur):
 
 
 CONTRATO_RPC_PARAMS = [
+    # A empresa entra como parâmetro obrigatório: sem ele o isolamento cairia.
     "p_id_info_clinica",
     "p_procedimento_id",
     "p_inicio",
@@ -172,6 +172,8 @@ CONTRATO_RPC_PARAMS = [
     "p_profissional_id",
     "p_step_minutos",
     "p_duracao_minutos",
+    # v2: revalidação de reagendamento precisa ignorar a própria consulta.
+    "p_ignorar_consulta_id",
 ]
 CONTRATO_RPC_RETORNO = [
     "id_info_clinica",
@@ -222,3 +224,78 @@ def test_rls_ligado_nas_tabelas_de_negocio(cur):
     sem_rls = [linha[0] for linha in cur.fetchall()]
 
     assert not sem_rls, f"tabelas de negócio sem RLS: {sem_rls}"
+
+
+# ===== Ajustes de `scripts/ajustes_ai_api.sql` =====
+def tipo_da_coluna(cur, tabela, coluna):
+    cur.execute(
+        "select data_type from information_schema.columns "
+        "where table_schema = 'public' and table_name = %s and column_name = %s",
+        (tabela, coluna),
+    )
+    linha = cur.fetchone()
+    return linha[0] if linha else None
+
+
+@pytest.mark.parametrize("coluna", ["confirmado_em", "cancelado_em"])
+def test_marcos_da_consulta_sao_instantes(cur, coluna):
+    """`date` descartaria a hora e duas ações do mesmo dia ficariam iguais."""
+    assert tipo_da_coluna(cur, "consulta", coluna) == "timestamp with time zone"
+
+
+def test_consulta_guarda_o_preco_cobrado(cur):
+    """Sem preço congelado, reajustar o serviço reescreve o histórico emitido."""
+    assert tipo_da_coluna(cur, "consulta", "valor_cobrado") == "numeric"
+
+    cur.execute(
+        "select pg_get_constraintdef(oid) from pg_constraint "
+        "where conname = 'consulta_valor_cobrado_nao_negativo'"
+    )
+    linha = cur.fetchone()
+
+    assert linha, "falta o CHECK de valor_cobrado"
+
+
+def test_telefone_do_cliente_tem_forma_normalizada_e_unica_por_empresa(cur):
+    """A API filtra por esta coluna: expressão indexada não é consultável."""
+    cur.execute(
+        "select is_generated from information_schema.columns "
+        "where table_schema = 'public' and table_name = 'cliente' "
+        "and column_name = 'whats_normalizado'"
+    )
+    linha = cur.fetchone()
+
+    assert linha and linha[0] == "ALWAYS", "whats_normalizado precisa ser coluna gerada"
+
+    cur.execute(
+        "select indisunique, pg_get_indexdef(indexrelid) from pg_index "
+        "where indexrelid = 'public.ux_cliente_empresa_whats_norm'::regclass"
+    )
+    indice = cur.fetchone()
+
+    assert indice and indice[0], "falta o índice único (empresa, telefone normalizado)"
+    # A empresa entra no índice: o mesmo telefone em duas empresas é legítimo.
+    assert "id_info_clinica" in indice[1]
+
+
+def test_catalogo_de_areas_esta_preenchido_e_sem_duplicata(cur):
+    cur.execute("select count(*), count(distinct lower(btrim(nome))) from public.area_atuacao")
+    total, distintos = cur.fetchone()
+
+    assert total > 0, "catálogo de áreas vazio: rodar scripts/ajustes_ai_api.sql"
+    assert total == distintos, "há rótulos duplicados em area_atuacao"
+
+    cur.execute(
+        "select 1 from pg_index where indexrelid = 'public.ux_area_atuacao_nome'::regclass"
+    )
+    assert cur.fetchone(), "falta a unicidade de nome em area_atuacao"
+
+
+def test_existe_uma_unica_assinatura_de_fn_buscar_slots(cur):
+    """Duas sobrecargas deixariam a chamada nomeada do PostgREST ambígua."""
+    cur.execute(
+        "select count(*) from pg_proc p join pg_namespace n on n.oid = p.pronamespace "
+        "where n.nspname = 'public' and p.proname = 'fn_buscar_slots'"
+    )
+
+    assert cur.fetchone()[0] == 1

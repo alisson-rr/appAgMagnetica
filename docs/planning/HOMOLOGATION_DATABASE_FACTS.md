@@ -106,12 +106,19 @@ Marcados com aviso no topo porque agora quebram ou enganam:
 catálogo. `btree_gist` foi movida para o schema `extensions`: instalada em `public` ela
 despejava ~140 funções `gbt_*` que o PostgREST passaria a expor como API.
 
-**Constraints:** 17 FKs, 11 CHECKs, 1 EXCLUDE, uniques em `usuarios.email`,
-`planos.codigo` e `(id_profissional, id_procedimento)`.
+**Constraints**, contadas no catálogo depois de todos os scripts: **17 FKs, 16
+CHECKs, 1 EXCLUDE e 6 uniques** — `usuarios.email`, `planos.codigo`,
+`(id_profissional, id_procedimento)` e as três chaves candidatas
+`(id, id_info_clinica)` de I1.
 
 **Travas T1–T6** todas aplicadas: unicidade de `instance_name`, cliente único por
 empresa e WhatsApp normalizado, exclusão de sobreposição, `chave_idempotencia` com
 índice único, `CHECK` dos cinco status, e índices por empresa em 8 tabelas.
+
+**Ajustes A1–A5** (`ajustes_ai_api.sql`) e **integridade I1–I4**
+(`integridade_tenant.sql`) aplicados depois. I2 e I3 **substituem** quatro FKs de
+uma coluna por FKs compostas com `id_info_clinica`, então a contagem acima muda:
+o total de FKs continua 17, mas quatro delas passam a ter duas colunas.
 
 **RLS:** habilitado nas 13 tabelas, **zero políticas** — decisão explicada em §8.
 
@@ -142,6 +149,11 @@ Colunas documentadas que **não** foram criadas, por não ter consumidor:
 `SECURITY INVOKER`, `STABLE`, `search_path = public, pg_temp`. Nenhum `SECURITY DEFINER`
 em `public`.
 
+Assinatura **v2**, de `scripts/fn_buscar_slots.sql`: **8 parâmetros**. A v1, de 7,
+foi removida explicitamente com `drop function` antes do `create or replace` —
+mantê-la criaria uma sobrecarga, e o PostgREST ficaria com duas candidatas para a
+mesma chamada nomeada (ambiguidade em toda busca de horário).
+
 ```
 fn_buscar_slots(
   p_id_info_clinica int8,          -- OBRIGATÓRIO, sem default
@@ -150,7 +162,10 @@ fn_buscar_slots(
   p_fim             timestamptz,
   p_profissional_id int8 default null,
   p_step_minutos    int  default 30,
-  p_duracao_minutos int  default null
+  p_duracao_minutos int  default null,
+  p_ignorar_consulta_id int8 default null  -- ignora ESTA consulta ao calcular
+                                           -- ocupação; só na revalidação de
+                                           -- reagendamento, nulo no resto
 ) returns table (
   id_info_clinica   int8,
   id_profissional   int8,   -- NUNCA nulo
@@ -169,8 +184,8 @@ aquele procedimento, respeita `horario_clinica`, respeita
 função e banco não discordarem), nunca oferta passado, e `DISTINCT` impede slot
 duplicado quando a empresa cadastra faixas de horário sobrepostas.
 
-`p_id_info_clinica` **não recebe default de propósito**. Com default, a empresa
-passaria a ser dedutível e o isolamento cairia.
+`p_id_info_clinica` **não recebe default de propósito** e é o primeiro parâmetro.
+Com default, a empresa passaria a ser dedutível e o isolamento cairia.
 
 ---
 
@@ -226,17 +241,25 @@ de banco (T1–T6) importam — elas valem mesmo quando o filtro do código falh
 
 | Teste | Resultado |
 |---|---|
-| `pytest services/api/tests` | **41 passaram** (eram 3 no início da sessão) |
-| Scripts aplicados duas vezes | 4/4 OK nas duas passadas, zero objetos novos na segunda |
-| `scripts/teste_transacional.sql` | **21 verificações OK**, 0 falhas, 0 linhas persistidas |
+| `pytest services/api/tests` | **173 passaram** (eram 3 no início da sessão; 41 ao fim da etapa de banco) |
+| Scripts aplicados duas vezes | 5/5 OK nas duas passadas, zero objetos novos na segunda |
+| `scripts/teste_transacional.sql` | **24 verificações OK**, 0 falhas, 0 linhas persistidas |
 | Inspeção do catálogo | 13 tabelas, 1 view, 1 função em `public`, RLS em tudo |
 | Formatos de `tstzrange` | 4 literais do backend e da automação, todos aceitos |
 | `git diff --check` | limpo nos arquivos alterados |
 
-Os 41 testes incluem 24 que rodam **contra o banco real** e falham se qualquer campo de
-modelo Pydantic perder a coluna, se uma FK de join embutido do PostgREST desaparecer,
-se o CHECK de status recusar um valor que a API escreve, ou se a view e a RPC saírem do
-contrato. Sem `DATABASE_URL`, esses 24 são ignorados em vez de falharem.
+Dos 173, **119 rodam sem rede** e 54 falam com o banco. Desses 54:
+
+- **30 são de compatibilidade de schema**, somente leitura (`SET TRANSACTION READ
+  ONLY` e `ROLLBACK`). Falham se qualquer campo de modelo Pydantic perder a
+  coluna, se uma FK de join embutido do PostgREST desaparecer, se o CHECK de
+  status recusar um valor que a API escreve, ou se a view e a RPC saírem do
+  contrato. Rodam sempre que houver `DATABASE_URL`.
+- **24 são de integração e ESCREVEM** com commit real. Além de `DATABASE_URL`,
+  exigem `PERMITIR_TESTES_DE_BANCO=1` no ambiente do processo — nunca no `.env`.
+  Sem a autorização, são ignorados em vez de gravarem.
+
+Sem `DATABASE_URL`, os 54 são ignorados em vez de falharem.
 
 Cobertura do teste transacional: mesmo telefone em empresas diferentes (permitido),
 duplicata na mesma empresa (recusada), `instance_name` duplicado (recusado), nulos e
@@ -246,7 +269,9 @@ profissional (permitido), idempotência (recusada), status inválido incluindo
 empresa (recusado), bloqueio respeitado, consulta existente respeitada, fechamento
 respeitado, view filtrada por empresa com ids, `agendavel` nos três estados,
 profissional inativo fora da view, exclusão com histórico recusada, todo slot completo,
-e `anon` barrado.
+`anon` barrado, consulta misturando empresas recusada nas três pontas (cliente,
+profissional e serviço) e intervalo sem limite recusado em `consulta` e em
+`agenda_bloqueio`.
 
 ---
 
@@ -321,14 +346,15 @@ Mais itens, sem bloquear:
 |---|---|---|
 | P1 | `JWT_SECRET` e as quatro variáveis da Evolution estão vazias | operacional — gerar/preencher |
 | P2 | Os dois bloqueadores de §11 | automação (Agente 1) |
-| P3 | `area_atuacao` é catálogo global e `POST /areas-atuacao` não verifica empresa nem papel: qualquer usuário autenticado escreve numa lista compartilhada por todos os clientes | produto + backend; corrigir exige mudar API e dashboard |
-| P4 | `consulta.confirmado_em` e `cancelado_em` são `date`, mas semanticamente são instantes. Melhor migrar **agora**, antes de existir dado | decisão |
-| P5 | Não existe valor cobrado por consulta: `Pagamentos.jsx` soma `procedimento.valor`, então editar um preço reescreve o histórico financeiro já emitido | decisão de produto; `consulta.valor_cobrado` resolveria |
+| ~~P3~~ | **RESOLVIDA** em 2026-08-21: `ux_area_atuacao_nome` + 24 rótulos (`ajustes_ai_api.sql`, A5) e `POST /areas-atuacao` removido do backend | fechada |
+| ~~P4~~ | **RESOLVIDA** em 2026-08-21: `consulta.confirmado_em` e `cancelado_em` migradas para `timestamptz` (`ajustes_ai_api.sql`, A1/A2). Migrado com a tabela vazia, sem reinterpretar nenhuma linha | fechada |
+| ~~P5~~ | **RESOLVIDA** em 2026-08-21 no banco e na API: `consulta.valor_cobrado numeric(10,2)` + CHECK `>= 0` (A3); painel e `/api/ai/*` gravam o preço no ato e os totais o preferem. Resta o front: `Pagamentos.jsx` ainda soma `procedimento.valor` (ver R6 do handoff) | fechada no banco; pendência de front |
 | P6 | `server.py:772` — quando `data_inicio` chega **sem** timezone, o intervalo é interpretado em UTC, deslocando 3 horas. O dashboard sempre envia offset, então é armadilha latente, não bug ativo | backend |
 | P7 | `procedimento.valor` trafega como `float` no Pydantic e é somado como float; a coluna é `numeric(10,2)`. Converter para `Decimal` na API evita erro de arredondamento em dinheiro | backend |
 | P8 | `time` não modela expediente que cruza a meia-noite (fechar às 00:00 é recusado pelo `CHECK`). A UI oferece 00:00 nos dois campos | limitação conhecida |
 | P9 | `planos` e `assinaturas` nascem vazias, e `EscolherPlano.jsx` lê preço de uma constante estática — duas fontes de verdade desde o dia zero | resolver junto com o Stripe |
 | P10 | Nada impede faixas de `horario_clinica` sobrepostas no mesmo dia. A RPC usa `DISTINCT`, então não gera dano; é sujeira de configuração | baixo |
+| ~~P11~~ | **Não estava nesta lista e deveria estar.** Encontrada e fechada em 2026-08-21: as FKs de uma coluna provavam que o id existia, não que era da mesma empresa — `consulta` aceitava ligar cliente da empresa A a profissional da B, e o isolamento vivia inteiro na aplicação. `integridade_tenant.sql` (I1–I4) troca por FKs compostas com `id_info_clinica` e exige intervalo com as duas pontas finitas | fechada |
 
 Nenhuma pendência foi resolvida por adivinhação, e nenhuma tabela especulativa foi
 criada: `whatsapp_instancia`, `conversa`, `conversa_evento` e `acao_idempotente`
@@ -338,8 +364,15 @@ continuam fora — T1 e T4 resolvem com índice e coluna.
 
 ## 13. Próximo passo
 
-As rotas `/api/ai/*` — deliberadamente **não** implementadas nesta etapa. A base que
-elas precisam está pronta: contrato da RPC congelado, view com `agendavel`,
-idempotência disponível e travas ativas.
+Este documento descreve a etapa de **banco**, encerrada em 2026-08-21. As rotas
+`/api/ai/*` eram, aqui, o próximo passo — e foram implementadas na etapa
+seguinte, ainda em 2026-08-21. O contrato delas está em
+`docs/planning/BACKEND_AI_API_HANDOFF.md`, que é a fonte de verdade da API; este
+arquivo segue sendo a fonte de verdade do que existe **no banco**.
 
-*Base construída em 2026-08-21. Nenhum dado apagado ou mesclado. Nenhum commit, nenhum push.*
+O que continua em aberto: migrar o workflow `automation/n8n/AgendaMagnetica-v2.n8n.json`
+para as rotas novas (§11), preencher `AUTOMATION_API_TOKEN` e as variáveis da
+Evolution (P1), e as pendências P6–P10.
+
+*Base construída em 2026-08-21; integridade entre empresas aplicada no mesmo dia.
+Nenhum dado apagado ou mesclado. Nenhum commit, nenhum push.*

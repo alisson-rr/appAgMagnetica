@@ -659,27 +659,46 @@
     },
     {
       "parameters": {
-        "operation": "get",
-        "tableId": "usuarios",
-        "filters": {
-          "conditions": [
+        "method": "POST",
+        "url": "={{ $env.AGENDA_API_BASE_URL.replace(/\\/$/, '') + '/api/ai/contexto' }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
             {
-              "keyName": "instance_name",
-              "keyValue": "={{ $('normalizar entrada').first().json.instance }}"
+              "name": "X-Automation-Token",
+              "value": "={{ $env.AGENDA_AUTOMATION_TOKEN }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
             }
           ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ instance_name: $('normalizar entrada').first().json.instance, telefone: $('normalizar entrada').first().json.telefone, nome: $('normalizar entrada').first().json.push_name || undefined }) }}",
+        "options": {
+          "timeout": 15000,
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
         }
       },
-      "type": "n8n-nodes-base.supabase",
-      "typeVersion": 1,
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
       "position": [
         3340,
         420
       ],
       "id": "ca1ec3d6-dc09-53bd-8a2f-49e8136ac3b4",
-      "name": "empresa pela instancia",
-      "alwaysOutputData": true,
-      "onError": "continueRegularOutput"
+      "name": "contexto da empresa",
+      "onError": "continueRegularOutput",
+      "retryOnFail": true,
+      "maxTries": 2,
+      "waitBetweenTries": 1000,
+      "alwaysOutputData": true
     },
     {
       "parameters": {
@@ -693,11 +712,11 @@
           "conditions": [
             {
               "id": "ecd76936-38ab-5a1a-94f0-454069c3041a",
-              "leftValue": "={{ $json.id_info_clinica }}",
-              "rightValue": "",
+              "leftValue": "={{ $json.ok }}",
+              "rightValue": true,
               "operator": {
-                "type": "number",
-                "operation": "exists",
+                "type": "boolean",
+                "operation": "true",
                 "singleValue": true
               }
             }
@@ -713,7 +732,7 @@
         420
       ],
       "id": "845e93ff-17e5-5843-bd64-07ce4ab7a782",
-      "name": "empresa configurada?"
+      "name": "contexto ok?"
     },
     {
       "parameters": {},
@@ -724,142 +743,7 @@
         260
       ],
       "id": "3e4c0562-f12c-5283-86c8-7b810370957e",
-      "name": "fim - instância sem empresa"
-    },
-    {
-      "parameters": {
-        "operation": "getAll",
-        "tableId": "cliente",
-        "limit": 1,
-        "filters": {
-          "conditions": [
-            {
-              "keyName": "whats",
-              "condition": "eq",
-              "keyValue": "={{ $('normalizar entrada').first().json.remote_jid }}"
-            },
-            {
-              "keyName": "id_info_clinica",
-              "condition": "eq",
-              "keyValue": "={{ $('empresa pela instancia').first().json.id_info_clinica }}"
-            }
-          ]
-        }
-      },
-      "type": "n8n-nodes-base.supabase",
-      "typeVersion": 1,
-      "position": [
-        3780,
-        420
-      ],
-      "id": "fcfc3bb2-c2d6-5a00-87eb-5fad49ca30bf",
-      "name": "buscar cliente",
-      "alwaysOutputData": true
-    },
-    {
-      "parameters": {
-        "conditions": {
-          "options": {
-            "caseSensitive": true,
-            "leftValue": "",
-            "typeValidation": "loose",
-            "version": 2
-          },
-          "conditions": [
-            {
-              "id": "19298ab7-d145-5ab4-a2a9-b76d5d76aceb",
-              "leftValue": "={{ $json.id }}",
-              "rightValue": "",
-              "operator": {
-                "type": "number",
-                "operation": "exists",
-                "singleValue": true
-              }
-            }
-          ],
-          "combinator": "and"
-        },
-        "options": {}
-      },
-      "type": "n8n-nodes-base.if",
-      "typeVersion": 2.2,
-      "position": [
-        4000,
-        420
-      ],
-      "id": "982b8321-b6a2-5beb-a1e3-a3e3a2d09896",
-      "name": "cliente existe?"
-    },
-    {
-      "parameters": {
-        "tableId": "cliente",
-        "fieldsUi": {
-          "fieldValues": [
-            {
-              "fieldId": "nome",
-              "fieldValue": "={{ $('normalizar entrada').first().json.push_name }}"
-            },
-            {
-              "fieldId": "whats",
-              "fieldValue": "={{ $('normalizar entrada').first().json.remote_jid }}"
-            },
-            {
-              "fieldId": "telefone",
-              "fieldValue": "={{ $('normalizar entrada').first().json.telefone }}"
-            },
-            {
-              "fieldId": "id_info_clinica",
-              "fieldValue": "={{ $('empresa pela instancia').first().json.id_info_clinica }}"
-            },
-            {
-              "fieldId": "status",
-              "fieldValue": "ativo"
-            }
-          ]
-        }
-      },
-      "type": "n8n-nodes-base.supabase",
-      "typeVersion": 1,
-      "position": [
-        4220,
-        580
-      ],
-      "id": "ab2ca0b5-2b5e-5cb1-af16-ecfd5c916c8d",
-      "name": "criar cliente"
-    },
-    {
-      "parameters": {},
-      "type": "n8n-nodes-base.noOp",
-      "typeVersion": 1,
-      "position": [
-        4440,
-        420
-      ],
-      "id": "b83c0aaa-0df9-5dd0-9e2b-7627fc41a048",
-      "name": "cliente da empresa"
-    },
-    {
-      "parameters": {
-        "operation": "get",
-        "tableId": "v_clinica_detalhes",
-        "filters": {
-          "conditions": [
-            {
-              "keyName": "id_info_clinica",
-              "keyValue": "={{ $('empresa pela instancia').first().json.id_info_clinica }}"
-            }
-          ]
-        }
-      },
-      "type": "n8n-nodes-base.supabase",
-      "typeVersion": 1,
-      "position": [
-        4660,
-        420
-      ],
-      "id": "356ee067-304d-52d3-9989-b9bff6f5e28b",
-      "name": "catalogo da empresa",
-      "alwaysOutputData": true
+      "name": "fim - contexto indisponível"
     },
     {
       "parameters": {
@@ -897,7 +781,7 @@
     },
     {
       "parameters": {
-        "jsCode": "// Monta o contexto minimo enviado a IA. Tudo aqui vem do sistema: empresa pela\n// instancia, cliente pela empresa + telefone, catalogo pela empresa.\nconst HISTORICO_MAX = 6;\nconst FUSO = 'America/Sao_Paulo';\nconst OFFSET_MIN = -180; // America/Sao_Paulo nao usa horario de verao desde 2019.\n\nconst entrada = $('normalizar entrada').first().json;\nconst conteudoItem = $('conteudo do cliente').first().json;\nconst empresaRow = $('empresa pela instancia').first().json || {};\nconst clienteRow = $('cliente da empresa').first().json || {};\nconst detalhes = $('catalogo da empresa').first().json || {};\nconst chaves = $input.first().json;\n\nfunction texto(v) { return v === null || v === undefined ? '' : String(v); }\nfunction numero(v) { const n = Number(v); return Number.isFinite(n) ? n : null; }\n\nfunction primeiroCampo(obj, nomes) {\n  for (const n of nomes) {\n    if (obj && obj[n] !== undefined && obj[n] !== null && obj[n] !== '') return obj[n];\n  }\n  return null;\n}\n\nfunction comoLista(v) {\n  if (Array.isArray(v)) return v;\n  if (typeof v === 'string' && v.trim().startsWith('[')) {\n    try { return JSON.parse(v); } catch (e) { return []; }\n  }\n  return [];\n}\n\n// Nome de exibicao: push name do WhatsApp costuma trazer nome de empresa, apelido\n// ou emoji. So usamos quando parece um primeiro nome de pessoa.\nconst MARCAS_DE_NEGOCIO = [\n  'ltda', 'mei', 'me ', 'studio', 'estúdio', 'salão', 'salao', 'clínica', 'clinica',\n  'consultório', 'consultorio', 'espaço', 'espaco', 'barbearia', 'atelier', 'ateliê',\n  'center', 'centro', 'serviços', 'servicos', 'com.br', 'www', 'oficial', 'delivery',\n];\n\nfunction primeiroNomeConfiavel(nome) {\n  const limpo = texto(nome).trim();\n  if (!limpo) return '';\n  const comparavel = limpo.toLowerCase();\n  if (MARCAS_DE_NEGOCIO.some((m) => comparavel.includes(m))) return '';\n  if (/\\d/.test(limpo)) return '';\n  const primeiro = limpo.split(/\\s+/)[0];\n  if (primeiro.length < 2 || primeiro.length > 20) return '';\n  if (!/^[A-Za-zÀ-ÿ'’-]+$/.test(primeiro)) return '';\n  return primeiro.charAt(0).toUpperCase() + primeiro.slice(1).toLowerCase();\n}\n\nconst agora = new Date();\nconst agoraLocal = new Date(agora.getTime() + OFFSET_MIN * 60000);\n\nconst servicos = comoLista(primeiroCampo(detalhes, ['procedimentos', 'servicos']))\n  .map((p) => ({\n    id: numero(primeiroCampo(p, ['id', 'id_procedimento', 'procedimento_id'])),\n    nome: texto(primeiroCampo(p, ['nome', 'procedimento', 'servico'])),\n    valor: numero(primeiroCampo(p, ['valor', 'preco'])),\n    duracao_minutos: numero(primeiroCampo(p, ['duracao_minutos', 'duracao'])) || 60,\n  }))\n  .filter((p) => p.nome);\n\nconst profissionais = comoLista(primeiroCampo(detalhes, ['profissionais']))\n  .map((p) => ({\n    id: numero(primeiroCampo(p, ['id', 'id_profissional', 'profissional_id'])),\n    nome: texto(primeiroCampo(p, ['nome', 'profissional'])),\n    area: texto(primeiroCampo(p, ['area', 'area_atuacao', 'especialidade'])),\n  }))\n  .filter((p) => p.nome);\n\nconst horarios = comoLista(primeiroCampo(detalhes, ['horarios', 'horario_clinica']))\n  .map((h) => ({\n    dia_semana: numero(h.dia_semana),\n    hora_inicio: texto(h.hora_inicio),\n    hora_fim: texto(h.hora_fim),\n  }))\n  .filter((h) => h.dia_semana !== null);\n\nlet pendente = null;\ntry {\n  const cru = chaves.pendente;\n  const obj = typeof cru === 'string' ? JSON.parse(cru) : cru;\n  if (obj && obj.tipo) pendente = obj;\n} catch (e) { pendente = null; }\n\nlet estado = { historico: [], slots_oferecidos: [], consultas_candidatas: [], reagendar_consulta_id: null };\ntry {\n  const cru = chaves.estado;\n  const obj = typeof cru === 'string' ? JSON.parse(cru) : cru;\n  if (obj && typeof obj === 'object') estado = Object.assign(estado, obj);\n} catch (e) { /* estado ausente e um caso normal */ }\n\nconst nomeCliente = texto(clienteRow.nome) || entrada.push_name;\n\nreturn [{\n  json: {\n    agora_iso: agora.toISOString(),\n    agora_local: agoraLocal.toISOString().replace('Z', '-03:00'),\n    fuso: FUSO,\n    empresa: {\n      id: numero(primeiroCampo(empresaRow, ['id_info_clinica'])),\n      nome: texto(primeiroCampo(detalhes, ['clinica_nome', 'nome'])) || 'nosso atendimento',\n      telefone: texto(primeiroCampo(detalhes, ['clinica_telefone', 'telefone'])),\n      email: texto(primeiroCampo(detalhes, ['clinica_email', 'email'])),\n      endereco: texto(primeiroCampo(detalhes, ['clinica_endereco', 'endereco'])),\n      assistente_nome: texto(primeiroCampo(detalhes, ['assistente_nome', 'clinica_assistente_nome'])) || 'assistente virtual',\n      assistente_tom: texto(primeiroCampo(detalhes, ['assistente_tom', 'clinica_assistente_tom'])) || 'cordial, direto e simples',\n      exige_profissional: primeiroCampo(detalhes, ['exige_profissional', 'clinica_exige_profissional']) === true,\n    },\n    servicos,\n    profissionais,\n    horarios,\n    cliente: {\n      id: numero(clienteRow.id),\n      nome: nomeCliente,\n      primeiro_nome: primeiroNomeConfiavel(nomeCliente),\n      tem_cadastro_confirmado: Boolean(texto(clienteRow.nome)),\n    },\n    pendente,\n    estado: {\n      historico: Array.isArray(estado.historico) ? estado.historico.slice(-HISTORICO_MAX) : [],\n      slots_oferecidos: Array.isArray(estado.slots_oferecidos) ? estado.slots_oferecidos : [],\n      consultas_candidatas: Array.isArray(estado.consultas_candidatas) ? estado.consultas_candidatas : [],\n      reagendar_consulta_id: numero(estado.reagendar_consulta_id),\n    },\n    conteudo: texto(conteudoItem.conteudo),\n    tipo_entrada: texto(conteudoItem.tipo) || 'texto',\n    entrada_incerta: conteudoItem.entrada_incerta === true,\n    msg_id: entrada.msg_id,\n    instance: entrada.instance,\n    remote_jid: entrada.remote_jid,\n  },\n}];\n"
+        "jsCode": "// Monta o contexto minimo enviado a IA. Tudo vem de uma unica chamada a\n// /api/ai/contexto: a empresa e derivada da instancia no servidor, o cliente e\n// localizado ou criado dentro dela e o catalogo e o dela. Nenhum id de empresa\n// ou de cliente circula por aqui: as rotas da API nao aceitam esses parametros.\nconst HISTORICO_MAX = 6;\nconst FUSO_PADRAO = 'America/Sao_Paulo';\nconst OFFSET_MIN = -180; // America/Sao_Paulo nao usa horario de verao desde 2019.\n\nconst entrada = $('normalizar entrada').first().json;\nconst conteudoItem = $('conteudo do cliente').first().json;\nconst envelope = $('contexto da empresa').first().json || {};\nconst chaves = $input.first().json;\n\n// Sem envelope valido nao existe contexto. O fluxo nao completa empresa nem\n// cliente por conta propria: quem nao tem contexto vai para uma pessoa.\nconst dados = (envelope.ok === true && envelope.data) ? envelope.data : {};\nconst empresaApi = dados.empresa || {};\nconst clienteApi = dados.cliente || {};\n\nfunction texto(v) { return v === null || v === undefined ? '' : String(v); }\nfunction numero(v) { const n = Number(v); return Number.isFinite(n) ? n : null; }\nfunction lista(v) { return Array.isArray(v) ? v : []; }\n\n// Nome de exibicao: push name do WhatsApp costuma trazer nome de empresa, apelido\n// ou emoji. So usamos quando parece um primeiro nome de pessoa.\nconst MARCAS_DE_NEGOCIO = [\n  'ltda', 'mei', 'me ', 'studio', 'estúdio', 'salão', 'salao', 'clínica', 'clinica',\n  'consultório', 'consultorio', 'espaço', 'espaco', 'barbearia', 'atelier', 'ateliê',\n  'center', 'centro', 'serviços', 'servicos', 'com.br', 'www', 'oficial', 'delivery',\n];\n\nfunction primeiroNomeConfiavel(nome) {\n  const limpo = texto(nome).trim();\n  if (!limpo) return '';\n  const comparavel = limpo.toLowerCase();\n  if (MARCAS_DE_NEGOCIO.some((m) => comparavel.includes(m))) return '';\n  if (/\\d/.test(limpo)) return '';\n  const primeiro = limpo.split(/\\s+/)[0];\n  if (primeiro.length < 2 || primeiro.length > 20) return '';\n  if (!/^[A-Za-zÀ-ÿ'’-]+$/.test(primeiro)) return '';\n  return primeiro.charAt(0).toUpperCase() + primeiro.slice(1).toLowerCase();\n}\n\nconst agora = new Date();\nconst agoraLocal = new Date(agora.getTime() + OFFSET_MIN * 60000);\n\nconst servicos = lista(dados.procedimentos)\n  .map((p) => ({\n    id: numero(p.id),\n    nome: texto(p.nome),\n    valor: numero(p.valor),\n    duracao_minutos: numero(p.duracao_minutos) || 60,\n    // agendavel: false = nenhum profissional ativo executa o servico. Ele tem\n    // preco para responder uma duvida, mas nunca teria horario livre.\n    agendavel: p.agendavel !== false,\n  }))\n  .filter((p) => p.id && p.nome);\n\nconst profissionais = lista(dados.profissionais)\n  .map((p) => ({ id: numero(p.id), nome: texto(p.nome), area: texto(p.area) }))\n  .filter((p) => p.id && p.nome);\n\nconst horarios = lista(empresaApi.horarios)\n  .map((h) => ({\n    dia_semana: numero(h.dia_semana),\n    hora_inicio: texto(h.hora_inicio),\n    hora_fim: texto(h.hora_fim),\n  }))\n  .filter((h) => h.dia_semana !== null);\n\nlet pendente = null;\ntry {\n  const cru = chaves.pendente;\n  const obj = typeof cru === 'string' ? JSON.parse(cru) : cru;\n  if (obj && obj.tipo) pendente = obj;\n} catch (e) { pendente = null; }\n\nlet estado = { historico: [], slots_oferecidos: [], consultas_candidatas: [], reagendar_consulta_id: null };\ntry {\n  const cru = chaves.estado;\n  const obj = typeof cru === 'string' ? JSON.parse(cru) : cru;\n  if (obj && typeof obj === 'object') estado = Object.assign(estado, obj);\n} catch (e) { /* estado ausente e um caso normal */ }\n\nconst nomeCliente = texto(clienteApi.nome) || entrada.push_name;\n// O telefone normalizado pela API e a identidade do cliente nas proximas\n// chamadas. Sem ele nao ha operacao possivel, e o fluxo transfere.\nconst telefoneCliente = texto(clienteApi.telefone);\nconst temContexto = Boolean(dados.empresa && telefoneCliente);\n\nreturn [{\n  json: {\n    tem_contexto: temContexto,\n    erro_contexto: temContexto ? null : texto((envelope.error || {}).code) || 'sem_envelope',\n    agora_iso: agora.toISOString(),\n    agora_local: agoraLocal.toISOString().replace('Z', '-03:00'),\n    fuso: texto(empresaApi.fuso) || FUSO_PADRAO,\n    empresa: {\n      nome: texto(empresaApi.nome) || 'nosso atendimento',\n      telefone: texto(empresaApi.telefone),\n      email: texto(empresaApi.email),\n      endereco: texto(empresaApi.endereco),\n      assistente_nome: texto(empresaApi.assistente_nome) || 'assistente virtual',\n      assistente_tom: texto(empresaApi.assistente_tom) || 'cordial, direto e simples',\n      exige_profissional: empresaApi.exige_profissional === true,\n    },\n    servicos,\n    profissionais,\n    horarios,\n    cliente: {\n      nome: nomeCliente,\n      primeiro_nome: primeiroNomeConfiavel(nomeCliente),\n      telefone: telefoneCliente,\n      novo: clienteApi.novo === true,\n      tem_cadastro_confirmado: Boolean(texto(clienteApi.nome)),\n    },\n    pendente,\n    estado: {\n      historico: Array.isArray(estado.historico) ? estado.historico.slice(-HISTORICO_MAX) : [],\n      slots_oferecidos: Array.isArray(estado.slots_oferecidos) ? estado.slots_oferecidos : [],\n      consultas_candidatas: Array.isArray(estado.consultas_candidatas) ? estado.consultas_candidatas : [],\n      reagendar_consulta_id: numero(estado.reagendar_consulta_id),\n    },\n    conteudo: texto(conteudoItem.conteudo),\n    tipo_entrada: texto(conteudoItem.tipo) || 'texto',\n    entrada_incerta: conteudoItem.entrada_incerta === true,\n    msg_id: entrada.msg_id,\n    instance: entrada.instance,\n    remote_jid: entrada.remote_jid,\n  },\n}];\n"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -991,7 +875,7 @@
     },
     {
       "parameters": {
-        "jsCode": "// Regras deterministicas do atendimento. A IA nao escolhe id, data, empresa,\n// filtro, ferramenta nem resultado: tudo e resolvido aqui.\nconst LIMIAR_PADRAO = 0.75;      // ajuste unico para pedir esclarecimento\nconst LIMIAR_DESTRUTIVO = 0.85;  // cancelar / reagendar / confirmar\nconst LIMIAR_HUMANO = 0.45;      // abaixo disso, pessoa assume\nconst JANELA_PADRAO_DIAS = 14;\nconst PASSO_MINUTOS = 30;\nconst OFFSET_MIN = -180; // America/Sao_Paulo, sem horario de verao desde 2019\n\nconst PERIODOS = { manha: [8, 12], tarde: [12, 18], noite: [18, 21] };\nconst DIA_INICIO = 7;\nconst DIA_FIM = 21;\n\nconst TERMOS_SENSIVEIS = [\n  'dor ', 'dores', 'doi', 'sangr', 'infec', 'febre', 'pus', 'inflam', 'alergi', 'remedio',\n  'pomada', 'antibiotic', 'diagnostic', 'gravid', 'gestante', 'diabet',\n  'anticoagul', 'cancer', 'tumor', 'ferida', 'machuc', 'lesao', 'medicament',\n];\n\nconst ctx = $('montar contexto').first().json;\nconst validacao = $input.first().json;\n\nfunction normalizar(s) {\n  return String(s === null || s === undefined ? '' : s)\n    .toLowerCase()\n    .normalize('NFD').replace(/[\\u0300-\\u036f]/g, '')\n    .replace(/[^a-z0-9\\s/:-]/g, ' ')\n    .replace(/\\s+/g, ' ')\n    .trim();\n}\n\nfunction pad(n) { return String(n).padStart(2, '0'); }\nfunction partesLocais(iso) {\n  const d = new Date(new Date(iso).getTime() + OFFSET_MIN * 60000);\n  return {\n    ano: d.getUTCFullYear(), mes: d.getUTCMonth() + 1, dia: d.getUTCDate(),\n    hora: d.getUTCHours(), min: d.getUTCMinutes(), dow: d.getUTCDay(),\n  };\n}\nfunction isoLocal(p, hora, min) {\n  return `${p.ano}-${pad(p.mes)}-${pad(p.dia)}T${pad(hora)}:${pad(min)}:00-03:00`;\n}\nfunction somarDias(p, n) {\n  const d = new Date(Date.UTC(p.ano, p.mes - 1, p.dia));\n  d.setUTCDate(d.getUTCDate() + n);\n  return { ano: d.getUTCFullYear(), mes: d.getUTCMonth() + 1, dia: d.getUTCDate(), dow: d.getUTCDay() };\n}\n\nconst agora = partesLocais(ctx.agora_iso);\nconst conteudoNorm = normalizar(ctx.conteudo);\n\n// ---------- datas ----------\nconst DIAS_SEMANA = {\n  domingo: 0, segunda: 1, terca: 2, quarta: 3, quinta: 4, sexta: 5, sabado: 6,\n};\nconst MESES = {\n  janeiro: 1, fevereiro: 2, marco: 3, abril: 4, maio: 5, junho: 6, julho: 7,\n  agosto: 8, setembro: 9, outubro: 10, novembro: 11, dezembro: 12,\n};\n\nfunction resolverData(textoData) {\n  const t = normalizar(textoData);\n  if (!t) return { tipo: null };\n  if (/\\bhoje\\b|\\bhj\\b|\\bagora\\b/.test(t)) return { tipo: 'dia', p: agora, ambiguo: false };\n  if (/depois de amanha/.test(t)) return { tipo: 'dia', p: somarDias(agora, 2), ambiguo: false };\n  if (/\\bamanha\\b/.test(t)) return { tipo: 'dia', p: somarDias(agora, 1), ambiguo: false };\n\n  const dm = t.match(/\\b(\\d{1,2})[/-](\\d{1,2})(?:[/-](\\d{2,4}))?\\b/);\n  if (dm) {\n    const dia = Number(dm[1]); const mes = Number(dm[2]);\n    let ano = dm[3] ? Number(dm[3]) : agora.ano;\n    if (ano < 100) ano += 2000;\n    if (dia >= 1 && dia <= 31 && mes >= 1 && mes <= 12) {\n      let p = { ano, mes, dia };\n      // Data recente no passado continua no passado: quem falou \"19/08\" ontem\n      // precisa ouvir que ja passou, e nao ser jogado para o ano que vem.\n      if (!dm[3]) {\n        const candidato = Date.UTC(ano, mes - 1, dia);\n        const hoje = Date.UTC(agora.ano, agora.mes - 1, agora.dia);\n        if (candidato < hoje - 60 * 86400000) p = { ano: ano + 1, mes, dia };\n      }\n      return { tipo: 'dia', p, ambiguo: false };\n    }\n  }\n\n  const dmExtenso = t.match(/\\bdia (\\d{1,2})(?: de ([a-z]+))?/);\n  if (dmExtenso) {\n    const dia = Number(dmExtenso[1]);\n    const mes = dmExtenso[2] && MESES[dmExtenso[2]] ? MESES[dmExtenso[2]] : agora.mes;\n    if (dia >= 1 && dia <= 31) return { tipo: 'dia', p: { ano: agora.ano, mes, dia }, ambiguo: false };\n  }\n\n  if (/semana que vem|proxima semana/.test(t)) {\n    return { tipo: 'janela', p: somarDias(agora, 7), dias: 6, ambiguo: false };\n  }\n\n  for (const nome of Object.keys(DIAS_SEMANA)) {\n    if (new RegExp(`\\\\b${nome}`).test(t)) {\n      const alvo = DIAS_SEMANA[nome];\n      let delta = (alvo - agora.dow + 7) % 7;\n      const proxima = /que vem|proxim/.test(t);\n      if (delta === 0 && proxima) delta = 7;\n      const ambiguo = delta === 0 && !proxima && !/\\bhoje\\b/.test(t);\n      return { tipo: 'dia', p: somarDias(agora, delta), ambiguo, nome_dia: nome };\n    }\n  }\n  return { tipo: null };\n}\n\nfunction resolverHora(textos) {\n  // Remove datas antes de procurar hora: \"14/03\" nao pode virar 14h.\n  const t = normalizar(textos.join(' ')).replace(/\\b\\d{1,2}[/-]\\d{1,2}(?:[/-]\\d{2,4})?\\b/g, ' ');\n  if (/meio dia/.test(t)) return { hora: 12, min: 0 };\n  const m = t.match(/\\b(\\d{1,2})(?:[:h](\\d{2}))?\\s*(?:h|hs|horas)?\\b/);\n  if (!m) return null;\n  let hora = Number(m[1]);\n  const min = m[2] ? Number(m[2]) : 0;\n  if (hora > 23 || min > 59) return null;\n  if (/da tarde|a tarde/.test(t) && hora <= 11) hora += 12;\n  if (/da noite|a noite/.test(t) && hora <= 11) hora += 12;\n  if (!/[:h]/.test(m[0]) && !/hora|\\bh\\b/.test(t) && hora <= 7) return null;\n  return { hora, min };\n}\n\n// ---------- catalogo ----------\nfunction acharServico(consulta) {\n  const q = normalizar(consulta);\n  const lista = ctx.servicos;\n  if (!lista.length) return { status: 'catalogo_vazio' };\n  const mencionados = lista.filter((s) => conteudoNorm.includes(normalizar(s.nome)));\n  if (mencionados.length > 1) return { status: 'ambiguo', opcoes: mencionados };\n  if (!q) return mencionados.length === 1 ? { status: 'ok', servico: mencionados[0] } : { status: 'ausente' };\n  const exato = lista.filter((s) => normalizar(s.nome) === q);\n  if (exato.length === 1) return { status: 'ok', servico: exato[0] };\n  const contem = lista.filter((s) => normalizar(s.nome).includes(q) || q.includes(normalizar(s.nome)));\n  if (contem.length === 1) return { status: 'ok', servico: contem[0] };\n  if (contem.length > 1) return { status: 'ambiguo', opcoes: contem };\n  const tokens = q.split(' ').filter((t) => t.length > 3);\n  const porToken = lista.filter((s) => { const n = normalizar(s.nome); return tokens.some((t) => n.includes(t)); });\n  if (porToken.length === 1) return { status: 'ok', servico: porToken[0] };\n  if (porToken.length > 1) return { status: 'ambiguo', opcoes: porToken };\n  return { status: 'nao_encontrado' };\n}\n\nfunction acharProfissional(consulta) {\n  const q = normalizar(consulta);\n  if (!q) return { status: 'ausente' };\n  const achados = ctx.profissionais.filter((p) => {\n    const n = normalizar(p.nome);\n    return n === q || n.includes(q) || q.includes(n.split(' ')[0]);\n  });\n  if (achados.length === 1) return { status: 'ok', profissional: achados[0] };\n  if (achados.length > 1) return { status: 'ambiguo', opcoes: achados };\n  return { status: 'nao_encontrado' };\n}\n\nfunction escolherSlotOferecido(entidades) {\n  const slots = ctx.estado.slots_oferecidos || [];\n  if (!slots.length) return null;\n  if (/\\bprimeir|\\bopcao 1\\b/.test(conteudoNorm) && slots[0]) return slots[0];\n  if (/\\bsegund|\\bopcao 2\\b/.test(conteudoNorm) && slots[1]) return slots[1];\n  const h = resolverHora([entidades.time_text || '', ctx.conteudo]);\n  if (h) {\n    const alvo = slots.find((s) => {\n      const p = partesLocais(s.inicio);\n      return p.hora === h.hora && (h.min === 0 || p.min === h.min);\n    });\n    if (alvo) return alvo;\n  }\n  if (slots.length === 1 && /\\bsim\\b|\\bpode\\b|\\bisso\\b|\\bserve\\b|\\bquero\\b|\\bfechado\\b|\\bbeleza\\b|\\bok\\b/.test(conteudoNorm)) return slots[0];\n  return null;\n}\n\nfunction resposta(tipo, dados) {\n  return { tipo, dados: dados || {} };\n}\n\nfunction saida(rota, extra) {\n  return [{\n    json: Object.assign({\n      rota,\n      contexto: ctx,\n      interp: interp,\n      log: {\n        msg_id: ctx.msg_id,\n        empresa: ctx.empresa.id,\n        intent: interp ? interp.intent : null,\n        confidence: interp ? interp.confidence : null,\n        rota,\n      },\n    }, extra),\n  }];\n}\n\n// ---------- decisao ----------\nlet interp = validacao.interp;\n\nif (!validacao.valida || !interp) {\n  return saida('humano', {\n    motivo: validacao.motivo || 'interpretacao_invalida',\n    handoff_motivo: 'interpretacao_invalida',\n    resposta: resposta('humano', {}),\n  });\n}\n\nif (!ctx.empresa.id || !ctx.cliente.id) {\n  return saida('humano', {\n    motivo: 'contexto_incompleto',\n    handoff_motivo: 'contexto_incompleto',\n    resposta: resposta('humano', {}),\n  });\n}\n\nconst ent = interp.entities;\nconst perguntaSensivel = TERMOS_SENSIVEIS.some((t) => conteudoNorm.includes(t))\n  && /\\?|\\bpode\\b|\\bposso\\b|\\be normal\\b|\\bo que\\b|\\bserve\\b|\\btomar\\b|\\bpassar\\b/.test(conteudoNorm)\n  && ['faq', 'saudacao', 'fora_do_escopo'].includes(interp.intent);\n\nif (interp.requires_human || interp.intent === 'falar_com_humano' || perguntaSensivel || interp.confidence < LIMIAR_HUMANO) {\n  return saida('humano', {\n    motivo: 'transferencia',\n    handoff_motivo: perguntaSensivel ? 'assunto_sensivel'\n      : (interp.confidence < LIMIAR_HUMANO ? 'confianca_baixa' : (interp.handoff_reason || 'pedido_do_cliente')),\n    resposta: resposta('humano', {}),\n  });\n}\n\nconst destrutiva = ['preparar_cancelamento', 'preparar_reagendamento', 'confirmar_acao'].includes(interp.intent);\nconst limiar = destrutiva ? LIMIAR_DESTRUTIVO : LIMIAR_PADRAO;\nif (interp.confidence < limiar) {\n  return saida('responder', {\n    motivo: 'confianca_abaixo_do_limiar',\n    resposta: resposta('esclarecer', { reply: interp.reply }),\n  });\n}\n\n// Confirmacao: so executa a acao pendente guardada pelo sistema.\nif (interp.next_action === 'confirm_pending') {\n  const pendente = ctx.pendente;\n  if (pendente && pendente.expira_em && new Date(pendente.expira_em).getTime() < new Date(ctx.agora_iso).getTime()) {\n    return saida('responder', { motivo: 'pendente_expirada', resposta: resposta('pendente_expirada', {}) });\n  }\n  if (pendente && pendente.tipo) {\n    return saida('executar_pendente', {\n      motivo: 'confirmacao_valida',\n      pendente,\n      busca_revalidacao: pendente.inicio ? {\n        p_inicio: pendente.inicio,\n        p_fim: new Date(new Date(pendente.inicio).getTime() + ((pendente.duracao_minutos || 60) + 1) * 60000).toISOString(),\n        p_procedimento_id: pendente.servico_id,\n        p_profissional_id: pendente.profissional_id || null,\n        p_step_minutos: PASSO_MINUTOS,\n        p_duracao_minutos: pendente.duracao_minutos || 60,\n      } : null,\n    });\n  }\n  const alvo = escolherSlotOferecido(ent);\n  if (alvo && alvo.servico_id) {\n    return saida('disponibilidade', {\n      motivo: 'selecao_de_horario_oferecido',\n      servico: { id: alvo.servico_id, nome: alvo.servico_nome, duracao_minutos: alvo.duracao_minutos },\n      profissional: alvo.profissional_id ? { id: alvo.profissional_id, nome: alvo.profissional_nome } : null,\n      horario_desejado: alvo.inicio,\n      reagendar_consulta_id: ctx.estado.reagendar_consulta_id,\n      busca: montarBusca(partesLocais(alvo.inicio), null, alvo.duracao_minutos, alvo.servico_id, alvo.profissional_id),\n    });\n  }\n  if ((ctx.estado.slots_oferecidos || []).length > 1) {\n    return saida('responder', { motivo: 'escolha_ambigua', resposta: resposta('qual_horario', { slots: ctx.estado.slots_oferecidos }) });\n  }\n  return saida('responder', { motivo: 'sem_pendente', resposta: resposta('sem_pendente', {}) });\n}\n\nif (interp.next_action === 'discard_pending') {\n  return saida('descartar_pendente', { motivo: 'cliente_recusou', resposta: resposta('pendente_descartada', {}) });\n}\n\nif (interp.next_action === 'handoff') {\n  return saida('humano', { motivo: 'pedido_do_cliente', handoff_motivo: 'pedido_do_cliente', resposta: resposta('humano', {}) });\n}\n\nif (interp.next_action === 'answer') {\n  return saida('responder', { motivo: 'resposta_conversacional', resposta: resposta('livre', { reply: interp.reply }) });\n}\n\nif (interp.next_action === 'update_customer') {\n  const campos = ent.customer_updates || {};\n  if (!Object.keys(campos).length) {\n    return saida('responder', { motivo: 'cadastro_sem_dado_explicito', resposta: resposta('esclarecer', { reply: interp.reply }) });\n  }\n  if (campos.email && !/^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$/.test(campos.email)) delete campos.email;\n  if (campos.data_nascimento && !/^\\d{4}-\\d{2}-\\d{2}$/.test(campos.data_nascimento)) {\n    const br = String(campos.data_nascimento).match(/^(\\d{2})[/-](\\d{2})[/-](\\d{4})$/);\n    if (br) campos.data_nascimento = `${br[3]}-${br[2]}-${br[1]}`;\n    else delete campos.data_nascimento;\n  }\n  if (!Object.keys(campos).length) {\n    return saida('responder', { motivo: 'cadastro_invalido', resposta: resposta('esclarecer', { reply: interp.reply }) });\n  }\n  return saida('atualizar_cadastro', { motivo: 'dados_explicitos', atualizacoes: campos });\n}\n\nif (interp.next_action === 'list_appointments') {\n  const objetivo = interp.intent === 'preparar_cancelamento' ? 'cancelar'\n    : (interp.intent === 'preparar_reagendamento' ? 'reagendar' : 'listar');\n  return saida('consultas_do_cliente', { motivo: `consultas_para_${objetivo}`, objetivo });\n}\n\n// ---------- disponibilidade ----------\nfunction montarBusca(pDia, periodo, duracao, servicoId, profissionalId) {\n  let hIni = DIA_INICIO; let mIni = 0; let hFim = DIA_FIM;\n  if (periodo && PERIODOS[periodo]) { hIni = PERIODOS[periodo][0]; hFim = PERIODOS[periodo][1]; }\n  const ehHoje = pDia.ano === agora.ano && pDia.mes === agora.mes && pDia.dia === agora.dia;\n  if (ehHoje && agora.hora >= hIni) { hIni = agora.hora; mIni = agora.min; }\n  return {\n    p_inicio: isoLocal(pDia, hIni, mIni),\n    p_fim: isoLocal(pDia, hFim, 0),\n    p_procedimento_id: servicoId,\n    p_profissional_id: profissionalId || null,\n    p_step_minutos: PASSO_MINUTOS,\n    p_duracao_minutos: duracao,\n  };\n}\n\nconst escolhido = escolherSlotOferecido(ent);\nconst buscaServico = acharServico(ent.service_query);\n\nif (buscaServico.status === 'catalogo_vazio' ) {\n  return saida('humano', { motivo: 'catalogo_vazio', handoff_motivo: 'configuracao_incompleta', resposta: resposta('humano', {}) });\n}\nif (buscaServico.status === 'ambiguo') {\n  return saida('responder', { motivo: 'servico_ambiguo', resposta: resposta('qual_servico', { opcoes: buscaServico.opcoes.map((s) => s.nome) }) });\n}\nif (buscaServico.status === 'nao_encontrado') {\n  return saida('responder', { motivo: 'servico_nao_confirmado', resposta: resposta('servico_nao_confirmado', { pedido: ent.service_query, servicos: ctx.servicos.map((s) => s.nome) }) });\n}\nif (buscaServico.status === 'ausente' && !escolhido) {\n  return saida('responder', { motivo: 'servico_ausente', resposta: resposta('qual_servico', { opcoes: ctx.servicos.map((s) => s.nome) }) });\n}\n\nconst servico = escolhido && escolhido.servico_id\n  ? { id: escolhido.servico_id, nome: escolhido.servico_nome, duracao_minutos: escolhido.duracao_minutos }\n  : buscaServico.servico;\n\nif (!servico || !servico.id) {\n  return saida('humano', { motivo: 'servico_sem_id', handoff_motivo: 'configuracao_incompleta', resposta: resposta('humano', {}) });\n}\n\nlet profissional = null;\nif (ent.professional_query) {\n  const achado = acharProfissional(ent.professional_query);\n  if (achado.status === 'ok') profissional = achado.profissional;\n  else if (achado.status === 'ambiguo') {\n    return saida('responder', { motivo: 'profissional_ambiguo', resposta: resposta('qual_profissional', { opcoes: achado.opcoes.map((p) => p.nome) }) });\n  } else if (achado.status === 'nao_encontrado') {\n    return saida('responder', { motivo: 'profissional_nao_confirmado', resposta: resposta('profissional_nao_confirmado', { profissionais: ctx.profissionais.map((p) => p.nome) }) });\n  }\n}\nif (!profissional && ctx.empresa.exige_profissional) {\n  return saida('responder', { motivo: 'profissional_obrigatorio', resposta: resposta('qual_profissional', { opcoes: ctx.profissionais.map((p) => p.nome) }) });\n}\n\nif (escolhido) {\n  return saida('disponibilidade', {\n    motivo: 'selecao_de_horario_oferecido',\n    servico,\n    profissional: profissional || (escolhido.profissional_id ? { id: escolhido.profissional_id, nome: escolhido.profissional_nome } : null),\n    horario_desejado: escolhido.inicio,\n    reagendar_consulta_id: ctx.estado.reagendar_consulta_id,\n    busca: montarBusca(partesLocais(escolhido.inicio), null, servico.duracao_minutos, servico.id, escolhido.profissional_id),\n  });\n}\n\nconst data = resolverData([ent.date_text || '', ctx.conteudo].join(' '));\nif (data.tipo === 'dia' && data.ambiguo) {\n  return saida('responder', {\n    motivo: 'data_ambigua',\n    resposta: resposta('data_ambigua', { nome_dia: data.nome_dia, hoje: isoLocal(agora, 12, 0), proxima: isoLocal(somarDias(agora, 7), 12, 0) }),\n  });\n}\n\nconst hora = resolverHora([ent.time_text || '', ent.date_text || '', ctx.conteudo]);\nlet horarioDesejado = null;\nif (data.tipo === 'dia') {\n  const inicioDia = isoLocal(data.p, hora ? hora.hora : DIA_FIM, hora ? hora.min : 0);\n  if (new Date(inicioDia).getTime() <= new Date(ctx.agora_iso).getTime()) {\n    return saida('responder', {\n      motivo: 'data_no_passado',\n      resposta: resposta('data_passada', { pedido: ent.date_text || ent.time_text || '', sugestao: isoLocal(somarDias(agora, 1), 9, 0) }),\n    });\n  }\n  if (hora) horarioDesejado = isoLocal(data.p, hora.hora, hora.min);\n}\n\nlet busca;\nif (data.tipo === 'dia') {\n  busca = montarBusca(data.p, ent.period, servico.duracao_minutos, servico.id, profissional ? profissional.id : null);\n} else {\n  const inicioJanela = data.tipo === 'janela' ? data.p : agora;\n  const dias = data.tipo === 'janela' ? (data.dias || 6) : JANELA_PADRAO_DIAS;\n  const ini = montarBusca(inicioJanela, ent.period, servico.duracao_minutos, servico.id, profissional ? profissional.id : null);\n  busca = Object.assign(ini, { p_fim: isoLocal(somarDias(inicioJanela, dias), DIA_FIM, 0) });\n}\n\nreturn saida('disponibilidade', {\n  motivo: 'buscar_horarios',\n  servico,\n  profissional,\n  periodo: ent.period,\n  horario_desejado: horarioDesejado,\n  reagendar_consulta_id: ctx.estado.reagendar_consulta_id,\n  busca,\n});\n"
+        "jsCode": "// Regras deterministicas do atendimento. A IA nao escolhe id, data, rota,\n// filtro, ferramenta nem resultado: tudo e resolvido aqui. As chamadas de\n// agenda saem prontas daqui (caminho e corpo), para que a repeticao de uma\n// escrita use exatamente o mesmo pedido, com a mesma chave de idempotencia.\nconst LIMIAR_PADRAO = 0.75;      // ajuste unico para pedir esclarecimento\nconst LIMIAR_DESTRUTIVO = 0.85;  // cancelar / reagendar / confirmar\nconst LIMIAR_HUMANO = 0.45;      // abaixo disso, pessoa assume\nconst JANELA_PADRAO_DIAS = 14;\nconst PASSO_MINUTOS = 30;\nconst LIMITE_SLOTS = 12;         // horarios pedidos por busca; ofertamos 2\nconst OFFSET_MIN = -180; // America/Sao_Paulo, sem horario de verao desde 2019\n\nconst PERIODOS = { manha: [8, 12], tarde: [12, 18], noite: [18, 21] };\nconst DIA_INICIO = 7;\nconst DIA_FIM = 21;\n\nconst TERMOS_SENSIVEIS = [\n  'dor ', 'dores', 'doi', 'sangr', 'infec', 'febre', 'pus', 'inflam', 'alergi', 'remedio',\n  'pomada', 'antibiotic', 'diagnostic', 'gravid', 'gestante', 'diabet',\n  'anticoagul', 'cancer', 'tumor', 'ferida', 'machuc', 'lesao', 'medicament',\n];\n\nconst ctx = $('montar contexto').first().json;\nconst validacao = $input.first().json;\n\nfunction normalizar(s) {\n  return String(s === null || s === undefined ? '' : s)\n    .toLowerCase()\n    .normalize('NFD').replace(/[\\u0300-\\u036f]/g, '')\n    .replace(/[^a-z0-9\\s/:-]/g, ' ')\n    .replace(/\\s+/g, ' ')\n    .trim();\n}\n\nfunction pad(n) { return String(n).padStart(2, '0'); }\nfunction partesLocais(iso) {\n  const d = new Date(new Date(iso).getTime() + OFFSET_MIN * 60000);\n  return {\n    ano: d.getUTCFullYear(), mes: d.getUTCMonth() + 1, dia: d.getUTCDate(),\n    hora: d.getUTCHours(), min: d.getUTCMinutes(), dow: d.getUTCDay(),\n  };\n}\nfunction isoLocal(p, hora, min) {\n  return `${p.ano}-${pad(p.mes)}-${pad(p.dia)}T${pad(hora)}:${pad(min)}:00-03:00`;\n}\nfunction somarDias(p, n) {\n  const d = new Date(Date.UTC(p.ano, p.mes - 1, p.dia));\n  d.setUTCDate(d.getUTCDate() + n);\n  return { ano: d.getUTCFullYear(), mes: d.getUTCMonth() + 1, dia: d.getUTCDate(), dow: d.getUTCDay() };\n}\n\nconst agora = partesLocais(ctx.agora_iso);\nconst conteudoNorm = normalizar(ctx.conteudo);\n\n// ---------- datas ----------\nconst DIAS_SEMANA = {\n  domingo: 0, segunda: 1, terca: 2, quarta: 3, quinta: 4, sexta: 5, sabado: 6,\n};\nconst MESES = {\n  janeiro: 1, fevereiro: 2, marco: 3, abril: 4, maio: 5, junho: 6, julho: 7,\n  agosto: 8, setembro: 9, outubro: 10, novembro: 11, dezembro: 12,\n};\n\nfunction resolverData(textoData) {\n  const t = normalizar(textoData);\n  if (!t) return { tipo: null };\n  if (/\\bhoje\\b|\\bhj\\b|\\bagora\\b/.test(t)) return { tipo: 'dia', p: agora, ambiguo: false };\n  if (/depois de amanha/.test(t)) return { tipo: 'dia', p: somarDias(agora, 2), ambiguo: false };\n  if (/\\bamanha\\b/.test(t)) return { tipo: 'dia', p: somarDias(agora, 1), ambiguo: false };\n\n  const dm = t.match(/\\b(\\d{1,2})[/-](\\d{1,2})(?:[/-](\\d{2,4}))?\\b/);\n  if (dm) {\n    const dia = Number(dm[1]); const mes = Number(dm[2]);\n    let ano = dm[3] ? Number(dm[3]) : agora.ano;\n    if (ano < 100) ano += 2000;\n    if (dia >= 1 && dia <= 31 && mes >= 1 && mes <= 12) {\n      let p = { ano, mes, dia };\n      // Data recente no passado continua no passado: quem falou \"19/08\" ontem\n      // precisa ouvir que ja passou, e nao ser jogado para o ano que vem.\n      if (!dm[3]) {\n        const candidato = Date.UTC(ano, mes - 1, dia);\n        const hoje = Date.UTC(agora.ano, agora.mes - 1, agora.dia);\n        if (candidato < hoje - 60 * 86400000) p = { ano: ano + 1, mes, dia };\n      }\n      return { tipo: 'dia', p, ambiguo: false };\n    }\n  }\n\n  const dmExtenso = t.match(/\\bdia (\\d{1,2})(?: de ([a-z]+))?/);\n  if (dmExtenso) {\n    const dia = Number(dmExtenso[1]);\n    const mes = dmExtenso[2] && MESES[dmExtenso[2]] ? MESES[dmExtenso[2]] : agora.mes;\n    if (dia >= 1 && dia <= 31) return { tipo: 'dia', p: { ano: agora.ano, mes, dia }, ambiguo: false };\n  }\n\n  if (/semana que vem|proxima semana/.test(t)) {\n    return { tipo: 'janela', p: somarDias(agora, 7), dias: 6, ambiguo: false };\n  }\n\n  for (const nome of Object.keys(DIAS_SEMANA)) {\n    if (new RegExp(`\\\\b${nome}`).test(t)) {\n      const alvo = DIAS_SEMANA[nome];\n      let delta = (alvo - agora.dow + 7) % 7;\n      const proxima = /que vem|proxim/.test(t);\n      if (delta === 0 && proxima) delta = 7;\n      const ambiguo = delta === 0 && !proxima && !/\\bhoje\\b/.test(t);\n      return { tipo: 'dia', p: somarDias(agora, delta), ambiguo, nome_dia: nome };\n    }\n  }\n  return { tipo: null };\n}\n\nfunction resolverHora(textos) {\n  // Remove datas antes de procurar hora: \"14/03\" nao pode virar 14h.\n  const t = normalizar(textos.join(' ')).replace(/\\b\\d{1,2}[/-]\\d{1,2}(?:[/-]\\d{2,4})?\\b/g, ' ');\n  if (/meio dia/.test(t)) return { hora: 12, min: 0 };\n  const m = t.match(/\\b(\\d{1,2})(?:[:h](\\d{2}))?\\s*(?:h|hs|horas)?\\b/);\n  if (!m) return null;\n  let hora = Number(m[1]);\n  const min = m[2] ? Number(m[2]) : 0;\n  if (hora > 23 || min > 59) return null;\n  if (/da tarde|a tarde/.test(t) && hora <= 11) hora += 12;\n  if (/da noite|a noite/.test(t) && hora <= 11) hora += 12;\n  if (!/[:h]/.test(m[0]) && !/hora|\\bh\\b/.test(t) && hora <= 7) return null;\n  return { hora, min };\n}\n\n// ---------- catalogo ----------\n// Servico com agendavel: false nunca teria horario livre. Ele continua no\n// catalogo para responder duvida de preco, mas sai das listas de oferta.\nconst AGENDAVEIS = ctx.servicos.filter((s) => s.agendavel !== false);\nfunction nomesAgendaveis() { return AGENDAVEIS.map((s) => s.nome); }\n\nfunction acharServico(consulta) {\n  const q = normalizar(consulta);\n  const lista = ctx.servicos;\n  if (!lista.length) return { status: 'catalogo_vazio' };\n  const mencionados = lista.filter((s) => conteudoNorm.includes(normalizar(s.nome)));\n  if (mencionados.length > 1) return { status: 'ambiguo', opcoes: mencionados };\n  if (!q) return mencionados.length === 1 ? { status: 'ok', servico: mencionados[0] } : { status: 'ausente' };\n  const exato = lista.filter((s) => normalizar(s.nome) === q);\n  if (exato.length === 1) return { status: 'ok', servico: exato[0] };\n  const contem = lista.filter((s) => normalizar(s.nome).includes(q) || q.includes(normalizar(s.nome)));\n  if (contem.length === 1) return { status: 'ok', servico: contem[0] };\n  if (contem.length > 1) return { status: 'ambiguo', opcoes: contem };\n  const tokens = q.split(' ').filter((t) => t.length > 3);\n  const porToken = lista.filter((s) => { const n = normalizar(s.nome); return tokens.some((t) => n.includes(t)); });\n  if (porToken.length === 1) return { status: 'ok', servico: porToken[0] };\n  if (porToken.length > 1) return { status: 'ambiguo', opcoes: porToken };\n  return { status: 'nao_encontrado' };\n}\n\nfunction acharProfissional(consulta) {\n  const q = normalizar(consulta);\n  if (!q) return { status: 'ausente' };\n  const achados = ctx.profissionais.filter((p) => {\n    const n = normalizar(p.nome);\n    return n === q || n.includes(q) || q.includes(n.split(' ')[0]);\n  });\n  if (achados.length === 1) return { status: 'ok', profissional: achados[0] };\n  if (achados.length > 1) return { status: 'ambiguo', opcoes: achados };\n  return { status: 'nao_encontrado' };\n}\n\nfunction escolherSlotOferecido(entidades) {\n  const slots = ctx.estado.slots_oferecidos || [];\n  if (!slots.length) return null;\n  if (/\\bprimeir|\\bopcao 1\\b/.test(conteudoNorm) && slots[0]) return slots[0];\n  if (/\\bsegund|\\bopcao 2\\b/.test(conteudoNorm) && slots[1]) return slots[1];\n  const h = resolverHora([entidades.time_text || '', ctx.conteudo]);\n  if (h) {\n    const alvo = slots.find((s) => {\n      const p = partesLocais(s.inicio);\n      return p.hora === h.hora && (h.min === 0 || p.min === h.min);\n    });\n    if (alvo) return alvo;\n  }\n  if (slots.length === 1 && /\\bsim\\b|\\bpode\\b|\\bisso\\b|\\bserve\\b|\\bquero\\b|\\bfechado\\b|\\bbeleza\\b|\\bok\\b/.test(conteudoNorm)) return slots[0];\n  return null;\n}\n\nfunction resposta(tipo, dados) {\n  return { tipo, dados: dados || {} };\n}\n\nfunction saida(rota, extra) {\n  return [{\n    json: Object.assign({\n      rota,\n      contexto: ctx,\n      interp: interp,\n      log: {\n        msg_id: ctx.msg_id,\n        instance: ctx.instance,\n        intent: interp ? interp.intent : null,\n        confidence: interp ? interp.confidence : null,\n        rota,\n      },\n    }, extra),\n  }];\n}\n\n// ---------- pedidos prontos para a API ----------\n// Caminho e corpo saem daqui uma unica vez: os nos de escrita e a repeticao\n// usam o mesmo objeto, entao repetir nunca muda a chave de idempotencia.\nfunction montarEscrita(p) {\n  const base = { instance_name: ctx.instance, telefone: ctx.cliente.telefone };\n  if (p.tipo === 'cancelar') {\n    return {\n      caminho: '/api/ai/agendamentos/cancelar',\n      corpo: Object.assign({}, base, { id_consulta: p.consulta_id, motivo: 'cliente_solicitou' }),\n    };\n  }\n  if (p.tipo === 'reagendar') {\n    // Reagendar e idempotente por estado: a API recusa chave_idempotencia aqui.\n    return {\n      caminho: '/api/ai/agendamentos/reagendar',\n      corpo: Object.assign({}, base, {\n        id_consulta: p.consulta_id,\n        novo_inicio: p.inicio,\n        id_profissional: p.profissional_id || null,\n      }),\n    };\n  }\n  return {\n    caminho: '/api/ai/agendamentos',\n    corpo: Object.assign({}, base, {\n      id_procedimento: p.servico_id,\n      id_profissional: p.profissional_id,\n      inicio: p.inicio,\n      chave_idempotencia: String(p.acao_id || '').slice(0, 120),\n    }),\n  };\n}\n\nfunction montarBusca(pDia, periodo, servicoId, profissionalId) {\n  let hIni = DIA_INICIO; let mIni = 0; let hFim = DIA_FIM;\n  if (periodo && PERIODOS[periodo]) { hIni = PERIODOS[periodo][0]; hFim = PERIODOS[periodo][1]; }\n  const ehHoje = pDia.ano === agora.ano && pDia.mes === agora.mes && pDia.dia === agora.dia;\n  if (ehHoje && agora.hora >= hIni) { hIni = agora.hora; mIni = agora.min; }\n  return {\n    instance_name: ctx.instance,\n    id_procedimento: servicoId,\n    id_profissional: profissionalId || null,\n    inicio: isoLocal(pDia, hIni, mIni),\n    fim: isoLocal(pDia, hFim, 0),\n    passo_minutos: PASSO_MINUTOS,\n    limite: LIMITE_SLOTS,\n  };\n}\n\n// Janela vazia acontece de verdade: \"hoje a tarde\" perguntado as 20h. A API\n// recusaria com ENTRADA_INVALIDA, e isso viraria transferencia por engano.\nfunction irBuscarHorarios(busca, extra) {\n  if (new Date(busca.inicio).getTime() >= new Date(busca.fim).getTime()) {\n    return saida('responder', {\n      motivo: 'fora_do_expediente',\n      resposta: resposta('sem_horarios', { servico: extra.servico, ate: busca.fim }),\n    });\n  }\n  return saida('disponibilidade', Object.assign({ busca }, extra));\n}\n\n// ---------- decisao ----------\nlet interp = validacao.interp;\n\nif (!validacao.valida || !interp) {\n  return saida('humano', {\n    motivo: validacao.motivo || 'interpretacao_invalida',\n    handoff_motivo: 'interpretacao_invalida',\n    resposta: resposta('humano', {}),\n  });\n}\n\nif (!ctx.tem_contexto) {\n  return saida('humano', {\n    motivo: 'contexto_incompleto',\n    handoff_motivo: ctx.erro_contexto || 'contexto_incompleto',\n    resposta: resposta('humano', {}),\n  });\n}\n\nconst ent = interp.entities;\nconst perguntaSensivel = TERMOS_SENSIVEIS.some((t) => conteudoNorm.includes(t))\n  && /\\?|\\bpode\\b|\\bposso\\b|\\be normal\\b|\\bo que\\b|\\bserve\\b|\\btomar\\b|\\bpassar\\b/.test(conteudoNorm)\n  && ['faq', 'saudacao', 'fora_do_escopo'].includes(interp.intent);\n\nif (interp.requires_human || interp.intent === 'falar_com_humano' || perguntaSensivel || interp.confidence < LIMIAR_HUMANO) {\n  return saida('humano', {\n    motivo: 'transferencia',\n    handoff_motivo: perguntaSensivel ? 'assunto_sensivel'\n      : (interp.confidence < LIMIAR_HUMANO ? 'confianca_baixa' : (interp.handoff_reason || 'pedido_do_cliente')),\n    resposta: resposta('humano', {}),\n  });\n}\n\nconst destrutiva = ['preparar_cancelamento', 'preparar_reagendamento', 'confirmar_acao'].includes(interp.intent);\nconst limiar = destrutiva ? LIMIAR_DESTRUTIVO : LIMIAR_PADRAO;\nif (interp.confidence < limiar) {\n  return saida('responder', {\n    motivo: 'confianca_abaixo_do_limiar',\n    resposta: resposta('esclarecer', { reply: interp.reply }),\n  });\n}\n\n// Confirmacao: so executa a acao pendente guardada pelo sistema.\nif (interp.next_action === 'confirm_pending') {\n  const pendente = ctx.pendente;\n  if (pendente && pendente.expira_em && new Date(pendente.expira_em).getTime() < new Date(ctx.agora_iso).getTime()) {\n    return saida('responder', { motivo: 'pendente_expirada', resposta: resposta('pendente_expirada', {}) });\n  }\n  if (pendente && pendente.tipo) {\n    // A API revalida o horario com a funcao do banco imediatamente antes de\n    // gravar, entao o fluxo nao repete a consulta de disponibilidade aqui.\n    return saida('executar_pendente', {\n      motivo: 'confirmacao_valida',\n      pendente,\n      escrita: montarEscrita(pendente),\n    });\n  }\n  const alvo = escolherSlotOferecido(ent);\n  if (alvo && alvo.servico_id) {\n    return irBuscarHorarios(\n      montarBusca(partesLocais(alvo.inicio), null, alvo.servico_id, alvo.profissional_id),\n      {\n        motivo: 'selecao_de_horario_oferecido',\n        servico: { id: alvo.servico_id, nome: alvo.servico_nome, duracao_minutos: alvo.duracao_minutos },\n        profissional: alvo.profissional_id ? { id: alvo.profissional_id, nome: alvo.profissional_nome } : null,\n        horario_desejado: alvo.inicio,\n        reagendar_consulta_id: ctx.estado.reagendar_consulta_id,\n      },\n    );\n  }\n  if ((ctx.estado.slots_oferecidos || []).length > 1) {\n    return saida('responder', { motivo: 'escolha_ambigua', resposta: resposta('qual_horario', { slots: ctx.estado.slots_oferecidos }) });\n  }\n  return saida('responder', { motivo: 'sem_pendente', resposta: resposta('sem_pendente', {}) });\n}\n\nif (interp.next_action === 'discard_pending') {\n  return saida('descartar_pendente', { motivo: 'cliente_recusou', resposta: resposta('pendente_descartada', {}) });\n}\n\nif (interp.next_action === 'handoff') {\n  return saida('humano', { motivo: 'pedido_do_cliente', handoff_motivo: 'pedido_do_cliente', resposta: resposta('humano', {}) });\n}\n\nif (interp.next_action === 'answer') {\n  return saida('responder', { motivo: 'resposta_conversacional', resposta: resposta('livre', { reply: interp.reply }) });\n}\n\nif (interp.next_action === 'update_customer') {\n  const campos = ent.customer_updates || {};\n  if (!Object.keys(campos).length) {\n    return saida('responder', { motivo: 'cadastro_sem_dado_explicito', resposta: resposta('esclarecer', { reply: interp.reply }) });\n  }\n  if (campos.email && !/^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$/.test(campos.email)) delete campos.email;\n  if (campos.data_nascimento && !/^\\d{4}-\\d{2}-\\d{2}$/.test(campos.data_nascimento)) {\n    const br = String(campos.data_nascimento).match(/^(\\d{2})[/-](\\d{2})[/-](\\d{4})$/);\n    if (br) campos.data_nascimento = `${br[3]}-${br[2]}-${br[1]}`;\n    else delete campos.data_nascimento;\n  }\n  if (!Object.keys(campos).length) {\n    return saida('responder', { motivo: 'cadastro_invalido', resposta: resposta('esclarecer', { reply: interp.reply }) });\n  }\n  return saida('atualizar_cadastro', { motivo: 'dados_explicitos', atualizacoes: campos });\n}\n\nif (interp.next_action === 'list_appointments') {\n  const objetivo = interp.intent === 'preparar_cancelamento' ? 'cancelar'\n    : (interp.intent === 'preparar_reagendamento' ? 'reagendar' : 'listar');\n  return saida('consultas_do_cliente', { motivo: `consultas_para_${objetivo}`, objetivo });\n}\n\n// ---------- disponibilidade ----------\nconst escolhido = escolherSlotOferecido(ent);\nconst buscaServico = acharServico(ent.service_query);\n\nif (buscaServico.status === 'catalogo_vazio' || !AGENDAVEIS.length) {\n  return saida('humano', { motivo: 'catalogo_vazio', handoff_motivo: 'configuracao_incompleta', resposta: resposta('humano', {}) });\n}\nif (buscaServico.status === 'ambiguo') {\n  return saida('responder', { motivo: 'servico_ambiguo', resposta: resposta('qual_servico', { opcoes: buscaServico.opcoes.map((s) => s.nome) }) });\n}\nif (buscaServico.status === 'nao_encontrado') {\n  return saida('responder', { motivo: 'servico_nao_confirmado', resposta: resposta('servico_nao_confirmado', { pedido: ent.service_query, servicos: nomesAgendaveis() }) });\n}\nif (buscaServico.status === 'ausente' && !escolhido) {\n  return saida('responder', { motivo: 'servico_ausente', resposta: resposta('qual_servico', { opcoes: nomesAgendaveis() }) });\n}\n\nconst servico = escolhido && escolhido.servico_id\n  ? { id: escolhido.servico_id, nome: escolhido.servico_nome, duracao_minutos: escolhido.duracao_minutos }\n  : buscaServico.servico;\n\nif (!servico || !servico.id) {\n  return saida('humano', { motivo: 'servico_sem_id', handoff_motivo: 'configuracao_incompleta', resposta: resposta('humano', {}) });\n}\n// Sem profissional ativo o servico nunca teria vaga: dizer \"sem horario\" seria\n// enganoso, porque nao existe data em que ele apareceria.\nif (servico.agendavel === false) {\n  return saida('humano', { motivo: 'servico_sem_profissional', handoff_motivo: 'configuracao_incompleta', resposta: resposta('humano', {}) });\n}\n\nlet profissional = null;\nif (ent.professional_query) {\n  const achado = acharProfissional(ent.professional_query);\n  if (achado.status === 'ok') profissional = achado.profissional;\n  else if (achado.status === 'ambiguo') {\n    return saida('responder', { motivo: 'profissional_ambiguo', resposta: resposta('qual_profissional', { opcoes: achado.opcoes.map((p) => p.nome) }) });\n  } else if (achado.status === 'nao_encontrado') {\n    return saida('responder', { motivo: 'profissional_nao_confirmado', resposta: resposta('profissional_nao_confirmado', { profissionais: ctx.profissionais.map((p) => p.nome) }) });\n  }\n}\nif (!profissional && ctx.empresa.exige_profissional) {\n  return saida('responder', { motivo: 'profissional_obrigatorio', resposta: resposta('qual_profissional', { opcoes: ctx.profissionais.map((p) => p.nome) }) });\n}\n\nif (escolhido) {\n  return irBuscarHorarios(\n    montarBusca(partesLocais(escolhido.inicio), null, servico.id, escolhido.profissional_id),\n    {\n      motivo: 'selecao_de_horario_oferecido',\n      servico,\n      profissional: profissional || (escolhido.profissional_id ? { id: escolhido.profissional_id, nome: escolhido.profissional_nome } : null),\n      horario_desejado: escolhido.inicio,\n      reagendar_consulta_id: ctx.estado.reagendar_consulta_id,\n    },\n  );\n}\n\nconst data = resolverData([ent.date_text || '', ctx.conteudo].join(' '));\nif (data.tipo === 'dia' && data.ambiguo) {\n  return saida('responder', {\n    motivo: 'data_ambigua',\n    resposta: resposta('data_ambigua', { nome_dia: data.nome_dia, hoje: isoLocal(agora, 12, 0), proxima: isoLocal(somarDias(agora, 7), 12, 0) }),\n  });\n}\n\nconst hora = resolverHora([ent.time_text || '', ent.date_text || '', ctx.conteudo]);\nlet horarioDesejado = null;\nif (data.tipo === 'dia') {\n  const inicioDia = isoLocal(data.p, hora ? hora.hora : DIA_FIM, hora ? hora.min : 0);\n  if (new Date(inicioDia).getTime() <= new Date(ctx.agora_iso).getTime()) {\n    return saida('responder', {\n      motivo: 'data_no_passado',\n      resposta: resposta('data_passada', { pedido: ent.date_text || ent.time_text || '', sugestao: isoLocal(somarDias(agora, 1), 9, 0) }),\n    });\n  }\n  if (hora) horarioDesejado = isoLocal(data.p, hora.hora, hora.min);\n}\n\nlet busca;\nif (data.tipo === 'dia') {\n  busca = montarBusca(data.p, ent.period, servico.id, profissional ? profissional.id : null);\n} else {\n  const inicioJanela = data.tipo === 'janela' ? data.p : agora;\n  const dias = data.tipo === 'janela' ? (data.dias || 6) : JANELA_PADRAO_DIAS;\n  const ini = montarBusca(inicioJanela, ent.period, servico.id, profissional ? profissional.id : null);\n  busca = Object.assign(ini, { fim: isoLocal(somarDias(inicioJanela, dias), DIA_FIM, 0) });\n}\n\nreturn irBuscarHorarios(busca, {\n  motivo: 'buscar_horarios',\n  servico,\n  profissional,\n  periodo: ent.period,\n  horario_desejado: horarioDesejado,\n  reagendar_consulta_id: ctx.estado.reagendar_consulta_id,\n});\n"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -1169,17 +1053,13 @@
     {
       "parameters": {
         "method": "POST",
-        "url": "={{ $env.SUPABASE_URL.replace(/\\/$/, '') + '/rest/v1/rpc/fn_buscar_slots' }}",
+        "url": "={{ $env.AGENDA_API_BASE_URL.replace(/\\/$/, '') + '/api/ai/disponibilidade' }}",
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
             {
-              "name": "Authorization",
-              "value": "={{ 'Bearer ' + $env.SUPABASE_SERVICE_ROLE_KEY }}"
-            },
-            {
-              "name": "apikey",
-              "value": "={{ $env.SUPABASE_SERVICE_ROLE_KEY }}"
+              "name": "X-Automation-Token",
+              "value": "={{ $env.AGENDA_AUTOMATION_TOKEN }}"
             },
             {
               "name": "Content-Type",
@@ -1191,7 +1071,12 @@
         "specifyBody": "json",
         "jsonBody": "={{ JSON.stringify($json.busca) }}",
         "options": {
-          "timeout": 15000
+          "timeout": 15000,
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
         }
       },
       "type": "n8n-nodes-base.httpRequest",
@@ -1210,7 +1095,7 @@
     },
     {
       "parameters": {
-        "jsCode": "// Le o retorno de fn_buscar_slots e decide a resposta. Zero, um ou varios\n// horarios sao casos distintos; nenhum horario e inventado nem vem do historico.\nconst MAX_OFERTAS = 2;\nconst PENDENTE_MINUTOS = 10;\nconst OFFSET_MIN = -180;\n\nconst decisao = $('resolver e decidir').first().json;\nconst ctx = decisao.contexto;\nconst linhas = $input.all().map((i) => i.json);\n\nfunction primeiroCampo(obj, nomes) {\n  for (const n of nomes) if (obj && obj[n] !== undefined && obj[n] !== null && obj[n] !== '') return obj[n];\n  return null;\n}\nfunction numero(v) { const n = Number(v); return Number.isFinite(n) ? n : null; }\nfunction paraIso(v) {\n  if (!v) return null;\n  const s = String(v).trim().replace(' ', 'T');\n  const comFuso = /[zZ]|[+-]\\d{2}(:?\\d{2})?$/.test(s) ? s.replace(/([+-]\\d{2})$/, '$1:00') : `${s}-03:00`;\n  const d = new Date(comFuso);\n  return Number.isNaN(d.getTime()) ? null : d.toISOString();\n}\nfunction turno(iso) {\n  const h = new Date(new Date(iso).getTime() + OFFSET_MIN * 60000).getUTCHours();\n  if (h < 12) return 'manha';\n  if (h < 18) return 'tarde';\n  return 'noite';\n}\nfunction dia(iso) { return new Date(new Date(iso).getTime() + OFFSET_MIN * 60000).toISOString().slice(0, 10); }\n\nconst houveErro = linhas.some((l) => l && (l.error !== undefined || l.__erro === true));\nconst agoraMs = new Date(ctx.agora_iso).getTime();\nconst idsProfissionais = ctx.profissionais.map((p) => p.id).filter((x) => x !== null);\n\nconst slots = houveErro ? [] : linhas\n  .map((l) => {\n    const inicio = paraIso(primeiroCampo(l, ['inicio', 'slot_inicio', 'inicio_slot', 'start', 'horario']));\n    if (!inicio) return null;\n    const profId = numero(primeiroCampo(l, ['id_profissional', 'profissional_id', 'p_profissional_id']));\n    return {\n      inicio,\n      fim: paraIso(primeiroCampo(l, ['fim', 'slot_fim', 'end'])),\n      profissional_id: profId,\n      profissional_nome: (ctx.profissionais.find((p) => p.id === profId) || {}).nome\n        || String(primeiroCampo(l, ['profissional', 'profissional_nome']) || ''),\n      servico_id: decisao.servico ? decisao.servico.id : null,\n      servico_nome: decisao.servico ? decisao.servico.nome : '',\n      duracao_minutos: decisao.servico ? decisao.servico.duracao_minutos : 60,\n    };\n  })\n  .filter((s) => s && new Date(s.inicio).getTime() > agoraMs)\n  // Isolamento: so aceita profissional da propria empresa quando o id vem preenchido.\n  .filter((s) => s.profissional_id === null || !idsProfissionais.length || idsProfissionais.includes(s.profissional_id))\n  .sort((a, b) => new Date(a.inicio) - new Date(b.inicio));\n\nfunction escolherDois(lista) {\n  if (lista.length <= 1) return lista.slice(0, 1);\n  const primeiro = lista[0];\n  const diferente = lista.find((s) => turno(s.inicio) !== turno(primeiro.inicio) || dia(s.inicio) !== dia(primeiro.inicio));\n  return diferente ? [primeiro, diferente] : lista.slice(0, MAX_OFERTAS);\n}\n\nfunction novaPendencia(slot) {\n  const expira = new Date(agoraMs + PENDENTE_MINUTOS * 60000).toISOString();\n  const base = {\n    acao_id: `${ctx.msg_id}:${slot.inicio}`,\n    empresa_id: ctx.empresa.id,\n    cliente_id: ctx.cliente.id,\n    inicio: slot.inicio,\n    duracao_minutos: slot.duracao_minutos,\n    servico_id: slot.servico_id,\n    servico_nome: slot.servico_nome,\n    profissional_id: slot.profissional_id,\n    profissional_nome: slot.profissional_nome,\n    criada_em: ctx.agora_iso,\n    expira_em: expira,\n  };\n  if (decisao.reagendar_consulta_id) {\n    return Object.assign(base, { tipo: 'reagendar', consulta_id: decisao.reagendar_consulta_id });\n  }\n  return Object.assign(base, { tipo: 'agendar' });\n}\n\nfunction resultado(tipo, dados, pendente, oferecidos) {\n  return [{\n    json: {\n      tipo_resposta: tipo,\n      dados: dados || {},\n      pendente_novo: pendente || null,\n      estado_novo: {\n        slots_oferecidos: oferecidos || [],\n        consultas_candidatas: [],\n        reagendar_consulta_id: pendente ? null : (decisao.reagendar_consulta_id || null),\n      },\n      log: Object.assign({}, decisao.log, { tipo_resposta: tipo, slots_encontrados: slots.length, erro_ferramenta: houveErro }),\n    },\n  }];\n}\n\nif (houveErro) {\n  return resultado('falha_ferramenta', { operacao: 'consulta_de_horarios' }, null, ctx.estado.slots_oferecidos);\n}\n\nif (decisao.horario_desejado) {\n  const alvoMs = new Date(decisao.horario_desejado).getTime();\n  const exato = slots.find((s) => new Date(s.inicio).getTime() === alvoMs);\n  if (exato) {\n    return resultado('pedir_confirmacao', { slot: exato, reagendamento: Boolean(decisao.reagendar_consulta_id) }, novaPendencia(exato), [exato]);\n  }\n  const alternativas = escolherDois(slots);\n  if (!alternativas.length) {\n    return resultado('sem_horarios', { servico: decisao.servico, ate: decisao.busca.p_fim }, null, []);\n  }\n  return resultado('horario_indisponivel', { pedido: decisao.horario_desejado, slots: alternativas }, null, alternativas);\n}\n\nif (!slots.length) {\n  return resultado('sem_horarios', { servico: decisao.servico, ate: decisao.busca.p_fim }, null, []);\n}\n\nconst ofertas = escolherDois(slots);\nif (ofertas.length === 1) {\n  return resultado('pedir_confirmacao', { slot: ofertas[0], unico: true, reagendamento: Boolean(decisao.reagendar_consulta_id) }, novaPendencia(ofertas[0]), ofertas);\n}\nreturn resultado('dois_horarios', { slots: ofertas, servico: decisao.servico }, null, ofertas);\n"
+        "jsCode": "// Le o envelope de /api/ai/disponibilidade e decide a resposta. Zero, um ou\n// varios horarios sao casos distintos; nenhum horario e inventado nem vem do\n// historico. Lista vazia com ok: true e resposta legitima, nao falha.\nconst MAX_OFERTAS = 2;\nconst PENDENTE_MINUTOS = 10;\nconst OFFSET_MIN = -180;\nconst CHAVE_MAX = 120; // limite de chave_idempotencia aceito pela API\n\nconst decisao = $('resolver e decidir').first().json;\nconst ctx = decisao.contexto;\nconst envelope = $input.first().json || {};\n\nfunction numero(v) { const n = Number(v); return Number.isFinite(n) ? n : null; }\nfunction turno(iso) {\n  const h = new Date(new Date(iso).getTime() + OFFSET_MIN * 60000).getUTCHours();\n  if (h < 12) return 'manha';\n  if (h < 18) return 'tarde';\n  return 'noite';\n}\nfunction dia(iso) { return new Date(new Date(iso).getTime() + OFFSET_MIN * 60000).toISOString().slice(0, 10); }\n\n// Sem envelope (falha de rede, corpo sem `ok`) o resultado e desconhecido, e\n// desconhecido nunca vira \"nao tem horario\".\nconst temEnvelope = typeof envelope.ok === 'boolean';\nconst dados = (temEnvelope && envelope.ok === true && envelope.data) ? envelope.data : {};\nconst falhou = !temEnvelope || envelope.ok !== true;\nconst codigoErro = temEnvelope && envelope.error ? String(envelope.error.code || '') : 'sem_envelope';\n\nconst agoraMs = new Date(ctx.agora_iso).getTime();\nconst procedimento = dados.procedimento || {};\n\n// Os horarios ja vem no fuso do negocio e todo slot traz id_profissional: a\n// API descarta slot sem profissional antes de responder.\nconst slots = (Array.isArray(dados.slots) ? dados.slots : [])\n  .map((s) => ({\n    inicio: s.inicio,\n    fim: s.fim || null,\n    profissional_id: numero(s.id_profissional),\n    profissional_nome: String(s.profissional_nome || ''),\n    servico_id: numero(procedimento.id) || (decisao.servico ? decisao.servico.id : null),\n    servico_nome: String(procedimento.nome || (decisao.servico ? decisao.servico.nome : '')),\n    duracao_minutos: numero(procedimento.duracao_minutos) || (decisao.servico ? decisao.servico.duracao_minutos : 60),\n  }))\n  .filter((s) => s.inicio && s.profissional_id && !Number.isNaN(new Date(s.inicio).getTime()))\n  .filter((s) => new Date(s.inicio).getTime() > agoraMs)\n  .sort((a, b) => new Date(a.inicio) - new Date(b.inicio));\n\nfunction escolherDois(lista) {\n  if (lista.length <= 1) return lista.slice(0, 1);\n  const primeiro = lista[0];\n  const diferente = lista.find((s) => turno(s.inicio) !== turno(primeiro.inicio) || dia(s.inicio) !== dia(primeiro.inicio));\n  return diferente ? [primeiro, diferente] : lista.slice(0, MAX_OFERTAS);\n}\n\nfunction novaPendencia(slot) {\n  const expira = new Date(agoraMs + PENDENTE_MINUTOS * 60000).toISOString();\n  const base = {\n    // acao_id vira a chave_idempotencia da criacao: repetir a mesma acao\n    // devolve o mesmo agendamento em vez de criar um segundo.\n    acao_id: `${ctx.msg_id}:${slot.inicio}`.slice(0, CHAVE_MAX),\n    inicio: slot.inicio,\n    duracao_minutos: slot.duracao_minutos,\n    servico_id: slot.servico_id,\n    servico_nome: slot.servico_nome,\n    profissional_id: slot.profissional_id,\n    profissional_nome: slot.profissional_nome,\n    criada_em: ctx.agora_iso,\n    expira_em: expira,\n  };\n  if (decisao.reagendar_consulta_id) {\n    return Object.assign(base, { tipo: 'reagendar', consulta_id: decisao.reagendar_consulta_id });\n  }\n  return Object.assign(base, { tipo: 'agendar' });\n}\n\nfunction resultado(tipo, dadosResposta, pendente, oferecidos) {\n  return [{\n    json: {\n      tipo_resposta: tipo,\n      dados: dadosResposta || {},\n      pendente_novo: pendente || null,\n      estado_novo: {\n        slots_oferecidos: oferecidos || [],\n        consultas_candidatas: [],\n        reagendar_consulta_id: pendente ? null : (decisao.reagendar_consulta_id || null),\n      },\n      log: Object.assign({}, decisao.log, {\n        tipo_resposta: tipo,\n        slots_encontrados: slots.length,\n        total: numero(dados.total),\n        truncado: dados.truncado === true,\n        erro_ferramenta: falhou ? codigoErro : null,\n      }),\n    },\n  }];\n}\n\nif (falhou) {\n  return resultado('falha_temporaria', { operacao: 'consulta_de_horarios' }, null, ctx.estado.slots_oferecidos);\n}\n\n// truncado: a API cortou a lista no limite pedido, entao existem mais opcoes\n// alem das duas ofertadas.\nconst maisOpcoes = dados.truncado === true;\n\nif (decisao.horario_desejado) {\n  const alvoMs = new Date(decisao.horario_desejado).getTime();\n  const exato = slots.find((s) => new Date(s.inicio).getTime() === alvoMs);\n  if (exato) {\n    return resultado('pedir_confirmacao', { slot: exato, reagendamento: Boolean(decisao.reagendar_consulta_id) }, novaPendencia(exato), [exato]);\n  }\n  const alternativas = escolherDois(slots);\n  if (!alternativas.length) {\n    return resultado('sem_horarios', { servico: decisao.servico, ate: decisao.busca.fim }, null, []);\n  }\n  return resultado('horario_indisponivel', { pedido: decisao.horario_desejado, slots: alternativas }, null, alternativas);\n}\n\nif (!slots.length) {\n  return resultado('sem_horarios', { servico: decisao.servico, ate: decisao.busca.fim }, null, []);\n}\n\nconst ofertas = escolherDois(slots);\nif (ofertas.length === 1) {\n  return resultado('pedir_confirmacao', { slot: ofertas[0], unico: true, reagendamento: Boolean(decisao.reagendar_consulta_id) }, novaPendencia(ofertas[0]), ofertas);\n}\nreturn resultado(\n  'dois_horarios',\n  { slots: ofertas, servico: decisao.servico, mais_opcoes: maisOpcoes || slots.length > ofertas.length },\n  null,\n  ofertas,\n);\n"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -1308,82 +1193,7 @@
               },
               "renameOutput": true,
               "outputKey": "cancelar"
-            }
-          ]
-        },
-        "options": {
-          "fallbackOutput": "extra",
-          "renameFallbackOutput": "agendar ou reagendar"
-        }
-      },
-      "type": "n8n-nodes-base.switch",
-      "typeVersion": 3.2,
-      "position": [
-        6920,
-        260
-      ],
-      "id": "b8e90be0-ed9b-5699-98bc-e7ff452d03a1",
-      "name": "tipo da ação"
-    },
-    {
-      "parameters": {
-        "method": "POST",
-        "url": "={{ $env.SUPABASE_URL.replace(/\\/$/, '') + '/rest/v1/rpc/fn_buscar_slots' }}",
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
-            {
-              "name": "Authorization",
-              "value": "={{ 'Bearer ' + $env.SUPABASE_SERVICE_ROLE_KEY }}"
             },
-            {
-              "name": "apikey",
-              "value": "={{ $env.SUPABASE_SERVICE_ROLE_KEY }}"
-            },
-            {
-              "name": "Content-Type",
-              "value": "application/json"
-            }
-          ]
-        },
-        "sendBody": true,
-        "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify($('resolver e decidir').first().json.busca_revalidacao) }}",
-        "options": {
-          "timeout": 15000
-        }
-      },
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
-      "position": [
-        7140,
-        320
-      ],
-      "id": "ca98589d-e0d0-54f6-8d36-95916c8776b6",
-      "name": "revalidar horário",
-      "onError": "continueRegularOutput",
-      "retryOnFail": true,
-      "maxTries": 2,
-      "waitBetweenTries": 1000,
-      "alwaysOutputData": true
-    },
-    {
-      "parameters": {
-        "jsCode": "// Revalida o horario da acao pendente no momento da execucao. Entre a oferta e o\n// \"sim\" o horario pode ter sido ocupado; sem esta checagem nasce agendamento duplo.\nconst decisao = $('resolver e decidir').first().json;\nconst ctx = decisao.contexto;\nconst pendente = decisao.pendente;\nconst linhas = $input.all().map((i) => i.json);\n\nfunction paraIso(v) {\n  if (!v) return null;\n  const s = String(v).trim().replace(' ', 'T');\n  const comFuso = /[zZ]|[+-]\\d{2}(:?\\d{2})?$/.test(s) ? s.replace(/([+-]\\d{2})$/, '$1:00') : `${s}-03:00`;\n  const d = new Date(comFuso);\n  return Number.isNaN(d.getTime()) ? null : d.toISOString();\n}\nfunction primeiroCampo(obj, nomes) {\n  for (const n of nomes) if (obj && obj[n] !== undefined && obj[n] !== null && obj[n] !== '') return obj[n];\n  return null;\n}\n\nconst houveErro = linhas.some((l) => l && l.error !== undefined);\nconst alvoMs = new Date(pendente.inicio).getTime();\nconst livre = !houveErro && linhas.some((l) => {\n  const inicio = paraIso(primeiroCampo(l, ['inicio', 'slot_inicio', 'inicio_slot', 'start', 'horario']));\n  return inicio && new Date(inicio).getTime() === alvoMs;\n});\n\nconst acao = houveErro ? 'falha' : (livre ? pendente.tipo : 'indisponivel');\n\nreturn [{\n  json: {\n    acao,\n    pendente,\n    tipo_resposta: acao === 'indisponivel' ? 'horario_ocupado' : (acao === 'falha' ? 'falha_ferramenta' : null),\n    dados: { pedido: pendente.inicio },\n    pendente_novo: null,\n    estado_novo: { slots_oferecidos: [], consultas_candidatas: [], reagendar_consulta_id: null },\n    log: Object.assign({}, decisao.log, { revalidacao: acao, horario: pendente.inicio }),\n    // Corpo e filtros das escritas: montados aqui, nunca pela IA.\n    corpo_criar: {\n      id_cliente: ctx.cliente.id,\n      id_info_clinica: ctx.empresa.id,\n      id_procedimento: pendente.servico_id,\n      id_profissional: pendente.profissional_id,\n      status: 'pendente',\n      intervalo: `[\"${pendente.inicio}\",\"${new Date(alvoMs + (pendente.duracao_minutos || 60) * 60000).toISOString()}\")`,\n    },\n    corpo_reagendar: {\n      intervalo: `[\"${pendente.inicio}\",\"${new Date(alvoMs + (pendente.duracao_minutos || 60) * 60000).toISOString()}\")`,\n      id_profissional: pendente.profissional_id,\n    },\n  },\n}];\n"
-      },
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [
-        7360,
-        320
-      ],
-      "id": "817344ac-3cc1-5c2b-aa37-80af92a5dcf7",
-      "name": "conferir revalidação"
-    },
-    {
-      "parameters": {
-        "rules": {
-          "values": [
             {
               "conditions": {
                 "options": {
@@ -1395,7 +1205,7 @@
                 "conditions": [
                   {
                     "id": "a1e693de-8abe-597a-b2f5-52e21ae7c9e1",
-                    "leftValue": "={{ $json.acao }}",
+                    "leftValue": "={{ $('resolver e decidir').first().json.pendente.tipo }}",
                     "rightValue": "agendar",
                     "operator": {
                       "type": "string",
@@ -1419,7 +1229,7 @@
                 "conditions": [
                   {
                     "id": "e171ffae-7681-5fe7-8ff7-8068a5792a7b",
-                    "leftValue": "={{ $json.acao }}",
+                    "leftValue": "={{ $('resolver e decidir').first().json.pendente.tipo }}",
                     "rightValue": "reagendar",
                     "operator": {
                       "type": "string",
@@ -1442,49 +1252,46 @@
       "type": "n8n-nodes-base.switch",
       "typeVersion": 3.2,
       "position": [
-        7580,
-        320
+        6920,
+        260
       ],
-      "id": "b633ad6d-057d-5571-beb7-7e301aa25d53",
-      "name": "executar ação"
+      "id": "b8e90be0-ed9b-5699-98bc-e7ff452d03a1",
+      "name": "tipo da ação"
     },
     {
       "parameters": {
         "method": "POST",
-        "url": "={{ $env.SUPABASE_URL.replace(/\\/$/, '') + '/rest/v1/consulta' }}",
+        "url": "={{ $env.AGENDA_API_BASE_URL.replace(/\\/$/, '') + '/api/ai/agendamentos' }}",
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
             {
-              "name": "Authorization",
-              "value": "={{ 'Bearer ' + $env.SUPABASE_SERVICE_ROLE_KEY }}"
-            },
-            {
-              "name": "apikey",
-              "value": "={{ $env.SUPABASE_SERVICE_ROLE_KEY }}"
+              "name": "X-Automation-Token",
+              "value": "={{ $env.AGENDA_AUTOMATION_TOKEN }}"
             },
             {
               "name": "Content-Type",
               "value": "application/json"
-            },
-            {
-              "name": "Prefer",
-              "value": "return=representation"
             }
           ]
         },
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify(Object.assign({}, $json.corpo_criar, { id_cliente: $('resolver e decidir').first().json.contexto.cliente.id, id_info_clinica: $('resolver e decidir').first().json.contexto.empresa.id })) }}",
+        "jsonBody": "={{ JSON.stringify($('resolver e decidir').first().json.escrita.corpo) }}",
         "options": {
-          "timeout": 15000
+          "timeout": 15000,
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
         }
       },
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        7800,
-        200
+        7140,
+        140
       ],
       "id": "8e7f474e-ce19-53dc-823e-9c2c5a5b95f7",
       "name": "criar consulta",
@@ -1492,45 +1299,42 @@
       "retryOnFail": true,
       "maxTries": 2,
       "waitBetweenTries": 1000,
-      "alwaysOutputData": false
+      "alwaysOutputData": true
     },
     {
       "parameters": {
-        "method": "PATCH",
-        "url": "={{ $env.SUPABASE_URL.replace(/\\/$/, '') + '/rest/v1/consulta' + '?id=eq.' + $('resolver e decidir').first().json.pendente.consulta_id + '&id_cliente=eq.' + $('resolver e decidir').first().json.contexto.cliente.id + '&id_info_clinica=eq.' + $('resolver e decidir').first().json.contexto.empresa.id + '&status=neq.cancelada' }}",
+        "method": "POST",
+        "url": "={{ $env.AGENDA_API_BASE_URL.replace(/\\/$/, '') + '/api/ai/agendamentos/reagendar' }}",
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
             {
-              "name": "Authorization",
-              "value": "={{ 'Bearer ' + $env.SUPABASE_SERVICE_ROLE_KEY }}"
-            },
-            {
-              "name": "apikey",
-              "value": "={{ $env.SUPABASE_SERVICE_ROLE_KEY }}"
+              "name": "X-Automation-Token",
+              "value": "={{ $env.AGENDA_AUTOMATION_TOKEN }}"
             },
             {
               "name": "Content-Type",
               "value": "application/json"
-            },
-            {
-              "name": "Prefer",
-              "value": "return=representation"
             }
           ]
         },
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify($json.corpo_reagendar) }}",
+        "jsonBody": "={{ JSON.stringify($('resolver e decidir').first().json.escrita.corpo) }}",
         "options": {
-          "timeout": 15000
+          "timeout": 15000,
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
         }
       },
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        7800,
-        400
+        7140,
+        320
       ],
       "id": "f4083a60-1900-5fd9-86be-07f08f9208ca",
       "name": "reagendar consulta",
@@ -1538,38 +1342,35 @@
       "retryOnFail": true,
       "maxTries": 2,
       "waitBetweenTries": 1000,
-      "alwaysOutputData": false
+      "alwaysOutputData": true
     },
     {
       "parameters": {
-        "method": "PATCH",
-        "url": "={{ $env.SUPABASE_URL.replace(/\\/$/, '') + '/rest/v1/consulta' + '?id=eq.' + $('resolver e decidir').first().json.pendente.consulta_id + '&id_cliente=eq.' + $('resolver e decidir').first().json.contexto.cliente.id + '&id_info_clinica=eq.' + $('resolver e decidir').first().json.contexto.empresa.id + '&status=neq.cancelada' }}",
+        "method": "POST",
+        "url": "={{ $env.AGENDA_API_BASE_URL.replace(/\\/$/, '') + '/api/ai/agendamentos/cancelar' }}",
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
             {
-              "name": "Authorization",
-              "value": "={{ 'Bearer ' + $env.SUPABASE_SERVICE_ROLE_KEY }}"
-            },
-            {
-              "name": "apikey",
-              "value": "={{ $env.SUPABASE_SERVICE_ROLE_KEY }}"
+              "name": "X-Automation-Token",
+              "value": "={{ $env.AGENDA_AUTOMATION_TOKEN }}"
             },
             {
               "name": "Content-Type",
               "value": "application/json"
-            },
-            {
-              "name": "Prefer",
-              "value": "return=representation"
             }
           ]
         },
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({ status: 'cancelada', cancelado_em: $now.toISODate(), motivo_cancelamento: 'cancelado pelo cliente no WhatsApp' }) }}",
+        "jsonBody": "={{ JSON.stringify($('resolver e decidir').first().json.escrita.corpo) }}",
         "options": {
-          "timeout": 15000
+          "timeout": 15000,
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
         }
       },
       "type": "n8n-nodes-base.httpRequest",
@@ -1584,11 +1385,86 @@
       "retryOnFail": true,
       "maxTries": 2,
       "waitBetweenTries": 1000,
-      "alwaysOutputData": false
+      "alwaysOutputData": true
     },
     {
       "parameters": {
-        "jsCode": "// So existe sucesso quando a ferramenta devolve um registro com id. Sem id, o\n// cliente nao recebe confirmacao: a conversa vai para uma pessoa.\nconst OFFSET_MIN = -180;\nconst DIAS = ['domingo', 'segunda-feira', 'terça-feira', 'quarta-feira', 'quinta-feira', 'sexta-feira', 'sábado'];\n\nconst decisao = $('resolver e decidir').first().json;\nconst pendente = decisao.pendente || {};\nconst linhas = $input.all().map((i) => i.json);\n\nfunction pad(n) { return String(n).padStart(2, '0'); }\nfunction quando(iso) {\n  const d = new Date(new Date(iso).getTime() + OFFSET_MIN * 60000);\n  const m = d.getUTCMinutes();\n  const hora = m ? `${d.getUTCHours()}h${pad(m)}` : `${d.getUTCHours()}h`;\n  return `${DIAS[d.getUTCDay()]} (${pad(d.getUTCDate())}/${pad(d.getUTCMonth() + 1)}) às ${hora}`;\n}\n\nconst houveErro = linhas.some((l) => l && l.error !== undefined);\nconst registro = linhas.find((l) => l && l.id !== undefined && l.id !== null) || null;\nconst idValido = registro && Number.isFinite(Number(registro.id));\n\nconst prof = pendente.profissional_nome ? ` com ${pendente.profissional_nome}` : '';\nconst resumo = pendente.inicio\n  ? `${pendente.servico_nome || 'seu atendimento'}, ${quando(pendente.inicio)}${prof}`\n  : 'seu atendimento';\n\nlet tipo;\nif (houveErro) tipo = 'falha_ferramenta';\nelse if (!idValido) tipo = 'resultado_sem_id';\nelse if (pendente.tipo === 'cancelar') tipo = 'cancelado';\nelse if (pendente.tipo === 'reagendar') tipo = 'reagendado';\nelse tipo = 'agendado';\n\nconst sucesso = tipo === 'agendado' || tipo === 'reagendado' || tipo === 'cancelado';\n\nreturn [{\n  json: {\n    sucesso,\n    precisa_humano: !sucesso,\n    tipo_resposta: tipo,\n    dados: { resumo, consulta_id: idValido ? Number(registro.id) : null },\n    pendente_novo: null,\n    estado_novo: { slots_oferecidos: [], consultas_candidatas: [], reagendar_consulta_id: null },\n    log: Object.assign({}, decisao.log, {\n      operacao: pendente.tipo || null,\n      resultado: tipo,\n      consulta_id: idValido ? Number(registro.id) : null,\n      erro_ferramenta: houveErro,\n    }),\n  },\n}];\n"
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "7c2f9e51-4a6b-5c0d-8e91-1f3a2b4c5d6e",
+              "leftValue": "={{ $json.error && $json.error.retryable === true }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        7440,
+        320
+      ],
+      "id": "3d1c7a44-9f0e-5a21-9c33-2b7f6a1e5d80",
+      "name": "repetir escrita?"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.AGENDA_API_BASE_URL.replace(/\\/$/, '') + $('resolver e decidir').first().json.escrita.caminho }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-Automation-Token",
+              "value": "={{ $env.AGENDA_AUTOMATION_TOKEN }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($('resolver e decidir').first().json.escrita.corpo) }}",
+        "options": {
+          "timeout": 15000,
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        7700,
+        200
+      ],
+      "id": "5b8e2f17-6c4a-5d93-b012-8a7f3e9d1c25",
+      "name": "repetir escrita",
+      "onError": "continueRegularOutput",
+      "retryOnFail": false,
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "jsCode": "// Le o envelope da API depois da escrita. So existe sucesso com ok: true E\n// data.agendamento.id; qualquer outra coisa tem rota fixa e nenhuma delas\n// anuncia sucesso ao cliente. `repetida: true` tambem e sucesso: a API\n// devolveu o mesmo agendamento em vez de criar um segundo.\nconst OFFSET_MIN = -180;\nconst DIAS = ['domingo', 'segunda-feira', 'terça-feira', 'quarta-feira', 'quinta-feira', 'sexta-feira', 'sábado'];\n\n// O horario saiu da agenda entre a oferta e o \"sim\": reoferta, sem pessoa.\nconst REOFERTAR_HORARIO = ['HORARIO_INDISPONIVEL', 'CONFLITO_HORARIO'];\n// O catalogo mudou: reoferta o que existe hoje, sem pessoa.\nconst REOFERTAR_CATALOGO = ['PROCEDIMENTO_INVALIDO', 'PROFISSIONAL_INVALIDO'];\n// A consulta nao e mais reagendavel ou nao e deste cliente: lista de novo.\nconst LISTAR_DE_NOVO = ['CONSULTA_NAO_ENCONTRADA', 'CONSULTA_NAO_REAGENDAVEL'];\n\nconst decisao = $('resolver e decidir').first().json;\nconst ctx = decisao.contexto;\nconst pendente = decisao.pendente || {};\nconst envelope = $input.first().json || {};\n\nfunction pad(n) { return String(n).padStart(2, '0'); }\nfunction quando(iso) {\n  const d = new Date(new Date(iso).getTime() + OFFSET_MIN * 60000);\n  const m = d.getUTCMinutes();\n  const hora = m ? `${d.getUTCHours()}h${pad(m)}` : `${d.getUTCHours()}h`;\n  return `${DIAS[d.getUTCDay()]} (${pad(d.getUTCDate())}/${pad(d.getUTCMonth() + 1)}) às ${hora}`;\n}\n\nconst temEnvelope = typeof envelope.ok === 'boolean';\nconst dados = envelope.data || {};\nconst agendamento = dados.agendamento || null;\nconst id = agendamento && Number.isFinite(Number(agendamento.id)) ? Number(agendamento.id) : null;\nconst codigo = temEnvelope && envelope.error ? String(envelope.error.code || '') : '';\n\n// O horario anunciado e o que a API confirmou ter gravado, nao o que pedimos.\nconst inicioConfirmado = (agendamento && agendamento.inicio) || pendente.inicio || null;\nconst nomeServico = (agendamento && agendamento.procedimento && agendamento.procedimento.nome)\n  || pendente.servico_nome || 'seu atendimento';\nconst nomeProfissional = (agendamento && agendamento.profissional && agendamento.profissional.nome)\n  || pendente.profissional_nome || '';\nconst prof = nomeProfissional ? ` com ${nomeProfissional}` : '';\nconst resumo = inicioConfirmado ? `${nomeServico}, ${quando(inicioConfirmado)}${prof}` : 'seu atendimento';\n\nconst nomesAgendaveis = (ctx.servicos || []).filter((s) => s.agendavel !== false).map((s) => s.nome);\nconst nomesProfissionais = (ctx.profissionais || []).map((p) => p.nome);\n\nlet tipo;\nlet sucesso = false;\nlet precisaHumano = true;\nlet dadosResposta = {};\n\nif (!temEnvelope) {\n  // Sem envelope o resultado e desconhecido: nada pode ser afirmado.\n  tipo = 'falha_ferramenta';\n  dadosResposta = { operacao: pendente.tipo || null };\n} else if (envelope.ok === true && id) {\n  sucesso = true;\n  precisaHumano = false;\n  tipo = pendente.tipo === 'cancelar' ? 'cancelado' : (pendente.tipo === 'reagendar' ? 'reagendado' : 'agendado');\n  dadosResposta = { resumo, consulta_id: id };\n} else if (envelope.ok === true) {\n  tipo = 'resultado_sem_id';\n} else if (REOFERTAR_HORARIO.includes(codigo)) {\n  precisaHumano = false;\n  tipo = 'horario_ocupado';\n} else if (codigo === 'PROFISSIONAL_INVALIDO') {\n  precisaHumano = false;\n  tipo = 'profissional_nao_confirmado';\n  dadosResposta = { profissionais: nomesProfissionais };\n} else if (REOFERTAR_CATALOGO.includes(codigo)) {\n  precisaHumano = false;\n  tipo = 'servico_nao_confirmado';\n  dadosResposta = { servicos: nomesAgendaveis };\n} else if (LISTAR_DE_NOVO.includes(codigo)) {\n  precisaHumano = false;\n  tipo = 'consulta_nao_encontrada';\n} else {\n  // Fecha por padrao: autenticacao, instancia, empresa, entrada invalida,\n  // chave conflitante, agendamento inativo, falha temporaria persistente e\n  // qualquer codigo novo param aqui e chamam uma pessoa.\n  tipo = 'falha_ferramenta';\n  dadosResposta = { operacao: pendente.tipo || null };\n}\n\nreturn [{\n  json: {\n    sucesso,\n    precisa_humano: precisaHumano,\n    tipo_resposta: tipo,\n    dados: dadosResposta,\n    pendente_novo: null,\n    estado_novo: { slots_oferecidos: [], consultas_candidatas: [], reagendar_consulta_id: null },\n    log: Object.assign({}, decisao.log, {\n      operacao: pendente.tipo || null,\n      resultado: tipo,\n      consulta_id: id,\n      repetida: agendamento ? dados.repetida === true : null,\n      codigo_erro: codigo || (temEnvelope ? null : 'sem_envelope'),\n    }),\n  },\n}];\n"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -1611,11 +1487,11 @@
           "conditions": [
             {
               "id": "b944d46d-f88c-53e5-b136-19ffcd52ed68",
-              "leftValue": "={{ $json.sucesso }}",
-              "rightValue": true,
+              "leftValue": "={{ $json.precisa_humano }}",
+              "rightValue": false,
               "operator": {
                 "type": "boolean",
-                "operation": "true",
+                "operation": "false",
                 "singleValue": true
               }
             }
@@ -1631,7 +1507,7 @@
         320
       ],
       "id": "f1ffe101-1782-590d-818c-adce36e6f53f",
-      "name": "operação concluída?"
+      "name": "pode seguir sem pessoa?"
     },
     {
       "parameters": {
@@ -1667,43 +1543,50 @@
     },
     {
       "parameters": {
-        "operation": "getAll",
-        "tableId": "consulta",
-        "limit": 10,
-        "filters": {
-          "conditions": [
+        "method": "POST",
+        "url": "={{ $env.AGENDA_API_BASE_URL.replace(/\\/$/, '') + '/api/ai/agendamentos/buscar' }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
             {
-              "keyName": "id_cliente",
-              "condition": "eq",
-              "keyValue": "={{ $json.contexto.cliente.id }}"
+              "name": "X-Automation-Token",
+              "value": "={{ $env.AGENDA_AUTOMATION_TOKEN }}"
             },
             {
-              "keyName": "id_info_clinica",
-              "condition": "eq",
-              "keyValue": "={{ $json.contexto.empresa.id }}"
-            },
-            {
-              "keyName": "status",
-              "condition": "neq",
-              "keyValue": "cancelada"
+              "name": "Content-Type",
+              "value": "application/json"
             }
           ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ instance_name: $json.contexto.instance, telefone: $json.contexto.cliente.telefone, status: ['pendente', 'agendado', 'confirmado'], limite: 10 }) }}",
+        "options": {
+          "timeout": 15000,
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
         }
       },
-      "type": "n8n-nodes-base.supabase",
-      "typeVersion": 1,
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
       "position": [
         6480,
         620
       ],
       "id": "8ae70490-25f5-5e14-a590-16ea9959e8b1",
       "name": "consultas do cliente",
-      "alwaysOutputData": true,
-      "onError": "continueRegularOutput"
+      "onError": "continueRegularOutput",
+      "retryOnFail": true,
+      "maxTries": 2,
+      "waitBetweenTries": 1000,
+      "alwaysOutputData": true
     },
     {
       "parameters": {
-        "jsCode": "// Trata as consultas do proprio cliente (filtro de empresa e cliente imposto no\n// no anterior). Decide listar, pedir escolha, abrir cancelamento ou reagendamento.\nconst PENDENTE_MINUTOS = 10;\nconst OFFSET_MIN = -180;\nconst STATUS_ATIVOS = ['pendente', 'agendada', 'confirmada'];\n\nconst decisao = $('resolver e decidir').first().json;\nconst ctx = decisao.contexto;\nconst linhas = $input.all().map((i) => i.json).filter((l) => l && l.id !== undefined);\n\nfunction numero(v) { const n = Number(v); return Number.isFinite(n) ? n : null; }\nfunction paraIso(v) {\n  if (!v) return null;\n  const s = String(v).trim().replace(' ', 'T');\n  const comFuso = /[zZ]|[+-]\\d{2}(:?\\d{2})?$/.test(s) ? s.replace(/([+-]\\d{2})$/, '$1:00') : `${s}-03:00`;\n  const d = new Date(comFuso);\n  return Number.isNaN(d.getTime()) ? null : d.toISOString();\n}\nfunction inicioDoIntervalo(linha) {\n  if (linha.data_inicio) return paraIso(linha.data_inicio);\n  const bruto = String(linha.intervalo || '');\n  const m = bruto.match(/[[(]\"?([^\",)]+)\"?/);\n  return m ? paraIso(m[1]) : null;\n}\nfunction normalizar(s) {\n  return String(s === null || s === undefined ? '' : s).toLowerCase()\n    .normalize('NFD').replace(/[\\u0300-\\u036f]/g, '')\n    .replace(/[^a-z0-9\\s/]/g, ' ').replace(/\\s+/g, ' ').trim();\n}\n\nconst agoraMs = new Date(ctx.agora_iso).getTime();\nconst DIAS = ['domingo', 'segunda', 'terca', 'quarta', 'quinta', 'sexta', 'sabado'];\n\nconst consultas = linhas\n  .map((l) => {\n    const inicio = inicioDoIntervalo(l);\n    const servico = ctx.servicos.find((s) => s.id === numero(l.id_procedimento));\n    const profissional = ctx.profissionais.find((p) => p.id === numero(l.id_profissional));\n    return {\n      consulta_id: numero(l.id),\n      inicio,\n      status: String(l.status || ''),\n      servico_id: numero(l.id_procedimento),\n      servico_nome: servico ? servico.nome : 'seu atendimento',\n      duracao_minutos: servico ? servico.duracao_minutos : 60,\n      profissional_id: numero(l.id_profissional),\n      profissional_nome: profissional ? profissional.nome : '',\n    };\n  })\n  .filter((c) => c.consulta_id && c.inicio && new Date(c.inicio).getTime() > agoraMs)\n  .filter((c) => !c.status || STATUS_ATIVOS.includes(c.status.toLowerCase()))\n  .sort((a, b) => new Date(a.inicio) - new Date(b.inicio));\n\nfunction pista(consulta) {\n  const texto = normalizar(`${decisao.interp.entities.appointment_hint || ''} ${decisao.interp.entities.date_text || ''} ${ctx.conteudo}`);\n  if (!texto) return false;\n  const local = new Date(new Date(consulta.inicio).getTime() + OFFSET_MIN * 60000);\n  const nomeDia = DIAS[local.getUTCDay()];\n  const diaMes = String(local.getUTCDate());\n  const hora = String(local.getUTCHours());\n  return texto.includes(nomeDia)\n    || new RegExp(`\\\\b${diaMes}\\\\b`).test(texto)\n    || new RegExp(`\\\\b${hora}\\\\s?h`).test(texto)\n    || (consulta.servico_nome && texto.includes(normalizar(consulta.servico_nome)));\n}\n\nfunction resultado(tipo, dados, pendente, estado) {\n  return [{\n    json: {\n      tipo_resposta: tipo,\n      dados: dados || {},\n      pendente_novo: pendente || null,\n      estado_novo: Object.assign({ slots_oferecidos: [], consultas_candidatas: [], reagendar_consulta_id: null }, estado || {}),\n      log: Object.assign({}, decisao.log, { tipo_resposta: tipo, consultas_encontradas: consultas.length }),\n    },\n  }];\n}\n\nfunction novaPendenciaCancelar(consulta) {\n  return {\n    tipo: 'cancelar',\n    acao_id: `${ctx.msg_id}:cancelar:${consulta.consulta_id}`,\n    empresa_id: ctx.empresa.id,\n    cliente_id: ctx.cliente.id,\n    consulta_id: consulta.consulta_id,\n    inicio: consulta.inicio,\n    servico_nome: consulta.servico_nome,\n    profissional_nome: consulta.profissional_nome,\n    criada_em: ctx.agora_iso,\n    expira_em: new Date(agoraMs + PENDENTE_MINUTOS * 60000).toISOString(),\n  };\n}\n\nif (!consultas.length) {\n  return resultado('sem_consultas', { objetivo: decisao.objetivo }, null, {});\n}\n\nif (decisao.objetivo === 'listar') {\n  return resultado('lista_consultas', { consultas: consultas.slice(0, 3) }, null, { consultas_candidatas: consultas.slice(0, 3) });\n}\n\nconst candidatas = consultas.length === 1 ? consultas : consultas.filter(pista);\nif (candidatas.length !== 1) {\n  return resultado('escolher_consulta', { consultas: consultas.slice(0, 3), objetivo: decisao.objetivo }, null, { consultas_candidatas: consultas.slice(0, 3) });\n}\n\nconst escolhida = candidatas[0];\nif (decisao.objetivo === 'cancelar') {\n  return resultado('pedir_confirmacao_cancelamento', { consulta: escolhida }, novaPendenciaCancelar(escolhida), {});\n}\nreturn resultado('pedir_nova_data', { consulta: escolhida }, null, { reagendar_consulta_id: escolhida.consulta_id });\n"
+        "jsCode": "// Trata os agendamentos do proprio cliente. O filtro de empresa e de cliente e\n// do servidor: a rota deriva a empresa da instancia e o cliente do telefone.\n// Decide listar, pedir escolha, abrir cancelamento ou reagendamento.\nconst PENDENTE_MINUTOS = 10;\nconst OFFSET_MIN = -180;\nconst CHAVE_MAX = 120;\n// Vocabulario da API: `cancelado` e `concluido` nao entram na lista de vivos.\nconst STATUS_ATIVOS = ['pendente', 'agendado', 'confirmado'];\n\nconst decisao = $('resolver e decidir').first().json;\nconst ctx = decisao.contexto;\nconst envelope = $input.first().json || {};\n\nfunction numero(v) { const n = Number(v); return Number.isFinite(n) ? n : null; }\nfunction normalizar(s) {\n  return String(s === null || s === undefined ? '' : s).toLowerCase()\n    .normalize('NFD').replace(/[\\u0300-\\u036f]/g, '')\n    .replace(/[^a-z0-9\\s/]/g, ' ').replace(/\\s+/g, ' ').trim();\n}\n\nconst temEnvelope = typeof envelope.ok === 'boolean';\nconst dados = (temEnvelope && envelope.ok === true && envelope.data) ? envelope.data : {};\nconst falhou = !temEnvelope || envelope.ok !== true;\nconst codigoErro = temEnvelope && envelope.error ? String(envelope.error.code || '') : 'sem_envelope';\n\nconst agoraMs = new Date(ctx.agora_iso).getTime();\nconst DIAS = ['domingo', 'segunda', 'terca', 'quarta', 'quinta', 'sexta', 'sabado'];\n\nconst consultas = (Array.isArray(dados.agendamentos) ? dados.agendamentos : [])\n  .map((a) => {\n    const procedimento = a.procedimento || {};\n    const profissional = a.profissional || {};\n    return {\n      consulta_id: numero(a.id),\n      inicio: a.inicio,\n      status: String(a.status || ''),\n      servico_id: numero(procedimento.id),\n      servico_nome: String(procedimento.nome || 'seu atendimento'),\n      duracao_minutos: numero(procedimento.duracao_minutos) || 60,\n      profissional_id: numero(profissional.id),\n      profissional_nome: String(profissional.nome || ''),\n    };\n  })\n  .filter((c) => c.consulta_id && c.inicio && !Number.isNaN(new Date(c.inicio).getTime()))\n  .filter((c) => new Date(c.inicio).getTime() > agoraMs)\n  .filter((c) => !c.status || STATUS_ATIVOS.includes(c.status.toLowerCase()))\n  .sort((a, b) => new Date(a.inicio) - new Date(b.inicio));\n\nfunction pista(consulta) {\n  const texto = normalizar(`${decisao.interp.entities.appointment_hint || ''} ${decisao.interp.entities.date_text || ''} ${ctx.conteudo}`);\n  if (!texto) return false;\n  const local = new Date(new Date(consulta.inicio).getTime() + OFFSET_MIN * 60000);\n  const nomeDia = DIAS[local.getUTCDay()];\n  const diaMes = String(local.getUTCDate());\n  const hora = String(local.getUTCHours());\n  return texto.includes(nomeDia)\n    || new RegExp(`\\\\b${diaMes}\\\\b`).test(texto)\n    || new RegExp(`\\\\b${hora}\\\\s?h`).test(texto)\n    || (consulta.servico_nome && texto.includes(normalizar(consulta.servico_nome)));\n}\n\nfunction resultado(tipo, dadosResposta, pendente, estado) {\n  return [{\n    json: {\n      tipo_resposta: tipo,\n      dados: dadosResposta || {},\n      pendente_novo: pendente || null,\n      estado_novo: Object.assign({ slots_oferecidos: [], consultas_candidatas: [], reagendar_consulta_id: null }, estado || {}),\n      log: Object.assign({}, decisao.log, {\n        tipo_resposta: tipo,\n        consultas_encontradas: consultas.length,\n        erro_ferramenta: falhou ? codigoErro : null,\n      }),\n    },\n  }];\n}\n\nfunction novaPendenciaCancelar(consulta) {\n  return {\n    tipo: 'cancelar',\n    acao_id: `${ctx.msg_id}:cancelar:${consulta.consulta_id}`.slice(0, CHAVE_MAX),\n    consulta_id: consulta.consulta_id,\n    inicio: consulta.inicio,\n    servico_nome: consulta.servico_nome,\n    profissional_nome: consulta.profissional_nome,\n    criada_em: ctx.agora_iso,\n    expira_em: new Date(agoraMs + PENDENTE_MINUTOS * 60000).toISOString(),\n  };\n}\n\n// Consulta que falhou nao e agenda vazia: dizer \"voce nao tem horario\" seria\n// afirmar algo que a ferramenta nao respondeu.\nif (falhou) {\n  return resultado('falha_temporaria', { operacao: 'consulta_de_agendamentos' }, null, {});\n}\n\nif (!consultas.length) {\n  return resultado('sem_consultas', { objetivo: decisao.objetivo }, null, {});\n}\n\nif (decisao.objetivo === 'listar') {\n  return resultado('lista_consultas', { consultas: consultas.slice(0, 3) }, null, { consultas_candidatas: consultas.slice(0, 3) });\n}\n\nconst candidatas = consultas.length === 1 ? consultas : consultas.filter(pista);\nif (candidatas.length !== 1) {\n  return resultado('escolher_consulta', { consultas: consultas.slice(0, 3), objetivo: decisao.objetivo }, null, { consultas_candidatas: consultas.slice(0, 3) });\n}\n\nconst escolhida = candidatas[0];\nif (decisao.objetivo === 'cancelar') {\n  return resultado('pedir_confirmacao_cancelamento', { consulta: escolhida }, novaPendenciaCancelar(escolhida), {});\n}\nreturn resultado('pedir_nova_data', { consulta: escolhida }, null, { reagendar_consulta_id: escolhida.consulta_id });\n"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -1716,34 +1599,31 @@
     },
     {
       "parameters": {
-        "method": "PATCH",
-        "url": "={{ $env.SUPABASE_URL.replace(/\\/$/, '') + '/rest/v1/cliente?id=eq.' + $json.contexto.cliente.id + '&id_info_clinica=eq.' + $json.contexto.empresa.id }}",
+        "method": "POST",
+        "url": "={{ $env.AGENDA_API_BASE_URL.replace(/\\/$/, '') + '/api/ai/cliente' }}",
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
             {
-              "name": "Authorization",
-              "value": "={{ 'Bearer ' + $env.SUPABASE_SERVICE_ROLE_KEY }}"
-            },
-            {
-              "name": "apikey",
-              "value": "={{ $env.SUPABASE_SERVICE_ROLE_KEY }}"
+              "name": "X-Automation-Token",
+              "value": "={{ $env.AGENDA_AUTOMATION_TOKEN }}"
             },
             {
               "name": "Content-Type",
               "value": "application/json"
-            },
-            {
-              "name": "Prefer",
-              "value": "return=representation"
             }
           ]
         },
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify($json.atualizacoes) }}",
+        "jsonBody": "={{ JSON.stringify(Object.assign({ instance_name: $json.contexto.instance, telefone: $json.contexto.cliente.telefone }, $json.atualizacoes)) }}",
         "options": {
-          "timeout": 15000
+          "timeout": 15000,
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
         }
       },
       "type": "n8n-nodes-base.httpRequest",
@@ -1758,11 +1638,11 @@
       "retryOnFail": true,
       "maxTries": 2,
       "waitBetweenTries": 1000,
-      "alwaysOutputData": false
+      "alwaysOutputData": true
     },
     {
       "parameters": {
-        "jsCode": "// Confirma a atualizacao cadastral so quando a ferramenta devolveu o registro.\nconst decisao = $('resolver e decidir').first().json;\nconst linhas = $input.all().map((i) => i.json);\n\nconst houveErro = linhas.some((l) => l && l.error !== undefined);\nconst registro = linhas.find((l) => l && l.id !== undefined && l.id !== null) || null;\nconst ok = !houveErro && registro && Number.isFinite(Number(registro.id));\n\nconst rotulos = { nome: 'nome', email: 'e-mail', data_nascimento: 'data de nascimento', interesses: 'preferências' };\nconst campos = Object.keys(decisao.atualizacoes || {}).map((c) => rotulos[c] || c);\n\nreturn [{\n  json: {\n    tipo_resposta: ok ? 'cadastro_atualizado' : 'falha_ferramenta',\n    dados: ok ? { campos } : { operacao: 'atualizacao_de_cadastro' },\n    pendente_novo: null,\n    estado_novo: { slots_oferecidos: [], consultas_candidatas: [], reagendar_consulta_id: null },\n    log: Object.assign({}, decisao.log, { resultado: ok ? 'cadastro_atualizado' : 'falha', campos }),\n  },\n}];\n"
+        "jsCode": "// Confirma a atualizacao cadastral so quando a API devolveu ok com os campos\n// que ela realmente gravou. `campos_atualizados` vem do servidor, nao do pedido.\nconst ROTULOS = { nome: 'nome', email: 'e-mail', data_nascimento: 'data de nascimento', interesses: 'preferências' };\n\nconst decisao = $('resolver e decidir').first().json;\nconst envelope = $input.first().json || {};\n\nconst temEnvelope = typeof envelope.ok === 'boolean';\nconst dados = (temEnvelope && envelope.ok === true && envelope.data) ? envelope.data : {};\nconst ok = Boolean(dados.cliente);\nconst codigoErro = temEnvelope && envelope.error ? String(envelope.error.code || '') : 'sem_envelope';\n\nconst gravados = Array.isArray(dados.campos_atualizados) ? dados.campos_atualizados : [];\nconst campos = gravados.map((c) => ROTULOS[c] || c);\n\nreturn [{\n  json: {\n    tipo_resposta: ok ? 'cadastro_atualizado' : 'falha_temporaria',\n    dados: ok ? { campos } : { operacao: 'atualizacao_de_cadastro' },\n    pendente_novo: null,\n    estado_novo: { slots_oferecidos: [], consultas_candidatas: [], reagendar_consulta_id: null },\n    log: Object.assign({}, decisao.log, {\n      resultado: ok ? 'cadastro_atualizado' : 'falha',\n      campos,\n      erro_ferramenta: ok ? null : codigoErro,\n    }),\n  },\n}];\n"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -1807,7 +1687,7 @@
     },
     {
       "parameters": {
-        "jsCode": "// Mensagens operacionais deterministicas. Nenhuma IA e chamada para dizer que um\n// horario foi marcado, alterado ou cancelado.\nconst OFFSET_MIN = -180;\nconst HISTORICO_MAX = 6;\nconst DIAS = ['domingo', 'segunda-feira', 'terça-feira', 'quarta-feira', 'quinta-feira', 'sexta-feira', 'sábado'];\n\nconst decisao = $('resolver e decidir').first().json;\nconst ctx = decisao.contexto;\nconst item = $input.first().json;\n\nconst tipo = item.tipo_resposta || (item.resposta && item.resposta.tipo) || 'livre';\nconst dados = item.dados || (item.resposta && item.resposta.dados) || {};\nconst pendenteNovo = item.pendente_novo || null;\nconst estadoNovo = item.estado_novo || {};\n\nfunction local(iso) { return new Date(new Date(iso).getTime() + OFFSET_MIN * 60000); }\nfunction pad(n) { return String(n).padStart(2, '0'); }\nfunction hora(iso) {\n  const d = local(iso);\n  const m = d.getUTCMinutes();\n  return m ? `${d.getUTCHours()}h${pad(m)}` : `${d.getUTCHours()}h`;\n}\nfunction data(iso) {\n  const d = local(iso);\n  return `${pad(d.getUTCDate())}/${pad(d.getUTCMonth() + 1)}`;\n}\nfunction quando(iso) {\n  const d = local(iso);\n  return `${DIAS[d.getUTCDay()]} (${data(iso)}) às ${hora(iso)}`;\n}\nfunction lista(itens) { return itens.map((t) => `- ${t}`).join('\\n'); }\nfunction moeda(v) {\n  return v === null || v === undefined ? '' : `R$ ${Number(v).toFixed(2).replace('.', ',')}`;\n}\n\nconst empresa = ctx.empresa.nome;\nconst nome = ctx.cliente.primeiro_nome;\nconst ola = nome ? `${nome}, ` : '';\n\nfunction descreverSlot(s) {\n  const prof = s.profissional_nome ? ` com ${s.profissional_nome}` : '';\n  return `${quando(s.inicio)}${prof}`;\n}\nfunction descreverConsulta(c) {\n  const prof = c.profissional_nome ? ` com ${c.profissional_nome}` : '';\n  return `${c.servico_nome} - ${quando(c.inicio)}${prof}`;\n}\n\nconst TEXTOS = {\n  livre: () => String(dados.reply || '').trim() || 'Não consegui confirmar essa informação por aqui. Quer falar com alguém da equipe?',\n  esclarecer: () => String(dados.reply || '').trim() || 'Não entendi direito. Pode me dizer de outro jeito?',\n  humano: () => `Já avisei a equipe do ${empresa}. Alguém responde por aqui.\\nAté lá eu não respondo mais nesta conversa.`,\n  sem_pendente: () => 'Não tenho nada pendente aqui para confirmar. Quer que eu veja horários?',\n  pendente_expirada: () => 'Esse horário já expirou aqui. Quer que eu procure de novo?',\n  pendente_descartada: () => 'Ok, deixei como está. Se mudar de ideia é só falar.',\n  qual_servico: () => {\n    const opcoes = (dados.opcoes || []).slice(0, 6);\n    return opcoes.length\n      ? `Qual desses você quer?\\n${lista(opcoes)}`\n      : 'Qual serviço você quer?';\n  },\n  servico_nao_confirmado: () => {\n    const opcoes = (dados.servicos || []).slice(0, 6);\n    const inicio = 'Não consegui confirmar esse serviço na nossa lista.';\n    return opcoes.length ? `${inicio}\\nO que temos é:\\n${lista(opcoes)}\\nAlgum desses?` : `${inicio} Quer falar com a equipe do ${empresa}?`;\n  },\n  qual_profissional: () => {\n    const opcoes = (dados.opcoes || []).slice(0, 6);\n    return opcoes.length ? `Com qual profissional?\\n${lista(opcoes)}` : 'Com qual profissional você prefere?';\n  },\n  profissional_nao_confirmado: () => {\n    const opcoes = (dados.profissionais || []).slice(0, 6);\n    return opcoes.length ? `Não consegui confirmar esse nome.\\nQuem atende é:\\n${lista(opcoes)}` : 'Não consegui confirmar esse nome por aqui.';\n  },\n  data_ambigua: () => `Só para eu não errar: ${data(dados.hoje)} (hoje) ou ${data(dados.proxima)}?`,\n  data_passada: () => `Essa data já passou. Quer que eu procure a partir de ${data(dados.sugestao)}?`,\n  sem_horarios: () => {\n    const servico = dados.servico ? ` para ${dados.servico.nome}` : '';\n    return `Não achei horário livre${servico} até ${data(dados.ate)}.\\nQuer que eu procure em outra data?`;\n  },\n  dois_horarios: () => {\n    const servico = dados.servico ? ` para ${dados.servico.nome}` : '';\n    const opcoes = (dados.slots || []).map((s, i) => `${i + 1}) ${descreverSlot(s)}`).join('\\n');\n    return `Tenho estes horários${servico}:\\n${opcoes}\\nQual prefere?`;\n  },\n  horario_indisponivel: () => {\n    const opcoes = (dados.slots || []).map((s, i) => `${i + 1}) ${descreverSlot(s)}`).join('\\n');\n    return `Esse horário não está livre.\\nTenho:\\n${opcoes}\\nAlgum serve?`;\n  },\n  horario_ocupado: () => 'Esse horário acabou de ser ocupado. Nada foi marcado.\\nQuer que eu procure outro?',\n  qual_horario: () => {\n    const opcoes = (dados.slots || []).map((s, i) => `${i + 1}) ${descreverSlot(s)}`).join('\\n');\n    return `Qual dos dois você quer?\\n${opcoes}`;\n  },\n  pedir_confirmacao: () => {\n    const s = dados.slot;\n    const acao = dados.reagendamento ? 'Remarco' : 'Confirmo';\n    return `${acao} então: ${s.servico_nome}, ${descreverSlot(s)}.\\nPosso ${dados.reagendamento ? 'remarcar' : 'marcar'}?`;\n  },\n  pedir_confirmacao_cancelamento: () => `Você tem ${descreverConsulta(dados.consulta)}.\\nConfirma o cancelamento?`,\n  pedir_nova_data: () => `Seu horário atual é ${descreverConsulta(dados.consulta)}.\\nPara quando você quer remarcar?`,\n  lista_consultas: () => {\n    const itens = (dados.consultas || []).map((c) => descreverConsulta(c));\n    return itens.length === 1\n      ? `Seu horário é ${itens[0]}.`\n      : `Seus horários marcados:\\n${lista(itens)}`;\n  },\n  sem_consultas: () => 'Não encontrei nenhum horário marcado no seu nome. Quer marcar um?',\n  escolher_consulta: () => {\n    const itens = (dados.consultas || []).map((c, i) => `${i + 1}) ${descreverConsulta(c)}`).join('\\n');\n    return `Você tem mais de um horário marcado:\\n${itens}\\nQual deles?`;\n  },\n  agendado: () => `Pronto, ${ola}está marcado: ${dados.resumo}.\\nSe precisar mudar, é só me chamar.`,\n  reagendado: () => `Remarcado. Agora ficou ${dados.resumo}.\\nO horário anterior foi liberado.`,\n  cancelado: () => `Cancelei ${dados.resumo}.\\nQuando quiser remarcar, é só falar.`,\n  falha_ferramenta: () => `Não consegui concluir agora por um problema no sistema. Nada foi alterado na sua agenda.\\nJá avisei a equipe do ${empresa} para te responder por aqui.`,\n  resultado_sem_id: () => `Não recebi a confirmação do sistema. Para não fazer nada em duplicidade, pedi para a equipe do ${empresa} conferir e te responder.`,\n  cadastro_atualizado: () => `Anotei aqui. ${dados.campos && dados.campos.length ? `Atualizei: ${dados.campos.join(', ')}.` : ''}`.trim(),\n};\n\nlet texto = (TEXTOS[tipo] || TEXTOS.livre)();\n\n// Primeira mensagem da conversa: identifica a empresa uma unica vez.\nconst primeiraMensagem = !(ctx.estado.historico || []).length;\nif (primeiraMensagem && tipo !== 'livre' && tipo !== 'esclarecer') {\n  texto = `Aqui é o atendimento do ${empresa}.\\n${texto}`;\n}\n\n// Audio com transcricao incerta: devolve o entendimento antes de qualquer acao.\nif (ctx.entrada_incerta && ['pedir_confirmacao', 'pedir_confirmacao_cancelamento'].includes(tipo)) {\n  texto = `Não peguei tudo do áudio, então confirmo com você:\\n${texto}`;\n}\n\n// Cliente mudou de assunto com uma acao pendente aberta: responde e retoma.\nconst pendenteAtual = ctx.pendente;\nif (!pendenteNovo && pendenteAtual && pendenteAtual.inicio && ['livre', 'esclarecer'].includes(tipo)) {\n  const acao = pendenteAtual.tipo === 'cancelar' ? 'Confirma o cancelamento de' : 'Confirmo o horário de';\n  texto = `${texto}\\n${acao} ${quando(pendenteAtual.inicio)}?`;\n}\n\nconst historico = (ctx.estado.historico || [])\n  .concat([{ r: 'cliente', t: String(ctx.conteudo).slice(0, 240) }, { r: 'assistente', t: texto.slice(0, 240) }])\n  .slice(-HISTORICO_MAX);\n\nreturn [{\n  json: {\n    texto,\n    tipo_resposta: tipo,\n    pendente_novo: pendenteNovo,\n    tem_pendente_novo: Boolean(pendenteNovo && pendenteNovo.tipo),\n    estado: {\n      historico,\n      slots_oferecidos: estadoNovo.slots_oferecidos || [],\n      consultas_candidatas: estadoNovo.consultas_candidatas || [],\n      reagendar_consulta_id: estadoNovo.reagendar_consulta_id || null,\n      atualizado_em: ctx.agora_iso,\n    },\n    log: Object.assign({ tipo_resposta: tipo }, item.log || decisao.log || {}),\n  },\n}];\n"
+        "jsCode": "// Mensagens operacionais deterministicas. Nenhuma IA e chamada para dizer que um\n// horario foi marcado, alterado ou cancelado.\nconst OFFSET_MIN = -180;\nconst HISTORICO_MAX = 6;\nconst DIAS = ['domingo', 'segunda-feira', 'terça-feira', 'quarta-feira', 'quinta-feira', 'sexta-feira', 'sábado'];\n// Vocabulario que so o sistema pode usar, e so depois de um efeito verificado.\nconst AFIRMA_EFEITO = /agendad|confirmad|cancelad|remarcad|reservad|marcad/i;\n\nconst decisao = $('resolver e decidir').first().json;\nconst ctx = decisao.contexto;\nconst item = $input.first().json;\n\nconst tipo = item.tipo_resposta || (item.resposta && item.resposta.tipo) || 'livre';\nconst dados = item.dados || (item.resposta && item.resposta.dados) || {};\nconst pendenteNovo = item.pendente_novo || null;\nconst estadoNovo = item.estado_novo || {};\n\nfunction local(iso) { return new Date(new Date(iso).getTime() + OFFSET_MIN * 60000); }\nfunction pad(n) { return String(n).padStart(2, '0'); }\nfunction hora(iso) {\n  const d = local(iso);\n  const m = d.getUTCMinutes();\n  return m ? `${d.getUTCHours()}h${pad(m)}` : `${d.getUTCHours()}h`;\n}\nfunction data(iso) {\n  const d = local(iso);\n  return `${pad(d.getUTCDate())}/${pad(d.getUTCMonth() + 1)}`;\n}\nfunction quando(iso) {\n  const d = local(iso);\n  return `${DIAS[d.getUTCDay()]} (${data(iso)}) às ${hora(iso)}`;\n}\nfunction lista(itens) { return itens.map((t) => `- ${t}`).join('\\n'); }\n\nconst empresa = ctx.empresa.nome;\nconst nome = ctx.cliente.primeiro_nome;\nconst ola = nome ? `${nome}, ` : '';\n// Nenhum no deste fluxo avisa o negocio. O que acontece de verdade e a IA\n// parar; a conversa segue no WhatsApp do proprio negocio. O texto diz isso.\nconst deixarComEquipe = `Vou parar por aqui e deixar com a equipe do ${empresa}, que continua com você nesta conversa.`;\n\nfunction descreverSlot(s) {\n  const prof = s.profissional_nome ? ` com ${s.profissional_nome}` : '';\n  return `${quando(s.inicio)}${prof}`;\n}\nfunction descreverConsulta(c) {\n  const prof = c.profissional_nome ? ` com ${c.profissional_nome}` : '';\n  return `${c.servico_nome} - ${quando(c.inicio)}${prof}`;\n}\n\nconst TEXTOS = {\n  livre: () => String(dados.reply || '').trim() || 'Não consegui confirmar essa informação por aqui. Quer falar com alguém da equipe?',\n  esclarecer: () => String(dados.reply || '').trim() || 'Não entendi direito. Pode me dizer de outro jeito?',\n  humano: () => deixarComEquipe,\n  sem_pendente: () => 'Não tenho nada pendente aqui para confirmar. Quer que eu veja horários?',\n  pendente_expirada: () => 'Esse horário já expirou aqui. Quer que eu procure de novo?',\n  pendente_descartada: () => 'Ok, deixei como está. Se mudar de ideia é só falar.',\n  qual_servico: () => {\n    const opcoes = (dados.opcoes || []).slice(0, 6);\n    return opcoes.length\n      ? `Qual desses você quer?\\n${lista(opcoes)}`\n      : 'Qual serviço você quer?';\n  },\n  servico_nao_confirmado: () => {\n    const opcoes = (dados.servicos || []).slice(0, 6);\n    const inicio = 'Não consegui confirmar esse serviço na nossa lista.';\n    return opcoes.length ? `${inicio}\\nO que temos é:\\n${lista(opcoes)}\\nAlgum desses?` : `${inicio} Quer falar com a equipe do ${empresa}?`;\n  },\n  qual_profissional: () => {\n    const opcoes = (dados.opcoes || []).slice(0, 6);\n    return opcoes.length ? `Com qual profissional?\\n${lista(opcoes)}` : 'Com qual profissional você prefere?';\n  },\n  profissional_nao_confirmado: () => {\n    const opcoes = (dados.profissionais || []).slice(0, 6);\n    return opcoes.length ? `Não consegui confirmar esse nome.\\nQuem atende é:\\n${lista(opcoes)}` : 'Não consegui confirmar esse nome por aqui.';\n  },\n  data_ambigua: () => `Só para eu não errar: ${data(dados.hoje)} (hoje) ou ${data(dados.proxima)}?`,\n  data_passada: () => `Essa data já passou. Quer que eu procure a partir de ${data(dados.sugestao)}?`,\n  sem_horarios: () => {\n    const servico = dados.servico ? ` para ${dados.servico.nome}` : '';\n    return `Não achei horário livre${servico} até ${data(dados.ate)}.\\nQuer que eu procure em outra data?`;\n  },\n  dois_horarios: () => {\n    const servico = dados.servico ? ` para ${dados.servico.nome}` : '';\n    const opcoes = (dados.slots || []).map((s, i) => `${i + 1}) ${descreverSlot(s)}`).join('\\n');\n    const extra = dados.mais_opcoes ? '\\nSe nenhum servir, tenho outras opções.' : '';\n    return `Tenho estes horários${servico}:\\n${opcoes}\\nQual prefere?${extra}`;\n  },\n  horario_indisponivel: () => {\n    const opcoes = (dados.slots || []).map((s, i) => `${i + 1}) ${descreverSlot(s)}`).join('\\n');\n    return `Esse horário não está livre.\\nTenho:\\n${opcoes}\\nAlgum serve?`;\n  },\n  horario_ocupado: () => 'Esse horário acabou de ser ocupado. Nada foi alterado na sua agenda.\\nQuer que eu procure outro?',\n  qual_horario: () => {\n    const opcoes = (dados.slots || []).map((s, i) => `${i + 1}) ${descreverSlot(s)}`).join('\\n');\n    return `Qual dos dois você quer?\\n${opcoes}`;\n  },\n  pedir_confirmacao: () => {\n    const s = dados.slot;\n    const acao = dados.reagendamento ? 'Remarco' : 'Confirmo';\n    return `${acao} então: ${s.servico_nome}, ${descreverSlot(s)}.\\nPosso ${dados.reagendamento ? 'remarcar' : 'marcar'}?`;\n  },\n  pedir_confirmacao_cancelamento: () => `Você tem ${descreverConsulta(dados.consulta)}.\\nConfirma o cancelamento?`,\n  pedir_nova_data: () => `Seu horário atual é ${descreverConsulta(dados.consulta)}.\\nPara quando você quer remarcar?`,\n  lista_consultas: () => {\n    const itens = (dados.consultas || []).map((c) => descreverConsulta(c));\n    return itens.length === 1\n      ? `Seu horário é ${itens[0]}.`\n      : `Seus horários marcados:\\n${lista(itens)}`;\n  },\n  sem_consultas: () => 'Não encontrei nenhum horário marcado no seu nome. Quer marcar um?',\n  consulta_nao_encontrada: () => 'Não encontrei esse horário na sua agenda agora. Nada foi alterado.\\nQuer que eu liste os seus horários marcados?',\n  escolher_consulta: () => {\n    const itens = (dados.consultas || []).map((c, i) => `${i + 1}) ${descreverConsulta(c)}`).join('\\n');\n    return `Você tem mais de um horário marcado:\\n${itens}\\nQual deles?`;\n  },\n  agendado: () => `Pronto, ${ola}está marcado: ${dados.resumo}.\\nSe precisar mudar, é só me chamar.`,\n  reagendado: () => `Remarcado. Agora ficou ${dados.resumo}.\\nO horário anterior foi liberado.`,\n  cancelado: () => `Cancelei ${dados.resumo}.\\nQuando quiser remarcar, é só falar.`,\n  // Leitura que nao respondeu: nada foi alterado e a IA continua na conversa.\n  falha_temporaria: () => 'Não consegui concluir isso agora. Nada foi alterado.\\nQuer tentar de novo em instantes?',\n  // Escrita sem resultado confiavel: a IA para e a equipe assume a conversa.\n  falha_ferramenta: () => `Não consegui concluir agora por um problema no sistema. Nada foi alterado na sua agenda.\\n${deixarComEquipe}`,\n  resultado_sem_id: () => `Não recebi a confirmação do sistema, então não vou afirmar nada. Nada foi alterado na sua agenda.\\n${deixarComEquipe}`,\n  cadastro_atualizado: () => `Anotei aqui. ${dados.campos && dados.campos.length ? `Atualizei: ${dados.campos.join(', ')}.` : ''}`.trim(),\n};\n\nlet texto = (TEXTOS[tipo] || TEXTOS.livre)();\n\n// Verificador deterministico de sucesso: texto escrito pela IA nunca afirma\n// que algo foi marcado, remarcado ou cancelado. Quem pode dizer isso e o\n// modelo fixo acima, e so depois de um efeito verificado nesta execucao.\nif (['livre', 'esclarecer'].includes(tipo) && item.sucesso !== true && AFIRMA_EFEITO.test(texto)) {\n  texto = 'Sobre isso eu não consigo dar uma resposta por aqui. Quer que eu veja os horários disponíveis?';\n}\n\n// Primeira mensagem da conversa: identifica a empresa uma unica vez.\nconst primeiraMensagem = !(ctx.estado.historico || []).length;\nif (primeiraMensagem && tipo !== 'livre' && tipo !== 'esclarecer') {\n  texto = `Aqui é o atendimento do ${empresa}.\\n${texto}`;\n}\n\n// Audio com transcricao incerta: devolve o entendimento antes de qualquer acao.\nif (ctx.entrada_incerta && ['pedir_confirmacao', 'pedir_confirmacao_cancelamento'].includes(tipo)) {\n  texto = `Não peguei tudo do áudio, então confirmo com você:\\n${texto}`;\n}\n\n// Cliente mudou de assunto com uma acao pendente aberta: responde e retoma.\nconst pendenteAtual = ctx.pendente;\nif (!pendenteNovo && pendenteAtual && pendenteAtual.inicio && ['livre', 'esclarecer'].includes(tipo)) {\n  const acao = pendenteAtual.tipo === 'cancelar' ? 'Confirma o cancelamento de' : 'Confirmo o horário de';\n  texto = `${texto}\\n${acao} ${quando(pendenteAtual.inicio)}?`;\n}\n\nconst historico = (ctx.estado.historico || [])\n  .concat([{ r: 'cliente', t: String(ctx.conteudo).slice(0, 240) }, { r: 'assistente', t: texto.slice(0, 240) }])\n  .slice(-HISTORICO_MAX);\n\nreturn [{\n  json: {\n    texto,\n    tipo_resposta: tipo,\n    pendente_novo: pendenteNovo,\n    tem_pendente_novo: Boolean(pendenteNovo && pendenteNovo.tipo),\n    estado: {\n      historico,\n      slots_oferecidos: estadoNovo.slots_oferecidos || [],\n      consultas_candidatas: estadoNovo.consultas_candidatas || [],\n      reagendar_consulta_id: estadoNovo.reagendar_consulta_id || null,\n      atualizado_em: ctx.agora_iso,\n    },\n    log: Object.assign({ tipo_resposta: tipo }, item.log || decisao.log || {}),\n  },\n}];\n"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -1890,7 +1770,7 @@
     },
     {
       "parameters": {
-        "jsCode": "// Quebra a resposta em no maximo 3 mensagens curtas de WhatsApp.\nconst MAX_PARTES = 3;\nconst MAX_CARACTERES = 900;\n\nconst item = $input.first().json;\nconst partes = String(item.texto || '')\n  .split(/\\n{2,}/)\n  .map((p) => p.trim())\n  .filter(Boolean)\n  .slice(0, MAX_PARTES)\n  .map((p) => p.slice(0, MAX_CARACTERES));\n\nreturn [{ json: { partes: partes.length ? partes : ['Não consegui montar a resposta agora. Já avisei a equipe.'] } }];\n"
+        "jsCode": "// Quebra a resposta em no maximo 3 mensagens curtas de WhatsApp.\nconst MAX_PARTES = 3;\nconst MAX_CARACTERES = 900;\n\nconst item = $input.first().json;\nconst partes = String(item.texto || '')\n  .split(/\\n{2,}/)\n  .map((p) => p.trim())\n  .filter(Boolean)\n  .slice(0, MAX_PARTES)\n  .map((p) => p.slice(0, MAX_CARACTERES));\n\nreturn [{ json: { partes: partes.length ? partes : ['Não consegui montar a resposta agora. Vou deixar com a equipe, que continua com você nesta conversa.'] } }];\n"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -1994,7 +1874,7 @@
     },
     {
       "parameters": {
-        "jsCode": "// Registro da decisao para auditoria. Sem telefone, sem nome e sem texto da\n// conversa: apenas identificadores e o motivo da rota escolhida.\nconst decisao = $('resolver e decidir').first().json;\nconst resposta = $('montar resposta').first().json;\n\nreturn [{\n  json: {\n    registro: 'atendimento_v2',\n    msg_id: decisao.contexto.msg_id,\n    instance: decisao.contexto.instance,\n    empresa_id: decisao.contexto.empresa.id,\n    cliente_id: decisao.contexto.cliente.id,\n    intent: decisao.interp ? decisao.interp.intent : null,\n    confidence: decisao.interp ? decisao.interp.confidence : null,\n    rota: decisao.rota,\n    motivo: decisao.motivo,\n    tipo_resposta: resposta.tipo_resposta,\n    acao_pendente: resposta.tem_pendente_novo ? resposta.pendente_novo.tipo : null,\n    detalhe: resposta.log || {},\n    em: decisao.contexto.agora_iso,\n  },\n}];\n"
+        "jsCode": "// Registro da decisao para auditoria. Sem telefone, sem nome e sem texto da\n// conversa. A instancia identifica o tenant; ids internos de empresa e de\n// cliente nao existem mais no fluxo, porque a API nao os devolve.\nconst decisao = $('resolver e decidir').first().json;\nconst resposta = $('montar resposta').first().json;\n\nreturn [{\n  json: {\n    registro: 'atendimento_v2',\n    msg_id: decisao.contexto.msg_id,\n    instance: decisao.contexto.instance,\n    intent: decisao.interp ? decisao.interp.intent : null,\n    confidence: decisao.interp ? decisao.interp.confidence : null,\n    rota: decisao.rota,\n    motivo: decisao.motivo,\n    tipo_resposta: resposta.tipo_resposta,\n    acao_pendente: resposta.tem_pendente_novo ? resposta.pendente_novo.tipo : null,\n    detalhe: resposta.log || {},\n    em: decisao.contexto.agora_iso,\n  },\n}];\n"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -2034,7 +1914,7 @@
     },
     {
       "parameters": {
-        "content": "## 2. Empresa, cliente e contexto\nA empresa vem SEMPRE da instância do WhatsApp (`usuarios.instance_name`), nunca do telefone e nunca da IA.\nO cliente é buscado por telefone **e** empresa; se não existir, é criado antes de qualquer atendimento.\nSó o catálogo da própria empresa entra no contexto.",
+        "content": "## 2. Empresa, cliente e contexto\nUma chamada a `POST /api/ai/contexto` resolve tudo: a empresa vem da instância do WhatsApp **no servidor**, o cliente é localizado ou criado dentro dela e o catálogo é o dela.\nO n8n não fala com o banco e não conhece id de empresa nem de cliente: nenhuma rota da API aceita esses parâmetros.\n`procedimentos[].agendavel: false` significa que nenhum profissional ativo executa o serviço — é caso de pessoa, não \"sem vaga hoje\".",
         "height": 240,
         "width": 900,
         "color": 7
@@ -2066,7 +1946,7 @@
     },
     {
       "parameters": {
-        "content": "## 4. Ações determinísticas\nAgendar, reagendar e cancelar só acontecem a partir de uma ação pendente guardada pelo sistema, com TTL e trava de execução única.\nO horário é revalidado no momento da confirmação e nenhuma escrita é anunciada sem `id` no retorno.",
+        "content": "## 4. Ações determinísticas\nAgendar, reagendar e cancelar só acontecem a partir de uma ação pendente guardada pelo sistema, com TTL e trava de execução única.\nQuem revalida o horário é a API, imediatamente antes de gravar, e ela relê o registro antes de responder `ok: true`.\nA criação envia `chave_idempotencia` (o `acao_id` da pendência); reagendar e cancelar são idempotentes por estado.\n`FALHA_TEMPORARIA` repete **uma** vez com o mesmo pedido. Sucesso só com `ok: true` **e** `data.agendamento.id`.",
         "height": 160,
         "width": 1500,
         "color": 3
@@ -2393,98 +2273,7 @@
       "main": [
         [
           {
-            "node": "empresa pela instancia",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "empresa pela instancia": {
-      "main": [
-        [
-          {
-            "node": "empresa configurada?",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "empresa configurada?": {
-      "main": [
-        [
-          {
-            "node": "buscar cliente",
-            "type": "main",
-            "index": 0
-          }
-        ],
-        [
-          {
-            "node": "fim - instância sem empresa",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "buscar cliente": {
-      "main": [
-        [
-          {
-            "node": "cliente existe?",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "cliente existe?": {
-      "main": [
-        [
-          {
-            "node": "cliente da empresa",
-            "type": "main",
-            "index": 0
-          }
-        ],
-        [
-          {
-            "node": "criar cliente",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "criar cliente": {
-      "main": [
-        [
-          {
-            "node": "cliente da empresa",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "cliente da empresa": {
-      "main": [
-        [
-          {
-            "node": "catalogo da empresa",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "catalogo da empresa": {
-      "main": [
-        [
-          {
-            "node": "Redis - ler ação pendente",
+            "node": "contexto da empresa",
             "type": "main",
             "index": 0
           }
@@ -2706,39 +2495,6 @@
         ],
         [
           {
-            "node": "revalidar horário",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "revalidar horário": {
-      "main": [
-        [
-          {
-            "node": "conferir revalidação",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "conferir revalidação": {
-      "main": [
-        [
-          {
-            "node": "executar ação",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "executar ação": {
-      "main": [
-        [
-          {
             "node": "criar consulta",
             "type": "main",
             "index": 0
@@ -2764,7 +2520,7 @@
       "main": [
         [
           {
-            "node": "verificar resultado",
+            "node": "repetir escrita?",
             "type": "main",
             "index": 0
           }
@@ -2775,7 +2531,7 @@
       "main": [
         [
           {
-            "node": "verificar resultado",
+            "node": "repetir escrita?",
             "type": "main",
             "index": 0
           }
@@ -2786,7 +2542,7 @@
       "main": [
         [
           {
-            "node": "verificar resultado",
+            "node": "repetir escrita?",
             "type": "main",
             "index": 0
           }
@@ -2797,25 +2553,7 @@
       "main": [
         [
           {
-            "node": "operação concluída?",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "operação concluída?": {
-      "main": [
-        [
-          {
-            "node": "Redis - limpar ação pendente",
-            "type": "main",
-            "index": 0
-          }
-        ],
-        [
-          {
-            "node": "Redis - pausar IA (falha na operação)",
+            "node": "pode seguir sem pessoa?",
             "type": "main",
             "index": 0
           }
@@ -3039,6 +2777,82 @@
         [
           {
             "node": "fim - atendimento respondido",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "contexto da empresa": {
+      "main": [
+        [
+          {
+            "node": "contexto ok?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "contexto ok?": {
+      "main": [
+        [
+          {
+            "node": "Redis - ler ação pendente",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "fim - contexto indisponível",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "repetir escrita?": {
+      "main": [
+        [
+          {
+            "node": "repetir escrita",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "verificar resultado",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "repetir escrita": {
+      "main": [
+        [
+          {
+            "node": "verificar resultado",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "pode seguir sem pessoa?": {
+      "main": [
+        [
+          {
+            "node": "Redis - limpar ação pendente",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Redis - pausar IA (falha na operação)",
             "type": "main",
             "index": 0
           }

@@ -32,3 +32,6 @@ os.environ.setdefault(
 os.environ.setdefault("JWT_SECRET", "test-only-jwt-secret-that-is-long-enough")
 os.environ.setdefault("JWT_ALGORITHM", "HS256")
 os.environ.setdefault("JWT_EXPIRATION_HOURS", "24")
+# Token de máquina da automação. Valor de teste, nunca real: o `.env` da
+# máquina não é lido porque `load_dotenv` não sobrescreve variável já definida.
+os.environ.setdefault("AUTOMATION_API_TOKEN", "token-de-teste-com-tamanho-suficiente-1234")

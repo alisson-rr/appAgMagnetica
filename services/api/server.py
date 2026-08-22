@@ -1,41 +1,35 @@
 from fastapi import FastAPI, APIRouter, HTTPException, Depends, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
-from dotenv import load_dotenv
 from starlette.middleware.cors import CORSMiddleware
-from supabase import create_client, Client
 import os
 import logging
+from decimal import Decimal
 from pathlib import Path
 from pydantic import BaseModel, Field, EmailStr
 from typing import List, Optional
-from datetime import datetime, date, time, timedelta, timezone
-
-# Timezone de São Paulo (UTC-03:00)
-SAO_PAULO_TZ = timezone(timedelta(hours=-3))
+from datetime import datetime, date, time, timedelta
 import jwt
 from passlib.context import CryptContext
 import re as regex_module
 
 ROOT_DIR = Path(__file__).parent
 
-# O .env pode ficar em services/api/ ou na raiz do monorepo, que é onde as
-# credenciais do projeto estão configuradas. O local do backend tem precedência.
-for _env_path in (ROOT_DIR / '.env', ROOT_DIR.parents[1] / '.env'):
-    if _env_path.exists():
-        load_dotenv(_env_path)
-        break
-
+# O `.env` é carregado por `settings`, que é importado abaixo.
 from settings import (
     JWT_ALGORITHM,
     JWT_EXPIRATION_HOURS,
     JWT_SECRET,
-    SUPABASE_SERVICE_ROLE_KEY,
-    SUPABASE_URL,
 )
-
-# A chave administrativa fica somente no backend. O isolamento por empresa é
-# reforçado em todas as consultas abaixo e deve ser complementado por RLS.
-supabase: Client = create_client(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY)
+import ai_api
+from dominio import (
+    SAO_PAULO_TZ,
+    com_fuso_de_negocio,
+    dinheiro,
+    dinheiro_para_banco,
+    dinheiro_para_json,
+    montar_intervalo,
+)
+from supabase_client import supabase
 
 # Password hashing
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
@@ -101,14 +95,16 @@ class ProcedimentoCreate(BaseModel):
     nome: str
     descricao: Optional[str] = None
     duracao_minutos: int
-    valor: float
+    # Dinheiro em Decimal: a coluna é numeric(10,2) e somar float acumula erro
+    # de arredondamento em relatório e cobrança.
+    valor: Decimal = Field(ge=0, decimal_places=2, max_digits=10)
     orientacoes: Optional[str] = None
 
 class ProcedimentoUpdate(BaseModel):
     nome: Optional[str] = None
     descricao: Optional[str] = None
     duracao_minutos: Optional[int] = None
-    valor: Optional[float] = None
+    valor: Optional[Decimal] = Field(default=None, ge=0, decimal_places=2, max_digits=10)
     orientacoes: Optional[str] = None
 
 # Consulta
@@ -127,8 +123,9 @@ class ConsultaUpdate(BaseModel):
     data_inicio: Optional[datetime] = None
     duracao_minutos: Optional[int] = None
     status: Optional[str] = None
-    confirmado_em: Optional[date] = None
-    cancelado_em: Optional[date] = None
+    # Instantes, não dias: a coluna é timestamptz desde `ajustes_ai_api.sql`.
+    confirmado_em: Optional[datetime] = None
+    cancelado_em: Optional[datetime] = None
     motivo_cancelamento: Optional[str] = None
 
 # Bloqueio
@@ -148,10 +145,6 @@ class DisponibilidadeItem(BaseModel):
     dia_semana: int
     hora_inicio: str
     hora_fim: str
-
-# Área de Atuação
-class AreaAtuacaoCreate(BaseModel):
-    nome: str
 
 # Horário Clínica
 class HorarioClinicaCreate(BaseModel):
@@ -222,6 +215,21 @@ def assert_owned_record(table: str, record_id: int, clinica_id: int, label: str)
     )
     if not result.data:
         raise HTTPException(status_code=404, detail=f"{label} não encontrado")
+
+
+def get_procedimento_da_empresa(procedimento_id: int, clinica_id: int) -> dict:
+    """Serviço da empresa, com o preço vigente para congelar na consulta."""
+    result = (
+        supabase.table('procedimento')
+        .select('id, valor, duracao_minutos')
+        .eq('id', procedimento_id)
+        .eq('id_info_clinica', clinica_id)
+        .limit(1)
+        .execute()
+    )
+    if not result.data:
+        raise HTTPException(status_code=404, detail="Serviço não encontrado")
+    return result.data[0]
 
 
 def raise_if_in_use(erro: Exception, label: str) -> None:
@@ -403,16 +411,23 @@ async def get_dashboard_stats(current_user: dict = Depends(verify_token)):
         cancelados_hoje = len(consultas_hoje) - len(consultas_ativas)
         total_atendimentos = len(consultas_ativas)
         
-        # Calcular valores do mês
-        total_recebido = 0.0
-        total_pendente = 0.0
-        
+        # Calcular valores do mês. Decimal, não float: somar dinheiro em
+        # binário acumula centavo perdido no fechamento do mês.
+        total_recebido = Decimal('0.00')
+        total_pendente = Decimal('0.00')
+
         for consulta in consultas_mes:
-            valor = consulta.get('procedimento', {}).get('valor', 0) or 0
+            # `valor_cobrado` é o preço acertado no dia do agendamento. O valor
+            # do cadastro é o de hoje: preferi-lo reescreveria o histórico
+            # sempre que o serviço mudasse de preço.
+            valor = consulta.get('valor_cobrado')
+            if valor is None:
+                valor = (consulta.get('procedimento') or {}).get('valor')
+            valor = dinheiro(valor) or Decimal('0.00')
             if consulta.get('status') == 'concluido':
-                total_recebido += float(valor)
+                total_recebido += valor
             elif consulta.get('status') == 'pendente':
-                total_pendente += float(valor)
+                total_pendente += valor
         
         # Próximos agendamentos (ordenar por horário)
         proximos = sorted(consultas_ativas, key=lambda x: x.get('intervalo', ''))[:5]
@@ -422,8 +437,8 @@ async def get_dashboard_stats(current_user: dict = Depends(verify_token)):
             "confirmados": len(confirmados),
             "aguardando_confirmacao": len(aguardando_confirmacao),
             "cancelados_hoje": cancelados_hoje,
-            "total_recebido": total_recebido,
-            "total_pendente": total_pendente,
+            "total_recebido": dinheiro_para_json(total_recebido),
+            "total_pendente": dinheiro_para_json(total_pendente),
             "proximos_agendamentos": proximos
         }
     except HTTPException:
@@ -710,6 +725,9 @@ async def create_procedimento(proc: ProcedimentoCreate, current_user: dict = Dep
     try:
         clinica_id = get_user_clinica_id(current_user)
         data = proc.model_dump()
+        # Decimal não é serializável em JSON e float reintroduz arredondamento:
+        # o texto é convertido para numeric pelo PostgreSQL sem perda.
+        data['valor'] = dinheiro_para_banco(data['valor'])
         data['id_info_clinica'] = clinica_id
         result = supabase.table('procedimento').insert(data).execute()
         return result.data[0]
@@ -724,6 +742,8 @@ async def update_procedimento(proc_id: int, proc: ProcedimentoUpdate, current_us
     try:
         clinica_id = get_user_clinica_id(current_user)
         data = proc.model_dump(exclude_none=True)
+        if 'valor' in data:
+            data['valor'] = dinheiro_para_banco(data['valor'])
         query = supabase.table('procedimento').update(data).eq('id', proc_id).eq('id_info_clinica', clinica_id)
         result = query.execute()
         return result.data[0]
@@ -782,27 +802,20 @@ async def create_consulta(consulta: ConsultaCreate, current_user: dict = Depends
         clinica_id = get_user_clinica_id(current_user)
         assert_owned_record('profissional', consulta.id_profissional, clinica_id, 'Profissional')
         assert_owned_record('cliente', consulta.id_cliente, clinica_id, 'Cliente')
-        assert_owned_record('procedimento', consulta.id_procedimento, clinica_id, 'Serviço')
+        procedimento = get_procedimento_da_empresa(consulta.id_procedimento, clinica_id)
         data = consulta.model_dump()
-        data_inicio = data['data_inicio']
-        
-        # Converter para timezone de São Paulo antes de extrair a string
-        # Pydantic pode converter para UTC internamente, então precisamos converter de volta
-        if data_inicio.tzinfo is not None:
-            data_inicio_local = data_inicio.astimezone(SAO_PAULO_TZ)
-            data_fim_local = data_inicio_local + timedelta(minutes=data['duracao_minutos'])
-            local_str = data_inicio_local.strftime('%Y-%m-%d %H:%M:%S')
-            local_fim_str = data_fim_local.strftime('%Y-%m-%d %H:%M:%S')
-            data['intervalo'] = f'["{local_str}-03","{local_fim_str}-03")'
-        else:
-            data_fim = data_inicio + timedelta(minutes=data['duracao_minutos'])
-            data['intervalo'] = f"[{data_inicio.isoformat()},{data_fim.isoformat()})"
-        
+
+        # `montar_intervalo` resolve horário sem offset como local de São Paulo.
+        # Interpretar como UTC deslocava o agendamento em três horas em silêncio.
+        data['intervalo'] = montar_intervalo(data['data_inicio'], data['duracao_minutos'])
         del data['data_inicio']
         del data['duracao_minutos']
-        
+
+        # Preço congelado no ato do agendamento: reajustar o serviço depois não
+        # reescreve o histórico financeiro já emitido.
+        data['valor_cobrado'] = dinheiro_para_banco(procedimento.get('valor'))
         data['id_info_clinica'] = clinica_id
-        
+
         result = supabase.table('consulta').insert(data).execute()
         return result.data[0]
     except HTTPException:
@@ -824,32 +837,22 @@ async def update_consulta(consulta_id: int, consulta: ConsultaUpdate, current_us
         ):
             if field in data:
                 assert_owned_record(table, data[field], clinica_id, label)
+
+        # Trocar o serviço troca o preço do atendimento: manter o valor antigo
+        # deixaria a consulta com o preço de outro procedimento.
+        if 'id_procedimento' in data:
+            procedimento = get_procedimento_da_empresa(data['id_procedimento'], clinica_id)
+            data['valor_cobrado'] = dinheiro_para_banco(procedimento.get('valor'))
         
         if 'data_inicio' in data and 'duracao_minutos' in data:
-            data_inicio = data['data_inicio']
-            logging.info(f"[DEBUG] data_inicio recebido: {data_inicio}")
-            logging.info(f"[DEBUG] data_inicio.tzinfo: {data_inicio.tzinfo}")
-            # Converter para timezone de São Paulo antes de extrair a string
-            # Pydantic converte para UTC internamente, então precisamos converter de volta
-            if data_inicio.tzinfo is not None:
-                data_inicio_local = data_inicio.astimezone(SAO_PAULO_TZ)
-                logging.info(f"[DEBUG] data_inicio_local após astimezone: {data_inicio_local}")
-                data_fim_local = data_inicio_local + timedelta(minutes=data['duracao_minutos'])
-                local_str = data_inicio_local.strftime('%Y-%m-%d %H:%M:%S')
-                local_fim_str = data_fim_local.strftime('%Y-%m-%d %H:%M:%S')
-                logging.info(f"[DEBUG] intervalo final: [{local_str}-03,{local_fim_str}-03)")
-                data['intervalo'] = f'["{local_str}-03","{local_fim_str}-03")'
-            else:
-                data_fim = data_inicio + timedelta(minutes=data['duracao_minutos'])
-                data['intervalo'] = f"[{data_inicio.isoformat()},{data_fim.isoformat()})"
+            data['intervalo'] = montar_intervalo(data['data_inicio'], data['duracao_minutos'])
             del data['data_inicio']
             del data['duracao_minutos']
-        
-        if data.get('confirmado_em'):
-            data['confirmado_em'] = data['confirmado_em'].isoformat()
-        if data.get('cancelado_em'):
-            data['cancelado_em'] = data['cancelado_em'].isoformat()
-        
+
+        for campo in ('confirmado_em', 'cancelado_em'):
+            if data.get(campo):
+                data[campo] = com_fuso_de_negocio(data[campo]).isoformat()
+
         query = supabase.table('consulta').update(data).eq('id', consulta_id).eq('id_info_clinica', clinica_id)
         result = query.execute()
         return result.data[0]
@@ -892,9 +895,11 @@ async def create_bloqueio(bloqueio: BloqueioCreate, current_user: dict = Depends
         clinica_id = get_user_clinica_id(current_user)
         assert_owned_record('profissional', bloqueio.id_profissional, clinica_id, 'Profissional')
         data = bloqueio.model_dump()
-        data_inicio = data['data_inicio']
-        data_fim = data['data_fim']
-        data['intervalo'] = f"[{data_inicio.isoformat()},{data_fim.isoformat()})"
+        data_inicio = com_fuso_de_negocio(data['data_inicio'])
+        data_fim = com_fuso_de_negocio(data['data_fim'])
+        if data_fim <= data_inicio:
+            raise HTTPException(status_code=400, detail="O fim do bloqueio precisa ser depois do início")
+        data['intervalo'] = f'["{data_inicio.isoformat()}","{data_fim.isoformat()}")'
         del data['data_inicio']
         del data['data_fim']
         
@@ -921,7 +926,10 @@ async def delete_bloqueio(bloqueio_id: int, current_user: dict = Depends(verify_
         raise HTTPException(status_code=500, detail="Erro interno")
 
 # ===== ÁREAS DE ATUAÇÃO =====
-# Nota: area_atuacao é uma tabela global (lookup), não filtrada por clínica
+# `area_atuacao` é catálogo GLOBAL, compartilhado por todas as empresas. Só a
+# leitura é exposta: a rota de criação foi removida porque qualquer usuário
+# autenticado passava a escrever numa lista que todos os clientes enxergam.
+# Incluir um rótulo novo é operação de banco (`scripts/ajustes_ai_api.sql`).
 @api_router.get("/areas-atuacao")
 async def get_areas_atuacao(current_user: dict = Depends(verify_token)):
     try:
@@ -931,17 +939,6 @@ async def get_areas_atuacao(current_user: dict = Depends(verify_token)):
         raise
     except Exception as e:
         logging.error(f"Erro ao buscar áreas de atuação: {str(e)}")
-        raise HTTPException(status_code=500, detail="Erro interno")
-
-@api_router.post("/areas-atuacao")
-async def create_area_atuacao(area: AreaAtuacaoCreate, current_user: dict = Depends(verify_token)):
-    try:
-        result = supabase.table('area_atuacao').insert(area.model_dump()).execute()
-        return result.data[0]
-    except HTTPException:
-        raise
-    except Exception as e:
-        logging.error(f"Erro ao criar área de atuação: {str(e)}")
         raise HTTPException(status_code=500, detail="Erro interno")
 
 # ===== CONFIGURAÇÕES =====
@@ -1186,6 +1183,11 @@ async def disconnect_whatsapp(current_user: dict = Depends(verify_token)):
 
 # Include router
 app.include_router(api_router)
+
+# Rotas determinísticas da automação, com token de máquina próprio e empresa
+# derivada da instância do WhatsApp.
+app.include_router(ai_api.router)
+ai_api.registrar_tratadores(app)
 
 app.add_middleware(
     CORSMiddleware,

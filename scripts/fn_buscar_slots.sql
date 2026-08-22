@@ -1,6 +1,15 @@
 -- =============================================================================
 -- fn_buscar_slots — disponibilidade real, calculada no servidor
--- Versão: 1 (2026-08-21). Rodar depois de scripts/bootstrap_schema.sql.
+-- Versão: 2 (2026-08-21). Rodar depois de scripts/bootstrap_schema.sql.
+--
+-- MUDANÇA DA v2: novo parâmetro opcional `p_ignorar_consulta_id`. Sem ele não
+-- existe revalidação honesta de REAGENDAMENTO: a própria consulta que está
+-- sendo movida ocupa o horário antigo e, quando o horário novo encosta no
+-- antigo, a função devolveria zero slot e a API recusaria um reagendamento
+-- perfeitamente válido. A alternativa seria reimplementar a regra de
+-- disponibilidade dentro do backend — duas fontes de verdade para a mesma
+-- regra. Este arquivo é a definição canônica do objeto: reexecutá-lo substitui
+-- a versão anterior, inclusive a assinatura de 7 parâmetros.
 --
 -- CONTRATO (PostgREST: POST /rest/v1/rpc/fn_buscar_slots, corpo JSON com os
 -- nomes dos parâmetros):
@@ -11,6 +20,9 @@
 --   p_profissional_id  int8  opcional — null = qualquer profissional apto
 --   p_step_minutos     int   opcional, padrão 30
 --   p_duracao_minutos  int   opcional — null usa a duração do procedimento
+--   p_ignorar_consulta_id int8 opcional — ignora ESTA consulta ao calcular
+--                               ocupação; usado só na revalidação de
+--                               reagendamento. Nulo em toda busca normal.
 --
 -- RETORNO: uma linha por horário livre, sempre com
 --   id_info_clinica, id_profissional, id_procedimento, inicio, fim,
@@ -33,6 +45,12 @@
 -- nomes qualificados, para não depender do caminho de quem chama.
 -- =============================================================================
 
+-- A v1 tinha 7 parâmetros. `create or replace` com 8 criaria uma SOBRECARGA em
+-- vez de substituir, e o PostgREST ficaria com duas candidatas para a mesma
+-- chamada nomeada — erro de ambiguidade em toda busca de horário. Por isso a
+-- assinatura antiga é removida explicitamente antes.
+drop function if exists public.fn_buscar_slots(int8, int8, timestamptz, timestamptz, int8, int, int);
+
 create or replace function public.fn_buscar_slots(
   p_id_info_clinica int8,
   p_procedimento_id int8,
@@ -40,7 +58,8 @@ create or replace function public.fn_buscar_slots(
   p_fim             timestamptz,
   p_profissional_id int8 default null,
   p_step_minutos    int  default 30,
-  p_duracao_minutos int  default null
+  p_duracao_minutos int  default null,
+  p_ignorar_consulta_id int8 default null
 )
 returns table (
   id_info_clinica   int8,
@@ -179,21 +198,29 @@ begin
       where cs.id_profissional = c.id_profissional
         and cs.status in ('pendente', 'agendado', 'confirmado')
         and cs.intervalo && tstzrange(c.inicio, c.fim, '[)')
+        -- A consulta que está sendo reagendada não bloqueia o próprio
+        -- reagendamento. `is distinct from` porque o parâmetro é nulo em toda
+        -- busca normal, e `<>` com nulo devolveria nulo (nada seria excluído).
+        and cs.id is distinct from p_ignorar_consulta_id
     )
   order by c.inicio, c.id_profissional;
 end;
 $$;
 
-comment on function public.fn_buscar_slots(int8, int8, timestamptz, timestamptz, int8, int, int) is
+comment on function public.fn_buscar_slots(int8, int8, timestamptz, timestamptz, int8, int, int, int8) is
   'Horarios livres de uma empresa para um procedimento. A empresa entra como '
   'parametro e e validada no procedimento e no profissional. Respeita horario da '
   'empresa, disponibilidade do profissional, bloqueios e agendamentos vivos. '
   'Toda linha traz id_profissional. Fuso America/Sao_Paulo.';
 
-revoke all on function public.fn_buscar_slots(int8, int8, timestamptz, timestamptz, int8, int, int)
+revoke all on function public.fn_buscar_slots(int8, int8, timestamptz, timestamptz, int8, int, int, int8)
   from public, anon, authenticated;
-grant execute on function public.fn_buscar_slots(int8, int8, timestamptz, timestamptz, int8, int, int)
+grant execute on function public.fn_buscar_slots(int8, int8, timestamptz, timestamptz, int8, int, int, int8)
   to service_role;
+
+-- O PostgREST resolve RPC pelo conjunto de argumentos nomeados. Sem o aviso, a
+-- automação continua enxergando a assinatura antiga em cache.
+notify pgrst, 'reload schema';
 
 -- =============================================================================
 -- Verificação (somente leitura)

@@ -18,6 +18,9 @@
 - `apps/site`: site React 18 + Vite.
 - `services/api`: FastAPI, Supabase, JWT e Evolution API.
 - `automation/n8n`: workflow do WhatsApp, mantido inativo até homologação.
+- `docs/INFRA-VPS.md`: **onde este projeto roda.** Leia antes de mexer em
+  Redis, Evolution API, n8n ou hospedagem — a VPS já existe, o n8n roda em
+  queue mode e o banco Redis dos fluxos é o `db1`, não o `db0`.
 - `docs/brand`: identidade visual oficial.
 - `docs/research-private`: pesquisa local; nunca publicar nem usar como código.
 
