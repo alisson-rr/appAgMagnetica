@@ -500,14 +500,14 @@
     "semantic_hash": ""
   },
   "services/api/server.py": {
-    "mtime": 1787320467.7408729,
-    "ast_hash": "23161de64aa0f6c23d713761353ee22f",
+    "mtime": 1787311970.933477,
+    "ast_hash": "f8e95340d981de3f6e0ed4fdcef6f840",
     "semantic_hash": ""
   },
   "services/api/settings.py": {
-    "mtime": 1787318604.7347078,
-    "ast_hash": "ccae92e7692e7fb7d783f15eb69de5d7",
-    "semantic_hash": ""
+    "mtime": 1787265642.9935446,
+    "ast_hash": "2d197dd8d36304be2403b03aeebefb9a",
+    "semantic_hash": "2d197dd8d36304be2403b03aeebefb9a"
   },
   "services/api/tests/test_tenant_guards.py": {
     "mtime": 1787267936.7323833,
@@ -515,18 +515,18 @@
     "semantic_hash": "588a820f3b4cd8e806e4ed07fbd7162f"
   },
   "automation/n8n/AgendaMagnetica-v2.n8n.json": {
-    "mtime": 1787357174.735726,
-    "ast_hash": "e9d9503be7353ae93e53328911da9ec6",
+    "mtime": 1787279678.5821352,
+    "ast_hash": "894f42e1e82c3e30b2e7cc48a16ac410",
     "semantic_hash": ""
   },
   "automation/n8n/tests/test_regras.mjs": {
-    "mtime": 1787357129.7821383,
-    "ast_hash": "3b8e37b036cd588e05327b9a1b802a07",
+    "mtime": 1787279375.6740143,
+    "ast_hash": "b8e45e0395e9561e37f05078a1b2fc1b",
     "semantic_hash": ""
   },
   "automation/n8n/validar_workflow.py": {
-    "mtime": 1787356900.0986047,
-    "ast_hash": "431ba5c927f6c2ae0ef9cea251e1ebba",
+    "mtime": 1787279517.0742536,
+    "ast_hash": "6619c8909049c1a6104cfb96c527d1b5",
     "semantic_hash": ""
   },
   ".claude/CLAUDE.md": {
@@ -655,8 +655,8 @@
     "semantic_hash": ""
   },
   "CLAUDE.md": {
-    "mtime": 1787420798.1476207,
-    "ast_hash": "9c9180b134afd2e91a7a1a98891c1086",
+    "mtime": 1787273526.2468023,
+    "ast_hash": "c0caa9da37ebffdc78dbbdb9347e53be",
     "semantic_hash": ""
   },
   "README.md": {
@@ -690,18 +690,18 @@
     "semantic_hash": ""
   },
   "automation/n8n/README.md": {
-    "mtime": 1787420800.3814828,
-    "ast_hash": "6aabf272a700edb3bfa2e9702772a927",
+    "mtime": 1787279584.2349496,
+    "ast_hash": "afae57788e254b7b4b29bea776cda382",
     "semantic_hash": ""
   },
   "automation/n8n/TESTES_AUTOMACAO_V2.md": {
-    "mtime": 1787357306.890089,
-    "ast_hash": "8e768c2b60c5f7f9d7ca8bac7698f5f9",
+    "mtime": 1787279633.2118447,
+    "ast_hash": "335ee641b155e92764272ab987953858",
     "semantic_hash": ""
   },
   "docs/DATABASE_SCHEMA.md": {
-    "mtime": 1787357295.8002863,
-    "ast_hash": "e827a9d8b1a7056a67fe1ebc2e752189",
+    "mtime": 1787312063.9723547,
+    "ast_hash": "b5988099fc58e87a6b8dc15c7315230e",
     "semantic_hash": ""
   },
   "docs/planning/AI_AUTOMATION_BLUEPRINT.md": {
@@ -885,13 +885,13 @@
     "semantic_hash": ""
   },
   "scripts/fn_buscar_slots.sql": {
-    "mtime": 1787318544.9121115,
-    "ast_hash": "78191ba6d013eddc3b889abe58773927",
+    "mtime": 1787311028.3045838,
+    "ast_hash": "c9c1220ddcee3c387858f61d2079c160",
     "semantic_hash": ""
   },
   "scripts/teste_transacional.sql": {
-    "mtime": 1787356828.777802,
-    "ast_hash": "725e4552300d0a3a8f46c223681ffc57",
+    "mtime": 1787311997.904183,
+    "ast_hash": "e79d2925de7b42e8763c6d3f15c5d47c",
     "semantic_hash": ""
   },
   "scripts/travas_corte_vertical.sql": {
@@ -905,8 +905,8 @@
     "semantic_hash": ""
   },
   "services/api/tests/conftest.py": {
-    "mtime": 1787319175.62391,
-    "ast_hash": "e5d8e8f5d3f7dfaf38a4d60a7ee64866",
+    "mtime": 1787310856.5642264,
+    "ast_hash": "fe30bcd90a90cff523250169acc35e19",
     "semantic_hash": ""
   },
   "services/api/tests/test_erros_api.py": {
@@ -915,8 +915,8 @@
     "semantic_hash": ""
   },
   "services/api/tests/test_schema_compatibilidade.py": {
-    "mtime": 1787319142.8823032,
-    "ast_hash": "131dad16452f2e8942de6f556fa6eab5",
+    "mtime": 1787310892.240486,
+    "ast_hash": "26f469fa9aa2139007729e17d63dc97c",
     "semantic_hash": ""
   },
   "services/api/tests/test_webhook_config.py": {
@@ -925,68 +925,13 @@
     "semantic_hash": ""
   },
   "docs/planning/HOMOLOGATION_DATABASE_FACTS.md": {
-    "mtime": 1787357393.7414181,
-    "ast_hash": "acb00e846bf961d38e3c9bd9f220c679",
+    "mtime": 1787312169.736315,
+    "ast_hash": "09930b32e15f210a5bb0772a957a5599",
     "semantic_hash": ""
   },
   "docs/planning/SAFE_VERTICAL_SLICE_PLAN.md": {
     "mtime": 1787315516.92757,
     "ast_hash": "880768427685eec7b3c251e21b4241ea",
-    "semantic_hash": ""
-  },
-  "scripts/ajustes_ai_api.sql": {
-    "mtime": 1787318519.4341393,
-    "ast_hash": "26ce84f0f31b4e19447f9875dcddb724",
-    "semantic_hash": ""
-  },
-  "scripts/integridade_tenant.sql": {
-    "mtime": 1787356744.7939692,
-    "ast_hash": "54d69487b399056268aff7b4ac7fc98e",
-    "semantic_hash": ""
-  },
-  "services/api/ai_api.py": {
-    "mtime": 1787356535.7930264,
-    "ast_hash": "6f32956041c8bd2eb8395e38e6693b15",
-    "semantic_hash": ""
-  },
-  "services/api/dominio.py": {
-    "mtime": 1787319639.8651297,
-    "ast_hash": "bd36549c3d57e0b094e44b2600899f14",
-    "semantic_hash": ""
-  },
-  "services/api/supabase_client.py": {
-    "mtime": 1787318608.8176703,
-    "ast_hash": "f31b75d46c579139fbcbde44aa51c405",
-    "semantic_hash": ""
-  },
-  "services/api/tests/test_ai_api.py": {
-    "mtime": 1787356477.258958,
-    "ast_hash": "923a1a4068424f674af42c1e78df1c0a",
-    "semantic_hash": ""
-  },
-  "services/api/tests/test_ai_api_integracao.py": {
-    "mtime": 1787356067.9836092,
-    "ast_hash": "14fb707b1a845be09351097494e928bc",
-    "semantic_hash": ""
-  },
-  ".github/workflows/ci.yml": {
-    "mtime": 1787355966.9137447,
-    "ast_hash": "6b8b8ab7da549d429037da77186718f7",
-    "semantic_hash": ""
-  },
-  "docs/INFRA-VPS.md": {
-    "mtime": 1787420771.7458227,
-    "ast_hash": "f8220331c08e83d9b8e7b0ac275a4647",
-    "semantic_hash": ""
-  },
-  "docs/planning/AUTOMATION_V2_API_HANDOFF.md": {
-    "mtime": 1787357412.4485724,
-    "ast_hash": "ceb8e7ea2e50a0e67b3c29adbadc113b",
-    "semantic_hash": ""
-  },
-  "docs/planning/BACKEND_AI_API_HANDOFF.md": {
-    "mtime": 1787357506.3643851,
-    "ast_hash": "669c79688f9f57a7d3ba5e6f50b379e4",
     "semantic_hash": ""
   }
 }

@@ -1,16 +1,16 @@
-# Graph Report - appAgMagnetica  (2026-08-22)
+# Graph Report - appAgMagnetica  (2026-08-21)
 
 ## Corpus Check
-- 170 files · ~236,334 words
+- 160 files · ~206,699 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 1556 nodes · 2204 edges · 182 communities (102 shown, 80 thin omitted)
-- Extraction: 100% EXTRACTED · 0% INFERRED · 0% AMBIGUOUS · INFERRED: 11 edges (avg confidence: 0.75)
+- 1168 nodes · 1425 edges · 165 communities (88 shown, 77 thin omitted)
+- Extraction: 100% EXTRACTED · 0% INFERRED · 0% AMBIGUOUS · INFERRED: 5 edges (avg confidence: 0.74)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `716cfdfe`
+- Built from commit: `d230498f`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -141,22 +141,11 @@
 - @radix-ui/react-slot
 - @radix-ui/react-toggle
 - react-hook-form
-- test_ai_api.py
-- test_ai_api_integracao.py
 - settings.py
 - graphify reference: GitHub clone and cross-repo merge
 - graphify reference: transcribe video and audio
 - dashboard/README.md
 - site/README.md
-- API da automação — contrato fechado
-- BancoFake
-- get_user_clinica_id
-- amanha_as
-- 2. Concluído
-- dominio.py
-- com_fuso_de_negocio
-- assert_owned_record
-- ErroDeBanco
 - .claude/CLAUDE.md
 - .claude/README.md
 - api-conventions.md
@@ -167,27 +156,20 @@
 - testing.md
 - typescript.md
 - extraction-spec.md
-- BancoIndisponivel
-- ajustes_ai_api.sql
-- date-fns
-- integridade_tenant.sql
-- test_corrida_na_criacao_de_cliente_rele_o_cadastro_existente
 
 ## God Nodes (most connected - your core abstractions)
-1. `banco_com()` - 35 edges
-2. `get_user_clinica_id()` - 34 edges
-3. `amanha_as()` - 34 edges
-4. `http_com()` - 33 edges
-5. `AiError` - 24 edges
-6. `chamar()` - 24 edges
-7. `criar_agendamento()` - 22 edges
-8. `compilerOptions` - 19 edges
-9. `consulta_em()` - 19 edges
-10. `reagendar_agendamento()` - 18 edges
+1. `get_user_clinica_id()` - 34 edges
+2. `compilerOptions` - 19 edges
+3. `Agenda Magnética — direção de produto 2026` - 17 edges
+4. `Base oficial construída — Agenda Magnética` - 15 edges
+5. `compilerOptions` - 14 edges
+6. `Tabelas` - 14 edges
+7. `3. Arquitetura proposta` - 14 edges
+8. `6. Contratos das ferramentas` - 13 edges
+9. `Card` - 12 edges
+10. `api` - 12 edges
 
 ## Surprising Connections (you probably didn't know these)
-- `Cenario` --indirect_call--> `cur()`  [INFERRED]
-  services/api/tests/test_ai_api_integracao.py → services/api/tests/test_schema_compatibilidade.py
 - `PrivateRoute()` --calls--> `useAuth()`  [EXTRACTED]
   apps/dashboard/src/App.jsx → apps/dashboard/src/context/AuthContext.jsx
 - `AppContent()` --calls--> `useAuth()`  [EXTRACTED]
@@ -196,15 +178,17 @@
   apps/dashboard/src/pages/Login.jsx → apps/dashboard/src/context/AuthContext.jsx
 - `Onboarding()` --calls--> `useAuth()`  [EXTRACTED]
   apps/dashboard/src/pages/Onboarding.jsx → apps/dashboard/src/context/AuthContext.jsx
+- `Layout()` --calls--> `useAuth()`  [EXTRACTED]
+  apps/dashboard/src/components/Layout.jsx → apps/dashboard/src/context/AuthContext.jsx
 
 ## Import Cycles
 - None detected.
 
-## Communities (182 total, 80 thin omitted)
+## Communities (165 total, 77 thin omitted)
 
 ### Community 0 - "server.py"
-Cohesion: 0.09
-Nodes (35): HTTPAuthorizationCredentials, ClienteCreate, ClienteUpdate, ConsultaUpdate, create_access_token(), create_cliente(), create_info_clinica(), create_procedimento() (+27 more)
+Cohesion: 0.05
+Nodes (73): BaseModel, HTTPAuthorizationCredentials, add_procedimentos_profissional(), AreaAtuacaoCreate, assert_owned_record(), BloqueioCreate, ClienteCreate, ClienteUpdate (+65 more)
 
 ### Community 1 - "Profissionais.jsx"
 Cohesion: 0.06
@@ -331,8 +315,8 @@ Cohesion: 0.40
 Nodes (4): InputOTP, InputOTPGroup, InputOTPSeparator, InputOTPSlot
 
 ### Community 34 - "vercel.json"
-Cohesion: 0.11
-Nodes (15): colunas(), Detecta divergência entre o schema do banco e o que o backend espera.  Roda so, Os literais que a API e o dashboard gravam têm de caber no CHECK., `date` descartaria a hora e duas ações do mesmo dia ficariam iguais., Sem preço congelado, reajustar o serviço reescreve o histórico emitido., A API filtra por esta coluna: expressão indexada não é consultável., Duas sobrecargas deixariam a chamada nomeada do PostgREST ambígua., test_campos_do_modelo_existem_na_tabela() (+7 more)
+Cohesion: 0.18
+Nodes (6): colunas(), Detecta divergência entre o schema do banco e o que o backend espera.  Roda some, Os literais que a API e o dashboard gravam têm de caber no CHECK., test_campos_do_modelo_existem_na_tabela(), test_status_escritos_pela_api_passam_no_check(), test_view_de_atendimento_cumpre_o_contrato()
 
 ### Community 35 - "accordion.jsx"
 Cohesion: 0.50
@@ -352,19 +336,15 @@ Nodes (3): ToggleGroup, ToggleGroupContext, ToggleGroupItem
 
 ### Community 39 - "Tabelas"
 Cohesion: 0.08
-Nodes (25): 10. `agenda_bloqueio`, 11. `consulta` — o agendamento, 12. `planos` — catálogo comercial (vazio), 13. `assinaturas`, 1. `info_clinica` — raiz do tenant, 2. `usuarios` — login do painel e vínculo com a instância do WhatsApp, 3. `cliente`, 4. `profissional` (+17 more)
-
-### Community 46 - "dependencies"
-Cohesion: 0.07
-Nodes (75): Any, AiError, atualizar_cliente(), AtualizarClienteRequest, autenticar_automacao(), BaseAutomacao, buscar_agendamentos(), buscar_cliente() (+67 more)
+Nodes (23): 10. `agenda_bloqueio`, 11. `consulta` — o agendamento, 12. `planos` — catálogo comercial (vazio), 13. `assinaturas`, 1. `info_clinica` — raiz do tenant, 2. `usuarios` — login do painel e vínculo com a instância do WhatsApp, 3. `cliente`, 4. `profissional` (+15 more)
 
 ### Community 47 - "dependencies"
 Cohesion: 0.15
-Nodes (13): axios, dependencies, axios, @radix-ui/react-avatar, @radix-ui/react-collapsible, @radix-ui/react-select, @radix-ui/react-toast, react-day-picker (+5 more)
+Nodes (13): dependencies, date-fns, @radix-ui/react-avatar, @radix-ui/react-collapsible, @radix-ui/react-select, @radix-ui/react-toast, react-day-picker, date-fns (+5 more)
 
 ### Community 49 - "date-fns"
-Cohesion: 0.29
-Nodes (3): Tradução de erro do banco em resposta HTTP útil., Só a FK vira 409. O resto continua caindo no tratamento genérico., test_erro_alheio_passa_direto()
+Cohesion: 0.36
+Nodes (7): Exception, Tradução de erro do banco em resposta HTTP útil., Só a FK vira 409. O resto continua caindo no tratamento genérico., test_erro_alheio_passa_direto(), test_nao_vaza_detalhe_interno_do_banco(), test_reconhece_a_mensagem_textual_da_fk(), test_violacao_de_fk_vira_409_explicativo()
 
 ### Community 61 - "What You Must Do When Invoked"
 Cohesion: 0.08
@@ -375,12 +355,12 @@ Cohesion: 0.11
 Nodes (17): aliases, components, hooks, lib, ui, utils, iconLibrary, rsc (+9 more)
 
 ### Community 113 - "Automação de atendimento — homologação"
-Cohesion: 0.07
-Nodes (25): A automação não fala com o banco, Ajustes rápidos, Antes de ativar, Automação de atendimento — homologação, Chaves do Redis, Configuração, Confirmação antes de qualquer escrita, Credenciais a religar após importar (+17 more)
+Cohesion: 0.13
+Nodes (14): Ajustes rápidos, Antes de ativar, Automação de atendimento — homologação, Chaves do Redis, Colunas opcionais, Configuração, Confirmação antes de qualquer escrita, Credenciais a religar após importar (+6 more)
 
 ### Community 114 - "test_regras.mjs"
-Cohesion: 0.13
-Nodes (14): AQUI, codigo(), decidir(), executar(), NOS, ok(), PROFISSIONAIS, responder() (+6 more)
+Cohesion: 0.17
+Nodes (10): AQUI, codigo(), decidir(), executar(), NOS, PROFISSIONAIS, responder(), SERVICOS (+2 more)
 
 ### Community 115 - "3. Arquitetura proposta"
 Cohesion: 0.14
@@ -439,8 +419,8 @@ Cohesion: 0.33
 Nodes (6): 1.1 Caminho completo da mensagem, 1.2 Prompts enviados ao modelo hoje, 1.3 Memória e contexto, 1.4 Ferramentas e integrações acionadas, 1.5 Como agendar, reagendar e cancelar funcionam hoje, 1. Como o fluxo funciona hoje
 
 ### Community 132 - "Matriz de testes — Atendimento V2"
-Cohesion: 0.33
-Nodes (5): Casos obrigatórios, Contrato da API, Matriz de testes — Atendimento V2, O que só a homologação com ambiente real cobre, Testes de estrutura
+Cohesion: 0.40
+Nodes (4): Casos obrigatórios, Matriz de testes — Atendimento V2, O que só a homologação com ambiente real cobre, Testes de estrutura
 
 ### Community 133 - "vercel.json"
 Cohesion: 0.40
@@ -462,70 +442,22 @@ Nodes (3): For git commit hook, For native CLAUDE.md integration, graphify refer
 Cohesion: 0.50
 Nodes (3): For --cluster-only, For --update (incremental re-extraction), graphify reference: incremental update and cluster-only
 
-### Community 144 - "test_ai_api.py"
-Cohesion: 0.04
-Nodes (23): Regras e contrato das rotas `/api/ai/*`, sem rede.  O comportamento contra o b, `status=neq.cancelada` é filtro de URL, não valor do vocabulário., `agendavel: false` é transferência para pessoa, não 'sem vaga hoje'., O painel não pode passar a receber o envelope da automação., O JWT do dashboard não pode virar credencial de máquina., O índice único é global: sem prefixo, duas empresas colidiriam., Uma requisição aceita não é prova de gravação., O feminino `cancelada` é recusado pelo CHECK `consulta_status_valido`. (+15 more)
-
-### Community 145 - "test_ai_api_integracao.py"
-Cohesion: 0.08
-Nodes (44): as_horas(), Cenario, chamar(), dia_alvo(), _do_env(), _executar(), http(), linha_da_consulta() (+36 more)
-
-### Community 146 - "settings.py"
-Cohesion: 0.09
-Nodes (45): banco_com(), cliente_http(), consulta_em(), http_com(), Estado desejado já no banco: repetir não pode virar HORARIO_INDISPONIVEL., `1994-13-45` casa com o padrão AAAA-MM-DD mas não é uma data.      Como texto,, Pelo menos um dos quatro campos permitidos é obrigatório., `push_name` do WhatsApp não vale mais que o cadastro do painel. (+37 more)
-
-### Community 151 - "API da automação — contrato fechado"
-Cohesion: 0.06
-Nodes (35): 10. Comandos de teste, 11. Riscos e pendências reais, 12. Checklist para o agente da automação, 1. O que mudou e por quê, 2. Autenticação, 3. Como o tenant é derivado, 4.1 `POST /api/ai/contexto`, 4.2 `POST /api/ai/disponibilidade` (+27 more)
-
-### Community 152 - "BancoFake"
-Cohesion: 0.10
-Nodes (9): BancoFake, ConsultaFake, Os joins embutidos que o PostgREST devolve no select da consulta., RespostaFake, test_consulta_de_outra_empresa_nao_e_encontrada(), test_mesmo_telefone_em_duas_empresas_nao_cruza(), test_releitura_que_nao_confirma_o_efeito_vira_falha(), test_slot_de_outra_empresa_e_descartado() (+1 more)
-
-### Community 153 - "get_user_clinica_id"
-Cohesion: 0.10
-Nodes (22): create_horario_clinica(), delete_bloqueio(), delete_cliente(), delete_consulta(), delete_horario_clinica(), delete_procedimento(), delete_profissional(), get_bloqueios() (+14 more)
-
-### Community 154 - "amanha_as"
-Cohesion: 0.11
-Nodes (19): amanha_as(), A chave da criação não pode ser sobrescrita pela remarcação., `extra=forbid` impede a automação de tentar escolher a empresa., Desativar o profissional depois não apaga o agendamento já gravado., Idempotência só vale para o MESMO pedido., test_ausencia_de_horario_nao_e_erro(), test_chave_reaproveitada_com_outro_pedido_e_conflito(), test_corpo_com_id_info_clinica_e_recusado() (+11 more)
-
-### Community 155 - "2. Concluído"
-Cohesion: 0.12
-Nodes (16): 1. Objetivo, 2.1 Contexto em uma chamada, 2.2 Disponibilidade, 2.3 Escritas, 2.4 Leitura do resultado, 2.5 O que saiu do JSON, 2.6 Variáveis novas, 2.7 Texto honesto na transferência (+8 more)
-
-### Community 156 - "dominio.py"
-Cohesion: 0.20
-Nodes (14): Decimal, _digitos(), dinheiro(), dinheiro_para_banco(), dinheiro_para_json(), Regras de domínio compartilhadas pelo painel e pela automação.  Fuso, dinheiro, Texto para o corpo JSON do PostgREST.      `Decimal` não é serializável em JSO, Número JSON para a resposta HTTP.      O contrato com o painel e com a automaç (+6 more)
-
-### Community 157 - "com_fuso_de_negocio"
-Cohesion: 0.23
-Nodes (12): com_fuso_de_negocio(), iso_no_fuso_de_negocio(), montar_intervalo(), datetime, Resolve horário sem offset como local de São Paulo, nunca como UTC.      Trata, Literal `tstzrange` fechado-aberto a partir de início e duração., Data de resposta sempre em -03:00.      O PostgREST devolve `timestamptz` no f, ConsultaCreate (+4 more)
-
-### Community 158 - "assert_owned_record"
-Cohesion: 0.22
-Nodes (9): add_procedimentos_profissional(), assert_owned_record(), BloqueioCreate, create_bloqueio(), delete_disponibilidade(), DisponibilidadeItem, get_disponibilidade_profissional(), get_procedimentos_profissional() (+1 more)
-
-### Community 159 - "ErroDeBanco"
-Cohesion: 0.33
-Nodes (4): ErroDeBanco, Exception, Erro do PostgREST com SQLSTATE, na forma que `codigo_postgres` lê., `corridas`: fila por tabela de `(sqlstate, linha_concorrente)`.          Cada
-
 ## Knowledge Gaps
-- **669 isolated node(s):** `python`, `$schema`, `style`, `rsc`, `tsx` (+664 more)
+- **612 isolated node(s):** `python`, `$schema`, `style`, `rsc`, `tsx` (+607 more)
   These have ≤1 connection - possible missing edges or undocumented components.
-- **80 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
+- **77 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
-- **Why does `dependencies` connect `dependencies` to `dashboard/package.json`, `@radix-ui/react-checkbox`, `clsx`, `@radix-ui/react-slot`, `@radix-ui/react-toggle`, `react-hook-form`, `cmdk`, `date-fns-tz`, `date-fns`, `@dnd-kit/core`, `@dnd-kit/sortable`, `embla-carousel-react`, `@hookform/resolvers`, `input-otp`, `next-themes`, `lucide-react`, `@radix-ui/react-alert-dialog`, `@radix-ui/react-aspect-ratio`, `server.py`, `@radix-ui/react-context-menu`, `@radix-ui/react-dialog`, `@radix-ui/react-dropdown-menu`, `@radix-ui/react-hover-card`, `@radix-ui/react-label`, `@radix-ui/react-menubar`, `@radix-ui/react-navigation-menu`, `@radix-ui/react-popover`, `@radix-ui/react-radio-group`, `@radix-ui/react-scroll-area`, `@radix-ui/react-separator`, `@radix-ui/react-slider`, `@radix-ui/react-switch`, `@radix-ui/react-tabs`, `@radix-ui/react-toast`, `@radix-ui/react-toggle-group`, `@radix-ui/react-tooltip`, `get_user_clinica_id`, `react-day-picker`, `react-dom`, `react-resizable-panels`, `react-router-dom`, `sonner`, `tailwind-merge`, `tailwindcss-animate`, `vaul`, `zod`?**
-  _High betweenness centrality (0.006) - this node is a cross-community bridge._
-- **Why does `ConsultaFake` connect `BancoFake` to `test_ai_api.py`?**
-  _High betweenness centrality (0.004) - this node is a cross-community bridge._
+- **Why does `dependencies` connect `dependencies` to `dashboard/package.json`, `@radix-ui/react-checkbox`, `clsx`, `@radix-ui/react-slot`, `@radix-ui/react-toggle`, `react-hook-form`, `dependencies`, `cmdk`, `date-fns-tz`, `@dnd-kit/core`, `@dnd-kit/sortable`, `embla-carousel-react`, `@hookform/resolvers`, `input-otp`, `lucide-react`, `next-themes`, `server.py`, `@radix-ui/react-alert-dialog`, `@radix-ui/react-aspect-ratio`, `@radix-ui/react-context-menu`, `@radix-ui/react-dialog`, `@radix-ui/react-dropdown-menu`, `@radix-ui/react-hover-card`, `@radix-ui/react-label`, `@radix-ui/react-menubar`, `@radix-ui/react-navigation-menu`, `@radix-ui/react-popover`, `@radix-ui/react-radio-group`, `@radix-ui/react-scroll-area`, `@radix-ui/react-separator`, `@radix-ui/react-slider`, `@radix-ui/react-switch`, `@radix-ui/react-tabs`, `@radix-ui/react-toast`, `@radix-ui/react-toggle-group`, `@radix-ui/react-tooltip`, `get_user_clinica_id`, `react-day-picker`, `react-dom`, `react-resizable-panels`, `react-router-dom`, `sonner`, `tailwind-merge`, `tailwindcss-animate`, `vaul`, `zod`?**
+  _High betweenness centrality (0.012) - this node is a cross-community bridge._
+- **Why does `Blueprint da recepção inteligente de IA — Agenda Magnética` connect `Blueprint da recepção inteligente de IA — Agenda Magnética` to `9. Roadmap e divisão de trabalho`, `1. Como o fluxo funciona hoje`, `3. Arquitetura proposta`, `6. Contratos das ferramentas`, `5. Arquitetura de prompts`, `7. Matriz de testes e avaliação`, `2. Registro de problemas classificados`?**
+  _High betweenness centrality (0.002) - this node is a cross-community bridge._
 - **What connects `python`, `$schema`, `style` to the rest of the system?**
-  _669 weakly-connected nodes found - possible documentation gaps or missing edges._
+  _612 weakly-connected nodes found - possible documentation gaps or missing edges._
 - **Should `server.py` be split into smaller, more focused modules?**
-  _Cohesion score 0.08502024291497975 - nodes in this community are weakly interconnected._
+  _Cohesion score 0.05 - nodes in this community are weakly interconnected._
 - **Should `Profissionais.jsx` be split into smaller, more focused modules?**
   _Cohesion score 0.06 - nodes in this community are weakly interconnected._
 - **Should `App.jsx` be split into smaller, more focused modules?**
