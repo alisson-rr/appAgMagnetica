@@ -99,8 +99,10 @@ def _montar_empresa(cur, rotulo, dia_semana, duracao, valor):
     empresa = {}
     empresa["clinica"] = _executar(
         cur,
-        "insert into info_clinica (nome, telefone, endereco, exige_profissional) "
-        "values (%s, %s, %s, false) returning id",
+        # `automacao_ativa` ligado: o cenário representa empresa em operação.
+        # Desligada, /api/ai/contexto recusaria tudo com AUTOMACAO_DESATIVADA.
+        "insert into info_clinica (nome, telefone, endereco, exige_profissional, automacao_ativa) "
+        "values (%s, %s, %s, false, true) returning id",
         (f"{MARCA} {rotulo}", "(51) 3333-0000", "Rua de Teste, 100"),
     )
     empresa["instance"] = f"{MARCA}-{rotulo}"
@@ -263,6 +265,39 @@ def test_mesmo_telefone_em_duas_empresas_gera_cadastros_separados(http, cenario,
         assert sorted(cur.fetchall()) == sorted(
             [(cenario.a["clinica"], 1), (cenario.b["clinica"], 1)]
         )
+
+
+def test_atendimento_desligado_recusa_e_nao_cadastra_ninguem(http, cenario, conexao):
+    """A trava por empresa precisa valer com a view real, não só no fake.
+
+    Prova junto que `v_clinica_detalhes` está expondo `automacao_ativa`: sem a
+    coluna, o contexto trataria toda empresa como desligada.
+    """
+    outro_telefone = "5551977776666"
+    with conexao.cursor() as cur:
+        cur.execute(
+            "update info_clinica set automacao_ativa = false where id = %s",
+            (cenario.a["clinica"],),
+        )
+    try:
+        resposta = chamar(http, "contexto", {
+            "instance_name": cenario.a["instance"], "telefone": outro_telefone})
+
+        assert resposta.status_code == 409, resposta.text
+        assert resposta.json()["error"]["code"] == "AUTOMACAO_DESATIVADA"
+        assert resposta.json()["error"]["retryable"] is False
+        with conexao.cursor() as cur:
+            cur.execute(
+                "select count(*) from cliente where id_info_clinica = %s and whats = %s",
+                (cenario.a["clinica"], outro_telefone),
+            )
+            assert cur.fetchone()[0] == 0
+    finally:
+        with conexao.cursor() as cur:
+            cur.execute(
+                "update info_clinica set automacao_ativa = true where id = %s",
+                (cenario.a["clinica"],),
+            )
 
 
 def test_procedimento_de_outra_empresa_nao_atravessa(http, cenario, dia_alvo):

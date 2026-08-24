@@ -606,7 +606,6 @@ def exigir_inicio_valido(valor: datetime) -> datetime:
 async def contexto(requisicao: ContextoRequest):
     """Empresa, cliente e catálogo agendável de um atendimento."""
     clinica_id = resolver_empresa(requisicao.instance_name)
-    cliente = localizar_ou_criar_cliente(clinica_id, requisicao.telefone, requisicao.nome)
 
     resultado = executar(
         "v_clinica_detalhes",
@@ -623,6 +622,19 @@ async def contexto(requisicao: ContextoRequest):
             "Empresa ainda não concluiu a configuração.",
             status=409,
         )
+
+    # Antes de qualquer escrita: empresa com o atendimento desligado não
+    # cadastra ninguém. O workflow encerra sem responder quando o contexto
+    # falha, então esta é a trava por empresa — o `active` do n8n é um só para
+    # todos os clientes.
+    if not detalhes.get("automacao_ativa"):
+        raise AiError(
+            "AUTOMACAO_DESATIVADA",
+            "O atendimento automático está desligado nesta empresa.",
+            status=409,
+        )
+
+    cliente = localizar_ou_criar_cliente(clinica_id, requisicao.telefone, requisicao.nome)
 
     procedimentos = [
         {

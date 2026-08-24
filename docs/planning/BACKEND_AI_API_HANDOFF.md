@@ -125,8 +125,12 @@ mensagem de WhatsApp continua sendo do fluxo.
 
 ### 4.1 `POST /api/ai/contexto`
 
-Resolve a empresa, normaliza o telefone, **localiza ou cria** o cliente e
-devolve o catálogo agendável.
+Resolve a empresa, **confere se o atendimento automático está ligado**,
+normaliza o telefone, **localiza ou cria** o cliente e devolve o catálogo
+agendável.
+
+A ordem importa: empresa com `automacao_ativa = false` recusa **antes** de
+localizar ou criar o cliente — empresa desligada não cadastra ninguém.
 
 ```json
 {
@@ -179,8 +183,27 @@ sobrescreve um cadastro existente. Caracteres de controle são removidos.
 - Os únicos ids devolvidos são os que as próximas chamadas precisam:
   `procedimentos[].id` e `profissionais[].id`.
 
+- `AUTOMACAO_DESATIVADA` (409) é o liga/desliga **por empresa**
+  (`info_clinica.automacao_ativa`), controlado pelo dono no painel. Não é falha:
+  é o estado escolhido. O fluxo **para e não responde ao cliente** — o nó
+  `contexto ok?` já encaminha para `fim - contexto indisponível`, então nada
+  muda em `automation/**`.
+
+```json
+{
+  "ok": false,
+  "data": null,
+  "error": {
+    "code": "AUTOMACAO_DESATIVADA",
+    "message": "O atendimento automático está desligado nesta empresa.",
+    "retryable": false
+  }
+}
+```
+
 Erros: `AUTENTICACAO_INVALIDA`, `INSTANCIA_DESCONHECIDA`,
-`EMPRESA_NAO_CONFIGURADA`, `CLIENTE_INVALIDO`, `FALHA_TEMPORARIA`.
+`EMPRESA_NAO_CONFIGURADA`, `AUTOMACAO_DESATIVADA`, `CLIENTE_INVALIDO`,
+`FALHA_TEMPORARIA`.
 
 ---
 
@@ -477,6 +500,7 @@ ou nenhum dos quatro campos enviado), `INSTANCIA_DESCONHECIDA`,
 | `INSTANCIA_DESCONHECIDA` | 404 | não | instância sem usuário | parar e alertar; **não** tentar por telefone |
 | `INSTANCIA_AMBIGUA` | 409 | não | mesma instância em dois usuários | parar e alertar |
 | `EMPRESA_NAO_CONFIGURADA` | 409 | não | usuário sem onboarding | parar e alertar |
+| `AUTOMACAO_DESATIVADA` | 409 | não | o dono desligou o atendimento automático desta empresa (`/api/ai/contexto`) | parar; **não responder ao cliente** |
 | `CLIENTE_INVALIDO` | 404/422 | não | telefone irreconhecível ou sem cadastro | transferir para pessoa |
 | `PROCEDIMENTO_INVALIDO` | 404 | não | serviço inexistente ou de outra empresa | reofertar catálogo |
 | `PROFISSIONAL_INVALIDO` | 404/409 | não | profissional inexistente, de outra empresa ou inativo | reofertar profissionais |
@@ -623,10 +647,13 @@ Detalhe completo em `docs/DATABASE_SCHEMA.md`.
 | A5 | `area_atuacao` com unicidade e 24 rótulos | catálogo global fechado; `POST /areas-atuacao` foi removido |
 | — | `fn_buscar_slots` v2 com `p_ignorar_consulta_id` | revalidação de reagendamento não é bloqueada pela própria consulta |
 | I1–I4 | integridade entre empresas: FKs compostas e limites finitos de intervalo | o banco passa a recusar consulta que misture empresas |
+| O1 | `info_clinica.automacao_ativa` + `v_clinica_detalhes` expondo a coluna | `/api/ai/contexto` recusa com `AUTOMACAO_DESATIVADA` quando o dono desliga |
+| O2 | `CHECK` do vocabulário de `assistente_tom` | o tom que entra no prompt de sistema não aceita texto livre |
 
 Ordem de execução dos scripts: `bootstrap_schema` → `travas_corte_vertical` →
 `v_clinica_detalhes` → `fn_buscar_slots` → `ajustes_ai_api` →
-`integridade_tenant`. Todos reexecutáveis.
+`integridade_tenant` → `ajustes_onboarding` → `v_clinica_detalhes` de novo (a
+view só expõe `automacao_ativa` depois que a coluna existe). Todos reexecutáveis.
 
 ### `scripts/integridade_tenant.sql`
 

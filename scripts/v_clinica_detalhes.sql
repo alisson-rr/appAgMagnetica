@@ -1,6 +1,7 @@
 -- =============================================================================
 -- v_clinica_detalhes — contexto de atendimento por empresa
--- Versão: 1 (2026-08-21). Rodar depois de scripts/bootstrap_schema.sql.
+-- Versão: 2 (2026-08-23). Rodar depois de scripts/bootstrap_schema.sql e, para
+-- a coluna `automacao_ativa`, depois de scripts/ajustes_onboarding.sql.
 --
 -- UMA LINHA POR EMPRESA. A automação lê com `operation: get` filtrando
 -- id_info_clinica, então a view precisa entregar tudo agregado em uma linha só.
@@ -15,6 +16,7 @@
 --   assistente_nome     empresa.assistente_nome   (nulo -> fallback do fluxo)
 --   assistente_tom      empresa.assistente_tom    (nulo -> fallback do fluxo)
 --   exige_profissional  empresa.exige_profissional
+--   automacao_ativa     trava por empresa; false encerra o atendimento
 --   procedimentos       [{id, nome, valor, duracao_minutos}]
 --   profissionais       [{id, nome, area}]
 --   horarios            [{dia_semana, hora_inicio, hora_fim}]
@@ -88,7 +90,15 @@ select
            ) order by hc.dia_semana, hc.hora_inicio)
     from public.horario_clinica hc
     where hc.id_info_clinica = ic.id
-  ), '[]'::jsonb)                         as horarios
+  ), '[]'::jsonb)                         as horarios,
+
+  -- Última de propósito: `create or replace view` só aceita coluna NOVA no fim
+  -- da lista. Colocá-la junto de `exige_profissional`, que é onde ela se
+  -- encaixaria por assunto, exigiria dropar a view — e a view é lida em
+  -- produção pela automação.
+  -- `/api/ai/contexto` lê esta coluna ANTES de localizar ou criar o cliente:
+  -- empresa com atendimento desligado não cadastra ninguém.
+  ic.automacao_ativa
 
 from public.info_clinica ic;
 

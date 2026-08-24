@@ -3,7 +3,7 @@
 > **Projeto Supabase:** definido em `SUPABASE_URL` / `DATABASE_URL` no `.env`, que não é
 > versionado. Nenhuma URL ou identificador de projeto entra neste documento.
 > **Servidor:** PostgreSQL 17.6. **Fuso:** `America/Sao_Paulo`. **Moeda:** BRL.
-> **Estado:** aplicado e verificado no catálogo em 2026-08-21. Todas as tabelas
+> **Estado:** aplicado e verificado no catálogo em 2026-08-23. Todas as tabelas
 > existem e estão **vazias** — nenhum dado de negócio foi inserido por script.
 
 Este documento descreve o schema **realmente criado**, extraído do catálogo, não um
@@ -20,11 +20,18 @@ schema pretendido. Cada coluna existe porque um consumidor real a lê ou escreve
 | 4 | `scripts/fn_buscar_slots.sql` | RPC de disponibilidade (v2) |
 | 5 | `scripts/ajustes_ai_api.sql` | A1–A5: correções para `/api/ai/*` |
 | 6 | `scripts/integridade_tenant.sql` | I1–I4: integridade entre empresas no próprio banco |
+| 7 | `scripts/ajustes_onboarding.sql` | O1–O2: `automacao_ativa` e vocabulário de `assistente_tom` |
+| 8 | `scripts/v_clinica_detalhes.sql` **de novo** | a view só expõe `automacao_ativa` depois que a coluna existe |
 | — | `scripts/teste_transacional.sql` | prova as garantias e termina em `ROLLBACK` |
 
 Todos são reexecutáveis: rodar duas vezes produz o mesmo estado e nenhum erro —
 verificado. Nenhum deles insere dado de **tenant**; o único dado inserido é o
 catálogo global de `area_atuacao` (A5), que não pertence a empresa alguma.
+
+O passo 8 não é engano: `v_clinica_detalhes.sql` é `create or replace` e roda
+duas vezes na sequência completa. `create or replace view` só aceita coluna
+**nova no fim da lista**, e é por isso que `automacao_ativa` aparece depois de
+`horarios` na view, e não junto de `exige_profissional`.
 
 **A ordem importa e é circular em um ponto:** T2 recria
 `ux_cliente_empresa_whats` e A4 o remove de novo, porque a coluna gerada
@@ -56,9 +63,21 @@ Convenção: 🔑 chave primária, 🔗 chave estrangeira, **N** `NOT NULL`.
 | `mensagem_lembrete` | text | | modelo de lembrete |
 | `onboarding_completo` | bool | **N** | default `false`; `true` ao fim do onboarding |
 | `assistente_nome` | text | | identidade da assistente; nulo usa o padrão do fluxo |
-| `assistente_tom` | text | | idem |
+| `assistente_tom` | text | | idem; `CHECK` fecha em `acolhedor`, `objetivo`, `descontraido` (nulo permitido) |
 | `exige_profissional` | bool | **N** | default `false` |
+| `automacao_ativa` | bool | **N** | default `false`; **trava por empresa** do atendimento automático |
 | `created_at` | timestamptz | **N** | default `now()` |
+
+`automacao_ativa` é o liga/desliga do atendimento **por empresa**. O workflow do
+n8n é um só para todos os clientes, então o `active` dele não serve: desligaria
+todo mundo junto. Com a flag em `false`, `/api/ai/contexto` responde
+`AUTOMACAO_DESATIVADA` **antes de localizar ou criar o cliente**, e o fluxo
+encerra sem responder. Quem liga é `PUT /config/automacao`, que só aceita depois
+de horários, serviço, profissional agendável e WhatsApp conectado.
+
+O `CHECK` de `assistente_tom` existe porque o valor entra no prompt de sistema
+da IA: a validação da API não protege contra script de manutenção, correção
+manual no banco ou rota futura.
 
 ### 2. `usuarios` — login do painel e vínculo com a instância do WhatsApp
 
@@ -384,6 +403,7 @@ Uma linha por empresa, `security_invoker = true`. Contrato conferido no nó
 | `procedimentos` | jsonb | `[{id, nome, valor, duracao_minutos, agendavel}]`, ordenado por nome |
 | `profissionais` | jsonb | `[{id, nome, area}]`, **somente ativos**, ordenado por nome |
 | `horarios` | jsonb | `[{dia_semana, hora_inicio, hora_fim}]`, hora em `HH:MM` |
+| `automacao_ativa` | bool | trava por empresa; `false` encerra o atendimento sem responder |
 
 Arrays nunca vêm `null`: empresa sem catálogo recebe `[]`. Não expõe nada de
 `usuarios`, `cliente` ou `consulta`, e nenhuma credencial.
@@ -480,6 +500,8 @@ barreira não vale para ele — é a razão de `/api/ai/*` existir. Ver
 | 2026-08-21 | `fn_buscar_slots` v2 com `p_ignorar_consulta_id` |
 | 2026-08-21 | `POST /areas-atuacao` removido do backend |
 | 2026-08-21 | `integridade_tenant.sql`: I1–I4 aplicadas; FKs de `consulta` e `agenda_bloqueio` passam a ser compostas com a empresa |
+| 2026-08-23 | `ajustes_onboarding.sql`: O1–O2 aplicadas (`info_clinica.automacao_ativa`, `CHECK` de `assistente_tom`) |
+| 2026-08-23 | `v_clinica_detalhes` v2: passa a expor `automacao_ativa` (12ª coluna) |
 
 ---
 

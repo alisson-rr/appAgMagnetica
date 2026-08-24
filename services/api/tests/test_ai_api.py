@@ -187,6 +187,7 @@ BANCO_PADRAO = {
             "assistente_nome": "Aurora",
             "assistente_tom": "acolhedor",
             "exige_profissional": False,
+            "automacao_ativa": True,
             "horarios": [{"dia_semana": 5, "hora_inicio": "09:00", "hora_fim": "18:00"}],
             "procedimentos": [
                 {"id": 10, "nome": "Limpeza de pele", "valor": "180.00",
@@ -1288,6 +1289,40 @@ def test_catalogo_marca_servico_sem_profissional_como_nao_agendavel(cliente_http
     procedimentos = {p["id"]: p for p in resposta.json()["data"]["procedimentos"]}
     assert procedimentos[10]["agendavel"] is True
     assert procedimentos[11]["agendavel"] is False
+
+
+def test_atendimento_desligado_recusa_antes_de_cadastrar_o_cliente(monkeypatch):
+    """Trava por empresa: o `active` do n8n é um só para todos os clientes.
+
+    A recusa vem ANTES de localizar ou criar o cliente — empresa desligada não
+    cadastra ninguém — e o fluxo encerra sem responder ao contato.
+    """
+    desligada = dict(BANCO_PADRAO["v_clinica_detalhes"][0], automacao_ativa=False)
+    banco = banco_com(cliente=[], v_clinica_detalhes=[desligada])
+
+    with http_com(monkeypatch, banco) as http:
+        resposta = http.post("/api/ai/contexto", headers=CABECALHO, json={
+            "instance_name": "agm_1_studio", "telefone": TELEFONE, "nome": "Marina"})
+
+    corpo = resposta.json()
+    assert resposta.status_code == 409
+    assert corpo["ok"] is False
+    assert corpo["data"] is None
+    assert corpo["error"]["code"] == "AUTOMACAO_DESATIVADA"
+    # Não é retentativa: só o dono religa o atendimento.
+    assert corpo["error"]["retryable"] is False
+    assert banco.tabelas["cliente"] == []
+
+
+def test_atendimento_ligado_segue_o_fluxo_normal(monkeypatch):
+    banco = banco_com(cliente=[])
+
+    with http_com(monkeypatch, banco) as http:
+        resposta = http.post("/api/ai/contexto", headers=CABECALHO, json={
+            "instance_name": "agm_1_studio", "telefone": TELEFONE, "nome": "Marina"})
+
+    assert resposta.status_code == 200, resposta.text
+    assert len(banco.tabelas["cliente"]) == 1
 
 
 def test_contexto_nao_devolve_a_empresa_como_id(cliente_http):

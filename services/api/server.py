@@ -1,12 +1,13 @@
 from fastapi import FastAPI, APIRouter, HTTPException, Depends, status
+from fastapi.responses import JSONResponse
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from starlette.middleware.cors import CORSMiddleware
 import os
 import logging
 from decimal import Decimal
 from pathlib import Path
-from pydantic import BaseModel, Field, EmailStr
-from typing import List, Optional
+from pydantic import BaseModel, Field, EmailStr, field_validator
+from typing import List, Literal, Optional
 from datetime import datetime, date, time, timedelta
 import jwt
 from passlib.context import CryptContext
@@ -153,6 +154,31 @@ class HorarioClinicaCreate(BaseModel):
     hora_fim: str
 
 # Info Clínica
+# Tom da assistente: vocabulário fechado, igual ao CHECK
+# `info_clinica_assistente_tom_valido` (scripts/ajustes_onboarding.sql). Os dois
+# precisam concordar; divergir faria a API aceitar o que o banco recusa.
+TONS_ASSISTENTE = ("acolhedor", "objetivo", "descontraido")
+
+LIMITE_NOME_ASSISTENTE = (2, 40)
+
+
+def validar_nome_assistente(valor: Optional[str]) -> Optional[str]:
+    """Nome da assistente: só letras e espaços, 2 a 40 caracteres.
+
+    O valor entra no prompt de sistema da IA. Texto livre do dono é vetor de
+    injeção, então a fronteira recusa em vez de sanear pela metade.
+    """
+    if valor is None:
+        return None
+    nome = valor.strip()
+    minimo, maximo = LIMITE_NOME_ASSISTENTE
+    if not minimo <= len(nome) <= maximo:
+        raise ValueError(f"O nome da assistente precisa ter de {minimo} a {maximo} caracteres")
+    if not all(caractere.isalpha() or caractere == ' ' for caractere in nome):
+        raise ValueError("O nome da assistente aceita apenas letras e espaços")
+    return nome
+
+
 class InfoClinicaUpdate(BaseModel):
     nome: Optional[str] = None
     telefone: Optional[str] = None
@@ -161,6 +187,15 @@ class InfoClinicaUpdate(BaseModel):
     endereco: Optional[str] = None
     onboarding_completo: Optional[bool] = None
     mensagem_lembrete: Optional[str] = None
+    assistente_nome: Optional[str] = None
+    assistente_tom: Optional[Literal[TONS_ASSISTENTE]] = None
+    exige_profissional: Optional[bool] = None
+
+    _validar_assistente_nome = field_validator('assistente_nome')(validar_nome_assistente)
+
+
+class AutomacaoUpdate(BaseModel):
+    ativa: bool
 
 class InfoClinicaCreate(BaseModel):
     nome: str
@@ -192,6 +227,75 @@ def verify_token(credentials: HTTPAuthorizationCredentials = Depends(security)):
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token expirado")
     except jwt.InvalidTokenError:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token inválido")
+
+# Colunas do login e da sessão. Nunca `*`: a linha de `usuarios` tem
+# `senha_hash`, e o objeto devolvido ao painel é montado a partir dela.
+CAMPOS_SESSAO = 'id, email, nome, id_info_clinica, role, status_assinatura, trial_fim'
+
+
+def estado_do_trial(user: dict) -> dict:
+    """Situação da assinatura recalculada no servidor.
+
+    Única fonte de verdade de `/auth/login` e `/auth/me`. O painel não pode
+    decidir trial pelo objeto guardado no `localStorage`: ele não expira
+    sozinho e é editável pelo próprio usuário.
+
+    Efeito colateral proposital: trial vencido é gravado como `expirado`, para
+    o estado não depender de alguém chamar a rota certa.
+    """
+    status_assinatura = user.get('status_assinatura', 'trial')
+    trial_fim = user.get('trial_fim')
+    trial_expirado = False
+    dias_restantes = 0
+
+    if status_assinatura == 'trial' and trial_fim:
+        try:
+            trial_fim_dt = datetime.fromisoformat(str(trial_fim).replace('Z', '+00:00'))
+            agora = (
+                datetime.utcnow().replace(tzinfo=trial_fim_dt.tzinfo)
+                if trial_fim_dt.tzinfo
+                else datetime.utcnow()
+            )
+            if agora > trial_fim_dt:
+                trial_expirado = True
+                status_assinatura = 'expirado'
+                supabase.table('usuarios').update(
+                    {"status_assinatura": "expirado"}
+                ).eq('id', user['id']).execute()
+            else:
+                dias_restantes = (trial_fim_dt - agora).days
+        except Exception:
+            # Data ilegível não pode derrubar o login: o usuário segue no
+            # estado gravado, que é o conservador.
+            logging.warning("trial_fim ilegível para o usuário %s", user.get('id'))
+
+    return {
+        "status_assinatura": status_assinatura,
+        "trial_expirado": trial_expirado,
+        "dias_restantes": dias_restantes,
+        "trial_fim": trial_fim,
+    }
+
+
+def onboarding_da_empresa(clinica_id: Optional[int]) -> Optional[bool]:
+    """Onboarding concluído, ou `None` enquanto o usuário não tem empresa.
+
+    `None` não é "não concluiu": é o estado de quem parou antes do passo 1, e o
+    painel usa a diferença para escolher entre onboarding e dashboard.
+    """
+    if not clinica_id:
+        return None
+    result = (
+        supabase.table('info_clinica')
+        .select('onboarding_completo')
+        .eq('id', clinica_id)
+        .limit(1)
+        .execute()
+    )
+    if not result.data:
+        return None
+    return bool(result.data[0].get('onboarding_completo'))
+
 
 def get_user_clinica_id(current_user: dict) -> int:
     """Exige uma empresa vinculada antes de acessar dados operacionais."""
@@ -253,46 +357,32 @@ def raise_if_in_use(erro: Exception, label: str) -> None:
 @api_router.post("/auth/login", response_model=LoginResponse)
 async def login(request: LoginRequest):
     try:
-        # Buscar usuário no Supabase
-        result = supabase.table('usuarios').select('*').eq('email', request.email).execute()
-        
+        # `senha_hash` só aqui: é a única rota que precisa conferir a senha.
+        result = (
+            supabase.table('usuarios')
+            .select(f'{CAMPOS_SESSAO}, senha_hash')
+            .eq('email', request.email)
+            .execute()
+        )
+
         if not result.data:
             raise HTTPException(status_code=401, detail="Credenciais inválidas")
-        
+
         user = result.data[0]
-        
+
         if not verify_password(request.senha, user['senha_hash']):
             raise HTTPException(status_code=401, detail="Credenciais inválidas")
-        
-        # Verificar status do trial
-        status_assinatura = user.get('status_assinatura', 'trial')
-        trial_fim = user.get('trial_fim')
-        trial_expirado = False
-        dias_restantes = 0
-        
-        if status_assinatura == 'trial' and trial_fim:
-            from datetime import datetime as dt
-            try:
-                trial_fim_dt = dt.fromisoformat(trial_fim.replace('Z', '+00:00'))
-                agora = dt.utcnow().replace(tzinfo=trial_fim_dt.tzinfo) if trial_fim_dt.tzinfo else dt.utcnow()
-                if agora > trial_fim_dt:
-                    trial_expirado = True
-                    status_assinatura = 'expirado'
-                    # Atualizar status no banco
-                    supabase.table('usuarios').update({"status_assinatura": "expirado"}).eq('id', user['id']).execute()
-                else:
-                    dias_restantes = (trial_fim_dt - agora).days
-            except:
-                pass
-        
+
+        trial = estado_do_trial(user)
+
         # Criar token JWT com id_info_clinica
         token = create_access_token({
-            "user_id": user['id'], 
+            "user_id": user['id'],
             "email": user['email'],
             "id_info_clinica": user.get('id_info_clinica'),
             "role": user.get('role', 'owner')
         })
-        
+
         return LoginResponse(
             access_token=token,
             usuario={
@@ -301,10 +391,7 @@ async def login(request: LoginRequest):
                 "nome": user['nome'],
                 "id_info_clinica": user.get('id_info_clinica'),
                 "role": user.get('role', 'owner'),
-                "status_assinatura": status_assinatura,
-                "trial_expirado": trial_expirado,
-                "dias_restantes": dias_restantes,
-                "trial_fim": trial_fim
+                **trial,
             }
         )
     except HTTPException:
@@ -313,12 +400,51 @@ async def login(request: LoginRequest):
         logging.error(f"Erro no login: {str(e)}")
         raise HTTPException(status_code=500, detail="Erro interno")
 
+
+@api_router.get("/auth/me")
+async def get_me(current_user: dict = Depends(verify_token)):
+    """Sessão recalculada no servidor, com trial e onboarding do banco.
+
+    O painel usava o objeto gravado no `localStorage` no login para decidir
+    trial e onboarding: ele não expira sozinho e o próprio usuário pode
+    editá-lo. Aqui o token só diz QUEM é; o resto vem do banco.
+    """
+    try:
+        user_id = current_user.get('user_id')
+        if not user_id:
+            raise HTTPException(status_code=401, detail="Sessão inválida")
+
+        result = (
+            supabase.table('usuarios')
+            .select(CAMPOS_SESSAO)
+            .eq('id', user_id)
+            .limit(1)
+            .execute()
+        )
+        if not result.data:
+            raise HTTPException(status_code=401, detail="Sessão inválida")
+
+        user = result.data[0]
+        clinica_id = user.get('id_info_clinica')
+
+        return {
+            "id": user['id'],
+            "nome": user['nome'],
+            "email": user['email'],
+            "role": user.get('role', 'owner'),
+            "id_info_clinica": clinica_id,
+            "onboarding_completo": onboarding_da_empresa(clinica_id),
+            **estado_do_trial(user),
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        logging.error(f"Erro ao carregar a sessão: {str(e)}")
+        raise HTTPException(status_code=500, detail="Erro interno")
+
 @api_router.post("/auth/register")
 async def register(request: UsuarioCreate):
     try:
-        import evolution_api
-        import re
-        
         # Verificar se usuário já existe
         result = supabase.table('usuarios').select('id').eq('email', request.email).execute()
         if result.data:
@@ -344,20 +470,12 @@ async def register(request: UsuarioCreate):
         
         result = supabase.table('usuarios').insert(user_data).execute()
         user_id = result.data[0]['id']
-        
-        # Criar instância Evolution API
-        # Nome: user_id + nome sanitizado (sem espaços e caracteres especiais)
-        nome_sanitizado = re.sub(r'[^a-zA-Z0-9]', '', request.nome.lower())[:20]
-        instance_name = f"agm_{user_id}_{nome_sanitizado}"
-        
-        try:
-            await evolution_api.create_instance(instance_name)
-            # Atualizar usuário com o nome da instância
-            supabase.table('usuarios').update({"instance_name": instance_name}).eq('id', user_id).execute()
-        except Exception as evo_error:
-            logging.warning(f"Erro ao criar instância Evolution (usuário criado sem instância): {str(evo_error)}")
-        
-        return {"message": "Usuário criado com sucesso", "id": user_id, "instance_name": instance_name}
+
+        # A instância da Evolution NÃO nasce aqui: ela é criada no passo
+        # WhatsApp do onboarding (POST /whatsapp/instancia). Criar no cadastro
+        # gastava instância com quem nunca faz onboarding e, quando falhava,
+        # deixava `instance_name` nulo sem nenhuma rota para recriar.
+        return {"message": "Usuário criado com sucesso", "id": user_id}
     except HTTPException:
         raise
     except Exception as e:
@@ -942,6 +1060,145 @@ async def get_areas_atuacao(current_user: dict = Depends(verify_token)):
         raise HTTPException(status_code=500, detail="Erro interno")
 
 # ===== CONFIGURAÇÕES =====
+# Ordem fixa do checklist: é a ordem dos passos do onboarding, e o painel a usa
+# para apontar o primeiro passo pendente. Mudar a ordem aqui muda a tela.
+ITENS_IMPLANTACAO = ('negocio', 'horarios', 'servicos', 'equipe', 'atendente', 'whatsapp')
+
+# Mínimo para ligar o atendimento. `negocio` e `atendente` ficam de fora porque
+# o fluxo tem padrão para nome e tom; sem horário, serviço, profissional
+# agendável ou WhatsApp, a atendente não consegue marcar nada.
+ITENS_PARA_ATIVAR = ('horarios', 'servicos', 'equipe', 'whatsapp')
+
+
+def equipe_agendavel(clinica_id: int) -> bool:
+    """Existe profissional que a automação consiga oferecer de verdade.
+
+    Ativo, com pelo menos um serviço vinculado E pelo menos uma faixa de
+    disponibilidade. Sem os dois, `fn_buscar_slots` devolve zero horário para
+    sempre e o cliente ouve "sem vaga" indefinidamente.
+    """
+    profissionais = (
+        supabase.table('profissional')
+        .select('id')
+        .eq('id_info_clinica', clinica_id)
+        .eq('ativo', True)
+        .execute()
+    )
+    ids = [linha['id'] for linha in (profissionais.data or []) if linha.get('id')]
+    if not ids:
+        return False
+
+    vinculos = (
+        supabase.table('profissional_procedimento')
+        .select('id_profissional')
+        .in_('id_profissional', ids)
+        .execute()
+    )
+    disponibilidades = (
+        supabase.table('disponibilidade_profissional')
+        .select('id_profissional')
+        .in_('id_profissional', ids)
+        .execute()
+    )
+    com_servico = {linha.get('id_profissional') for linha in (vinculos.data or [])}
+    com_horario = {linha.get('id_profissional') for linha in (disponibilidades.data or [])}
+    return bool(com_servico & com_horario)
+
+
+async def montar_implantacao(clinica_id: int, user_id: Optional[int]) -> dict:
+    """Checklist de implantação calculado no servidor.
+
+    Única fonte de verdade de `GET /config/implantacao` e da recusa de
+    `PUT /config/automacao`: se o painel calculasse por conta própria, "falta
+    configurar" viraria opinião do navegador.
+    """
+    empresa = (
+        supabase.table('info_clinica')
+        .select('nome, assistente_nome, automacao_ativa')
+        .eq('id', clinica_id)
+        .limit(1)
+        .execute()
+    )
+    dados = empresa.data[0] if empresa.data else {}
+
+    horarios = (
+        supabase.table('horario_clinica').select('id')
+        .eq('id_info_clinica', clinica_id).limit(1).execute()
+    )
+    servicos = (
+        supabase.table('procedimento').select('id')
+        .eq('id_info_clinica', clinica_id).limit(1).execute()
+    )
+
+    itens = {
+        'negocio': bool((dados.get('nome') or '').strip()),
+        'horarios': bool(horarios.data),
+        'servicos': bool(servicos.data),
+        'equipe': equipe_agendavel(clinica_id),
+        'atendente': bool((dados.get('assistente_nome') or '').strip()),
+        'whatsapp': await whatsapp_conectado(user_id),
+    }
+    pendencias = [item for item in ITENS_IMPLANTACAO if not itens[item]]
+    return {
+        **itens,
+        "automacao_ativa": bool(dados.get('automacao_ativa')),
+        "pendencias": pendencias,
+        # A flag de automação não entra: ela é o resultado do checklist, não
+        # um item dele.
+        "completo": not pendencias,
+    }
+
+
+@api_router.get("/config/implantacao")
+async def get_implantacao(current_user: dict = Depends(verify_token)):
+    try:
+        clinica_id = current_user.get('id_info_clinica')
+        if not clinica_id:
+            raise HTTPException(status_code=404, detail="Empresa não encontrada")
+        return await montar_implantacao(int(clinica_id), current_user.get('user_id'))
+    except HTTPException:
+        raise
+    except Exception as e:
+        logging.error(f"Erro ao montar o checklist de implantação: {str(e)}")
+        raise HTTPException(status_code=500, detail="Erro interno")
+
+
+@api_router.put("/config/automacao")
+async def update_automacao(corpo: AutomacaoUpdate, current_user: dict = Depends(verify_token)):
+    """Liga e desliga o atendimento automático desta empresa.
+
+    Desligar é sempre aceito — é o botão de emergência. Ligar exige o mínimo
+    pronto: uma atendente que não consegue marcar nada é pior que nenhuma.
+    """
+    try:
+        clinica_id = get_user_clinica_id(current_user)
+
+        if corpo.ativa:
+            checklist = await montar_implantacao(clinica_id, current_user.get('user_id'))
+            faltando = [item for item in checklist['pendencias'] if item in ITENS_PARA_ATIVAR]
+            if faltando:
+                return JSONResponse(
+                    status_code=409,
+                    content={"detail": "Falta configurar antes de ativar.", "pendencias": faltando},
+                )
+
+        result = (
+            supabase.table('info_clinica')
+            .update({"automacao_ativa": corpo.ativa})
+            .eq('id', clinica_id)
+            .execute()
+        )
+        if not result.data:
+            raise HTTPException(status_code=500, detail="Erro interno")
+        # O valor persistido, não o pedido: o painel mostra o que o banco tem.
+        return {"ativa": bool(result.data[0].get('automacao_ativa'))}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logging.error(f"Erro ao alterar o atendimento automático: {str(e)}")
+        raise HTTPException(status_code=500, detail="Erro interno")
+
+
 @api_router.get("/config/horarios-clinica")
 async def get_horarios_clinica(current_user: dict = Depends(verify_token)):
     try:
@@ -996,6 +1253,14 @@ async def update_info_clinica(info_id: int, info: InfoClinicaUpdate, current_use
         if info_id != clinica_id:
             raise HTTPException(status_code=404, detail="Empresa não encontrada")
         data = info.model_dump(exclude_none=True)
+        # `null` limpa a identidade da assistente. As duas colunas aceitam
+        # nulo; nas demais, null continua sendo ignorado para não gravar vazio
+        # em coluna obrigatória.
+        for campo in ('assistente_nome', 'assistente_tom'):
+            if campo in info.model_fields_set:
+                data[campo] = getattr(info, campo)
+        # `automacao_ativa` não entra aqui de propósito: ligar o atendimento
+        # tem rota própria, que confere o checklist antes.
         result = supabase.table('info_clinica').update(data).eq('id', clinica_id).execute()
         return result.data[0]
     except HTTPException:
@@ -1067,32 +1332,161 @@ async def delete_horario_clinica(horario_id: int, current_user: dict = Depends(v
         raise HTTPException(status_code=500, detail="Erro interno")
 
 # ===== EVOLUTION API (WhatsApp) =====
+# Regra do painel para tudo que fala com a Evolution: erro do provedor nunca
+# atravessa. Nem a mensagem, nem a URL, nem a chave — o dono do negócio não tem
+# o que fazer com isso e o log guardaria credencial.
+def instancia_do_usuario(user_id: Optional[int]) -> Optional[str]:
+    """Instância da Evolution deste usuário, ou None se ainda não existe."""
+    if not user_id:
+        return None
+    result = (
+        supabase.table('usuarios')
+        .select('instance_name')
+        .eq('id', user_id)
+        .limit(1)
+        .execute()
+    )
+    if not result.data:
+        return None
+    return result.data[0].get('instance_name') or None
+
+
+def montar_nome_instancia(user_id: int, nome: str) -> str:
+    """`agm_{id}_{nome sanitizado}` — mesma regra que o cadastro usava.
+
+    O id na frente é o que garante unicidade; o nome só existe para o operador
+    reconhecer a instância. Por isso o painel não exibe este valor.
+    """
+    apelido = regex_module.sub(r'[^a-zA-Z0-9]', '', (nome or '').lower())[:20]
+    return f"agm_{user_id}_{apelido}"
+
+
+async def estado_da_conexao(instance_name: str) -> str:
+    """Estado da instância na Evolution. Nunca levanta.
+
+    O painel precisa responder mesmo com o provedor fora do ar: quem lê trata
+    "não conectado" como estado, não como erro de sistema.
+    """
+    import evolution_api
+    try:
+        estado = await evolution_api.get_connection_state(instance_name)
+    except Exception as erro:
+        logging.error("Evolution indisponível ao ler o estado (%s)", type(erro).__name__)
+        return 'disconnected'
+    if not isinstance(estado, dict):
+        return 'unknown'
+    # A Evolution devolve {"instance": {"instanceName": "...", "state": "open"}}
+    instancia = estado.get('instance') if isinstance(estado.get('instance'), dict) else {}
+    return instancia.get('state') or estado.get('state') or 'unknown'
+
+
+async def numero_conectado(instance_name: str) -> Optional[str]:
+    """Número conectado, só dígitos, sem o sufixo `@s.whatsapp.net`.
+
+    É o que o painel mostra para o dono testar a atendente de outro telefone.
+    Nunca levanta e nunca vai para log: é dado pessoal.
+    """
+    import evolution_api
+    try:
+        instancias = await evolution_api.fetch_instances(instance_name)
+    except Exception as erro:
+        logging.error("Evolution indisponível ao ler o número (%s)", type(erro).__name__)
+        return None
+    for item in instancias:
+        if not isinstance(item, dict):
+            continue
+        dados = item.get('instance') if isinstance(item.get('instance'), dict) else item
+        jid = dados.get('ownerJid') or dados.get('owner')
+        if jid:
+            return regex_module.sub(r'\D', '', str(jid)) or None
+    return None
+
+
+async def whatsapp_conectado(user_id: Optional[int]) -> bool:
+    """Item `whatsapp` do checklist: só `open` conta, falha vira `false`."""
+    instancia = instancia_do_usuario(user_id)
+    if not instancia:
+        return False
+    return await estado_da_conexao(instancia) == 'open'
+
+
+async def garantir_instancia(user_id: int) -> tuple:
+    """Instância existente na Evolution, com webhook registrado. Idempotente.
+
+    Devolve `(nome, criada)`. Consultar a Evolution antes de criar cobre os
+    três casos com o mesmo caminho: usuário sem instância, instância gravada
+    que o provedor não conhece mais (reinstalação, limpeza) e instância já
+    pronta. Recriar sempre com o MESMO nome preserva o vínculo com a empresa,
+    que a automação deriva de `usuarios.instance_name`.
+    """
+    import evolution_api
+    result = (
+        supabase.table('usuarios')
+        .select('nome, instance_name')
+        .eq('id', user_id)
+        .limit(1)
+        .execute()
+    )
+    if not result.data:
+        raise HTTPException(status_code=401, detail="Sessão inválida")
+
+    usuario = result.data[0]
+    gravada = usuario.get('instance_name') or None
+    instancia = gravada or montar_nome_instancia(user_id, usuario.get('nome') or '')
+
+    try:
+        criada = not await evolution_api.fetch_instances(instancia)
+        if criada:
+            # `create_instance` registra o webhook em seguida.
+            await evolution_api.create_instance(instancia)
+    except Exception as erro:
+        logging.error("Falha ao preparar a instância do WhatsApp (%s)", type(erro).__name__)
+        raise HTTPException(
+            status_code=503,
+            detail="Não foi possível preparar o WhatsApp agora.",
+        )
+
+    if instancia != gravada:
+        supabase.table('usuarios').update(
+            {"instance_name": instancia}
+        ).eq('id', user_id).execute()
+
+    return instancia, criada
+
+
+@api_router.post("/whatsapp/instancia")
+async def criar_instancia_whatsapp(current_user: dict = Depends(verify_token)):
+    """Prepara a instância do WhatsApp do usuário. Pode ser chamada de novo."""
+    try:
+        user_id = current_user.get('user_id')
+        if not user_id:
+            raise HTTPException(status_code=401, detail="Sessão inválida")
+        instancia, criada = await garantir_instancia(user_id)
+        return {"instance": instancia, "criada": criada}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logging.error(f"Erro ao preparar instância WhatsApp: {str(e)}")
+        raise HTTPException(status_code=500, detail="Erro interno")
+
+
 @api_router.get("/whatsapp/status")
 async def get_whatsapp_status(current_user: dict = Depends(verify_token)):
     """Retorna o status da conexão WhatsApp"""
-    import evolution_api
     try:
-        user_id = current_user.get('user_id')
-        result = supabase.table('usuarios').select('instance_name').eq('id', user_id).execute()
-        
-        if not result.data or not result.data[0].get('instance_name'):
-            return {"connected": False, "instance": None, "state": "not_configured"}
-        
-        instance_name = result.data[0]['instance_name']
-        
-        try:
-            state = await evolution_api.get_connection_state(instance_name)
-            # Evolution API retorna: {"instance": {"instanceName": "...", "state": "open"}}
-            instance_data = state.get('instance', {})
-            connection_state = instance_data.get('state', state.get('state', 'unknown'))
-            return {
-                "connected": connection_state == 'open',
-                "instance": instance_name,
-                "state": connection_state,
-            }
-        except Exception as inner_e:
-            logging.error(f"Erro ao buscar estado: {str(inner_e)}")
-            return {"connected": False, "instance": instance_name, "state": "disconnected"}
+        instance_name = instancia_do_usuario(current_user.get('user_id'))
+        if not instance_name:
+            return {"connected": False, "instance": None, "state": "not_configured", "numero": None}
+
+        connection_state = await estado_da_conexao(instance_name)
+        conectado = connection_state == 'open'
+        return {
+            "connected": conectado,
+            "instance": instance_name,
+            "state": connection_state,
+            # Só faz sentido perguntar o número de uma sessão aberta.
+            "numero": await numero_conectado(instance_name) if conectado else None,
+        }
     except HTTPException:
         raise
     except Exception as e:
@@ -1105,12 +1499,15 @@ async def get_whatsapp_qrcode(current_user: dict = Depends(verify_token)):
     import evolution_api
     try:
         user_id = current_user.get('user_id')
-        result = supabase.table('usuarios').select('instance_name').eq('id', user_id).execute()
-        
-        if not result.data or not result.data[0].get('instance_name'):
-            raise HTTPException(status_code=400, detail="Instância não configurada")
-        
-        instance_name = result.data[0]['instance_name']
+        if not user_id:
+            raise HTTPException(status_code=401, detail="Sessão inválida")
+
+        # Sem instância, criar é o próximo passo óbvio: recusar com 400 deixava
+        # o passo do WhatsApp sem saída para quem se cadastrou antes desta fase.
+        instance_name = instancia_do_usuario(user_id)
+        if not instance_name:
+            instance_name, _ = await garantir_instancia(user_id)
+
         qr_data = await evolution_api.connect_instance(instance_name)
         
         # Evolution API retorna base64 diretamente na raiz
@@ -1144,13 +1541,10 @@ async def restart_whatsapp(current_user: dict = Depends(verify_token)):
     """Reinicia a instância WhatsApp"""
     import evolution_api
     try:
-        user_id = current_user.get('user_id')
-        result = supabase.table('usuarios').select('instance_name').eq('id', user_id).execute()
-        
-        if not result.data or not result.data[0].get('instance_name'):
+        instance_name = instancia_do_usuario(current_user.get('user_id'))
+        if not instance_name:
             raise HTTPException(status_code=400, detail="Instância não configurada")
-        
-        instance_name = result.data[0]['instance_name']
+
         await evolution_api.restart_instance(instance_name)
         
         return {"message": "Instância reiniciada com sucesso", "instance": instance_name}
@@ -1165,13 +1559,10 @@ async def disconnect_whatsapp(current_user: dict = Depends(verify_token)):
     """Desconecta a instância WhatsApp"""
     import evolution_api
     try:
-        user_id = current_user.get('user_id')
-        result = supabase.table('usuarios').select('instance_name').eq('id', user_id).execute()
-        
-        if not result.data or not result.data[0].get('instance_name'):
+        instance_name = instancia_do_usuario(current_user.get('user_id'))
+        if not instance_name:
             raise HTTPException(status_code=400, detail="Instância não configurada")
-        
-        instance_name = result.data[0]['instance_name']
+
         await evolution_api.logout_instance(instance_name)
         
         return {"message": "Instância desconectada com sucesso", "instance": instance_name}
