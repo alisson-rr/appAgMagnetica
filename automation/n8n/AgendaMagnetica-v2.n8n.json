@@ -19,7 +19,7 @@
       "webhookId": "87cd4a12-f2c9-56a9-90d5-6d5a34dfbb5f",
       "credentials": {
         "httpHeaderAuth": {
-          "id": "CONFIGURAR_NO_N8N",
+          "id": "CONFIGURAR_NO_N8N_WEBHOOK",
           "name": "Agenda Magnetica - webhook Evolution"
         }
       }
@@ -698,7 +698,7 @@
       "alwaysOutputData": true,
       "credentials": {
         "httpHeaderAuth": {
-          "id": "CONFIGURAR_NO_N8N",
+          "id": "CONFIGURAR_NO_N8N_API",
           "name": "Agenda Magnetica - token da automacao"
         }
       }
@@ -1097,7 +1097,7 @@
       "alwaysOutputData": true,
       "credentials": {
         "httpHeaderAuth": {
-          "id": "CONFIGURAR_NO_N8N",
+          "id": "CONFIGURAR_NO_N8N_API",
           "name": "Agenda Magnetica - token da automacao"
         }
       }
@@ -1309,7 +1309,7 @@
       "alwaysOutputData": true,
       "credentials": {
         "httpHeaderAuth": {
-          "id": "CONFIGURAR_NO_N8N",
+          "id": "CONFIGURAR_NO_N8N_API",
           "name": "Agenda Magnetica - token da automacao"
         }
       }
@@ -1356,7 +1356,7 @@
       "alwaysOutputData": true,
       "credentials": {
         "httpHeaderAuth": {
-          "id": "CONFIGURAR_NO_N8N",
+          "id": "CONFIGURAR_NO_N8N_API",
           "name": "Agenda Magnetica - token da automacao"
         }
       }
@@ -1403,7 +1403,7 @@
       "alwaysOutputData": true,
       "credentials": {
         "httpHeaderAuth": {
-          "id": "CONFIGURAR_NO_N8N",
+          "id": "CONFIGURAR_NO_N8N_API",
           "name": "Agenda Magnetica - token da automacao"
         }
       }
@@ -1482,7 +1482,7 @@
       "alwaysOutputData": true,
       "credentials": {
         "httpHeaderAuth": {
-          "id": "CONFIGURAR_NO_N8N",
+          "id": "CONFIGURAR_NO_N8N_API",
           "name": "Agenda Magnetica - token da automacao"
         }
       }
@@ -1608,7 +1608,7 @@
       "alwaysOutputData": true,
       "credentials": {
         "httpHeaderAuth": {
-          "id": "CONFIGURAR_NO_N8N",
+          "id": "CONFIGURAR_NO_N8N_API",
           "name": "Agenda Magnetica - token da automacao"
         }
       }
@@ -1668,7 +1668,7 @@
       "alwaysOutputData": true,
       "credentials": {
         "httpHeaderAuth": {
-          "id": "CONFIGURAR_NO_N8N",
+          "id": "CONFIGURAR_NO_N8N_API",
           "name": "Agenda Magnetica - token da automacao"
         }
       }
@@ -1868,7 +1868,7 @@
       "maxTries": 2,
       "credentials": {
         "httpHeaderAuth": {
-          "id": "CONFIGURAR_NO_N8N",
+          "id": "CONFIGURAR_NO_N8N_EVO",
           "name": "Agenda Magnetica - Evolution API"
         }
       }
@@ -1900,7 +1900,7 @@
       "maxTries": 2,
       "credentials": {
         "httpHeaderAuth": {
-          "id": "CONFIGURAR_NO_N8N",
+          "id": "CONFIGURAR_NO_N8N_EVO",
           "name": "Agenda Magnetica - Evolution API"
         }
       }
