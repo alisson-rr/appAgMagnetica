@@ -817,17 +817,52 @@ teste('E07 nenhuma operação de agenda fala com o banco', () => {
     const no = NOS.get(nome);
     assert.ok(no, `nó ausente: ${nome}`);
     assert.equal(no.type, 'n8n-nodes-base.httpRequest', nome);
-    assert.ok(no.parameters.url.includes('$env.AGENDA_API_BASE_URL'), `${nome} sem base URL do ambiente`);
+    // A origem sai de `normalizar entrada`, não do ambiente: a VPS roda com
+    // N8N_BLOCK_ENV_ACCESS_IN_NODE=true e $env lança dentro do worker.
+    assert.ok(no.parameters.url.includes("json.api_base"), `${nome} sem base URL de api_base`);
     assert.ok(no.parameters.url.includes(rota), `${nome} não chama ${rota}`);
-    const token = no.parameters.headerParameters.parameters.find((p) => p.name === 'X-Automation-Token');
-    assert.ok(token && token.value.includes('$env.AGENDA_AUTOMATION_TOKEN'), `${nome} sem X-Automation-Token`);
+    // O token é credencial cifrada do n8n, nunca header literal no arquivo.
+    assert.equal(no.parameters.genericAuthType, 'httpHeaderAuth', `${nome} sem credencial Header Auth`);
+    assert.ok(no.credentials && no.credentials.httpHeaderAuth, `${nome} sem credencial ligada`);
+    const literais = (no.parameters.headerParameters?.parameters ?? []).map((p) => p.name);
+    assert.equal(literais.includes('X-Automation-Token'), false, `${nome} com token em header literal`);
     // 4xx/5xx vêm com envelope: sem isso o código de erro se perde.
     assert.equal(no.parameters.options.response.response.neverError, true, `${nome} não lê o corpo em erro`);
     assert.equal(no.parameters.options.timeout, 15000, nome);
   }
 
+  // Nenhum nó pode depender do ambiente: o worker não consegue ler.
+  assert.equal(bruto.includes('$env'), false, 'o fluxo ainda lê variável de ambiente');
+
+  // `contexto da empresa` não pode continuar em erro: o item de entrada passaria
+  // sem `ok`, 'contexto ok?' cairia no `false` e a execução terminaria "com
+  // sucesso" — indistinguível de atendimento desligado, e sem execução salva.
+  assert.equal(NOS.get('contexto da empresa').onError, undefined, 'contexto engole falha de infra');
+  assert.equal(NOS.get('contexto ok?').parameters.conditions.conditions[0].leftValue, '={{ $json.ok }}');
+
   assert.equal(NOS.get('revalidar horário'), undefined, 'a API revalida antes de gravar');
   assert.equal(NOS.get('conferir revalidação'), undefined);
+});
+
+teste('E08 contexto: recusa de negócio encerra calado, falha de integração explode', () => {
+  const encerrar = (entrada) => executar('fim - contexto indisponível', { entrada });
+
+  // A empresa dizendo não: encerrar sem responder é o comportamento correto.
+  for (const codigo of ['AUTOMACAO_DESATIVADA', 'INSTANCIA_DESCONHECIDA', 'EMPRESA_NAO_CONFIGURADA']) {
+    const [saida] = encerrar(falha(codigo));
+    assert.equal(saida.json.encerrado_por, codigo);
+  }
+
+  // Integração quebrada: nunca pode terminar "com sucesso", senão
+  // `saveDataSuccessExecution: none` apaga o único rastro do problema.
+  // AUTOMACAO_INDISPONIVEL é o que a API devolve sem AUTOMATION_API_TOKEN.
+  for (const codigo of ['AUTOMACAO_INDISPONIVEL', 'AUTENTICACAO_INVALIDA', 'INSTANCIA_AMBIGUA', 'FALHA_TEMPORARIA']) {
+    assert.throws(() => encerrar(falha(codigo, true)), new RegExp(codigo), `${codigo} deveria falhar alto`);
+  }
+
+  // Sem envelope (proxy, HTML de erro, item repassado por onError).
+  assert.throws(() => encerrar({}), /resposta sem envelope/);
+  assert.throws(() => encerrar({ conteudo: 'oi', tipo: 'texto' }), /resposta sem envelope/);
 });
 
 // ---------------------------------------------------------------- execução

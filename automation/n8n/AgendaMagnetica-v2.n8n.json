@@ -26,7 +26,7 @@
     },
     {
       "parameters": {
-        "jsCode": "// Normaliza o evento da Evolution API. Nenhuma IA participa desta etapa.\n// Decide tambem a rota de entrada: mensagem do cliente, mensagem do negocio ou descarte.\nconst LIMITE_TEXTO = 2000;\n\nconst raiz = $input.first().json;\nconst body = raiz.body || raiz;\nconst data = body.data || {};\nconst chave = data.key || {};\nconst mensagem = data.message || {};\n\nconst remoteJid = String(chave.remoteJid || '');\nconst instance = String(body.instance || '');\nconst msgId = String(chave.id || '');\nconst fromMe = chave.fromMe === true;\nconst evento = String(body.event || '');\n\nconst texto = mensagem.conversation\n  || (mensagem.extendedTextMessage && mensagem.extendedTextMessage.text)\n  || (mensagem.imageMessage && mensagem.imageMessage.caption)\n  || '';\n\nlet tipo = 'outro';\nlet mimetype = '';\nif (mensagem.audioMessage) {\n  tipo = 'audio';\n  mimetype = mensagem.audioMessage.mimetype || 'audio/ogg';\n} else if (mensagem.imageMessage) {\n  tipo = 'imagem';\n  mimetype = mensagem.imageMessage.mimetype || 'image/jpeg';\n} else if (String(texto).trim()) {\n  tipo = 'texto';\n}\n\n// Conversa individual apenas: grupos (@g.us) e status@broadcast ficam de fora.\nconst individual = remoteJid.endsWith('@s.whatsapp.net');\n\nlet rota = 'ignorar';\nlet motivo = '';\nif (evento !== 'messages.upsert') motivo = 'evento_nao_suportado';\nelse if (!individual) motivo = 'conversa_nao_individual';\nelse if (!msgId || !instance) motivo = 'evento_incompleto';\nelse if (fromMe) { rota = 'humano'; motivo = 'mensagem_enviada_pelo_negocio'; }\nelse if (tipo === 'outro') motivo = 'tipo_de_mensagem_nao_suportado';\nelse rota = 'cliente';\n\nreturn [{\n  json: {\n    rota_entrada: rota,\n    motivo,\n    instance,\n    remote_jid: remoteJid,\n    telefone: remoteJid.replace('@s.whatsapp.net', ''),\n    msg_id: msgId,\n    from_me: fromMe,\n    evento,\n    tipo,\n    conteudo: String(texto).slice(0, LIMITE_TEXTO),\n    base64: String(mensagem.base64 || data.base64 || ''),\n    mimetype,\n    push_name: String(data.pushName || '').slice(0, 60),\n    timestamp: Number(data.messageTimestamp || 0),\n  },\n}];\n"
+        "jsCode": "// Normaliza o evento da Evolution API. Nenhuma IA participa desta etapa.\n// Decide tambem a rota de entrada: mensagem do cliente, mensagem do negocio ou descarte.\nconst LIMITE_TEXTO = 2000;\n\n// Origens dos servicos. Nao sao segredo (o token vai em credencial do n8n),\n// mas mudam por ambiente: este e o UNICO lugar do fluxo para troca-las.\n// Nao leia isto do ambiente: N8N_BLOCK_ENV_ACCESS_IN_NODE=true nesta VPS, entao\n// a expressao lanca \"access to env vars denied\" no worker e o no morre calado.\nconst API_BASE = 'https://agenda-magnetica-painel.vercel.app';\nconst EVOLUTION_BASE = 'https://evo.fixwear.com.br';\n\nconst raiz = $input.first().json;\nconst body = raiz.body || raiz;\nconst data = body.data || {};\nconst chave = data.key || {};\nconst mensagem = data.message || {};\n\nconst remoteJid = String(chave.remoteJid || '');\nconst instance = String(body.instance || '');\nconst msgId = String(chave.id || '');\nconst fromMe = chave.fromMe === true;\nconst evento = String(body.event || '');\n\nconst texto = mensagem.conversation\n  || (mensagem.extendedTextMessage && mensagem.extendedTextMessage.text)\n  || (mensagem.imageMessage && mensagem.imageMessage.caption)\n  || '';\n\nlet tipo = 'outro';\nlet mimetype = '';\nif (mensagem.audioMessage) {\n  tipo = 'audio';\n  mimetype = mensagem.audioMessage.mimetype || 'audio/ogg';\n} else if (mensagem.imageMessage) {\n  tipo = 'imagem';\n  mimetype = mensagem.imageMessage.mimetype || 'image/jpeg';\n} else if (String(texto).trim()) {\n  tipo = 'texto';\n}\n\n// Conversa individual apenas: grupos (@g.us) e status@broadcast ficam de fora.\nconst individual = remoteJid.endsWith('@s.whatsapp.net');\n\nlet rota = 'ignorar';\nlet motivo = '';\nif (evento !== 'messages.upsert') motivo = 'evento_nao_suportado';\nelse if (!individual) motivo = 'conversa_nao_individual';\nelse if (!msgId || !instance) motivo = 'evento_incompleto';\nelse if (fromMe) { rota = 'humano'; motivo = 'mensagem_enviada_pelo_negocio'; }\nelse if (tipo === 'outro') motivo = 'tipo_de_mensagem_nao_suportado';\nelse rota = 'cliente';\n\nreturn [{\n  json: {\n    rota_entrada: rota,\n    motivo,\n    instance,\n    remote_jid: remoteJid,\n    telefone: remoteJid.replace('@s.whatsapp.net', ''),\n    msg_id: msgId,\n    from_me: fromMe,\n    evento,\n    tipo,\n    conteudo: String(texto).slice(0, LIMITE_TEXTO),\n    base64: String(mensagem.base64 || data.base64 || ''),\n    mimetype,\n    push_name: String(data.pushName || '').slice(0, 60),\n    timestamp: Number(data.messageTimestamp || 0),\n    api_base: API_BASE.replace(/\\/$/, ''),\n    evolution_base: EVOLUTION_BASE.replace(/\\/$/, ''),\n  },\n}];\n"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -660,14 +660,10 @@
     {
       "parameters": {
         "method": "POST",
-        "url": "={{ $env.AGENDA_API_BASE_URL.replace(/\\/$/, '') + '/api/ai/contexto' }}",
+        "url": "={{ $('normalizar entrada').first().json.api_base + '/api/ai/contexto' }}",
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
-            {
-              "name": "X-Automation-Token",
-              "value": "={{ $env.AGENDA_AUTOMATION_TOKEN }}"
-            },
             {
               "name": "Content-Type",
               "value": "application/json"
@@ -684,7 +680,9 @@
               "neverError": true
             }
           }
-        }
+        },
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth"
       },
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
@@ -694,11 +692,16 @@
       ],
       "id": "ca1ec3d6-dc09-53bd-8a2f-49e8136ac3b4",
       "name": "contexto da empresa",
-      "onError": "continueRegularOutput",
       "retryOnFail": true,
       "maxTries": 2,
       "waitBetweenTries": 1000,
-      "alwaysOutputData": true
+      "alwaysOutputData": true,
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "CONFIGURAR_NO_N8N",
+          "name": "Agenda Magnetica - token da automacao"
+        }
+      }
     },
     {
       "parameters": {
@@ -735,9 +738,11 @@
       "name": "contexto ok?"
     },
     {
-      "parameters": {},
-      "type": "n8n-nodes-base.noOp",
-      "typeVersion": 1,
+      "parameters": {
+        "jsCode": "// Fim do atendimento quando /api/ai/contexto respondeu `ok: false`.\n// Nem todo `ok: false` e igual: RECUSA_DE_NEGOCIO e a empresa dizendo nao\n// (atendimento desligado, instancia de outro produto, cadastro incompleto) e\n// encerrar calado e o comportamento certo. Qualquer outro codigo — ou resposta\n// sem envelope — e a integracao quebrada, e ai o silencio e o pior resultado\n// possivel: o cliente fica sem resposta e ninguem fica sabendo, porque\n// `saveDataSuccessExecution: none` nao guarda execucao que terminou bem.\nconst RECUSA_DE_NEGOCIO = [\n  'AUTOMACAO_DESATIVADA',      // o dono desligou o atendimento no painel\n  'INSTANCIA_DESCONHECIDA',    // a instancia nao pertence a este produto\n  'EMPRESA_NAO_CONFIGURADA',   // onboarding incompleto\n];\n\nconst erro = ($input.first().json || {}).error || {};\nconst codigo = String(erro.code || '');\n\nif (!RECUSA_DE_NEGOCIO.includes(codigo)) {\n  // Mensagem so com o codigo: `message` da API e seguro, mas nao ha motivo\n  // para copiar corpo de resposta para dentro do log de execucao.\n  throw new Error(\n    'contexto indisponivel por falha, nao por regra: ' +\n    (codigo || 'resposta sem envelope') +\n    '. Confira AUTOMATION_API_TOKEN nas variaveis do projeto na Vercel e a ' +\n    'credencial \"Agenda Magnetica - token da automacao\" no n8n.'\n  );\n}\n\nreturn [{ json: { encerrado_por: codigo } }];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
       "position": [
         3780,
         260
@@ -1053,14 +1058,10 @@
     {
       "parameters": {
         "method": "POST",
-        "url": "={{ $env.AGENDA_API_BASE_URL.replace(/\\/$/, '') + '/api/ai/disponibilidade' }}",
+        "url": "={{ $('normalizar entrada').first().json.api_base + '/api/ai/disponibilidade' }}",
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
-            {
-              "name": "X-Automation-Token",
-              "value": "={{ $env.AGENDA_AUTOMATION_TOKEN }}"
-            },
             {
               "name": "Content-Type",
               "value": "application/json"
@@ -1077,7 +1078,9 @@
               "neverError": true
             }
           }
-        }
+        },
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth"
       },
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
@@ -1091,7 +1094,13 @@
       "retryOnFail": true,
       "maxTries": 2,
       "waitBetweenTries": 1000,
-      "alwaysOutputData": true
+      "alwaysOutputData": true,
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "CONFIGURAR_NO_N8N",
+          "name": "Agenda Magnetica - token da automacao"
+        }
+      }
     },
     {
       "parameters": {
@@ -1261,14 +1270,10 @@
     {
       "parameters": {
         "method": "POST",
-        "url": "={{ $env.AGENDA_API_BASE_URL.replace(/\\/$/, '') + '/api/ai/agendamentos' }}",
+        "url": "={{ $('normalizar entrada').first().json.api_base + '/api/ai/agendamentos' }}",
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
-            {
-              "name": "X-Automation-Token",
-              "value": "={{ $env.AGENDA_AUTOMATION_TOKEN }}"
-            },
             {
               "name": "Content-Type",
               "value": "application/json"
@@ -1285,7 +1290,9 @@
               "neverError": true
             }
           }
-        }
+        },
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth"
       },
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
@@ -1299,19 +1306,21 @@
       "retryOnFail": true,
       "maxTries": 2,
       "waitBetweenTries": 1000,
-      "alwaysOutputData": true
+      "alwaysOutputData": true,
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "CONFIGURAR_NO_N8N",
+          "name": "Agenda Magnetica - token da automacao"
+        }
+      }
     },
     {
       "parameters": {
         "method": "POST",
-        "url": "={{ $env.AGENDA_API_BASE_URL.replace(/\\/$/, '') + '/api/ai/agendamentos/reagendar' }}",
+        "url": "={{ $('normalizar entrada').first().json.api_base + '/api/ai/agendamentos/reagendar' }}",
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
-            {
-              "name": "X-Automation-Token",
-              "value": "={{ $env.AGENDA_AUTOMATION_TOKEN }}"
-            },
             {
               "name": "Content-Type",
               "value": "application/json"
@@ -1328,7 +1337,9 @@
               "neverError": true
             }
           }
-        }
+        },
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth"
       },
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
@@ -1342,19 +1353,21 @@
       "retryOnFail": true,
       "maxTries": 2,
       "waitBetweenTries": 1000,
-      "alwaysOutputData": true
+      "alwaysOutputData": true,
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "CONFIGURAR_NO_N8N",
+          "name": "Agenda Magnetica - token da automacao"
+        }
+      }
     },
     {
       "parameters": {
         "method": "POST",
-        "url": "={{ $env.AGENDA_API_BASE_URL.replace(/\\/$/, '') + '/api/ai/agendamentos/cancelar' }}",
+        "url": "={{ $('normalizar entrada').first().json.api_base + '/api/ai/agendamentos/cancelar' }}",
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
-            {
-              "name": "X-Automation-Token",
-              "value": "={{ $env.AGENDA_AUTOMATION_TOKEN }}"
-            },
             {
               "name": "Content-Type",
               "value": "application/json"
@@ -1371,7 +1384,9 @@
               "neverError": true
             }
           }
-        }
+        },
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth"
       },
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
@@ -1385,7 +1400,13 @@
       "retryOnFail": true,
       "maxTries": 2,
       "waitBetweenTries": 1000,
-      "alwaysOutputData": true
+      "alwaysOutputData": true,
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "CONFIGURAR_NO_N8N",
+          "name": "Agenda Magnetica - token da automacao"
+        }
+      }
     },
     {
       "parameters": {
@@ -1424,14 +1445,10 @@
     {
       "parameters": {
         "method": "POST",
-        "url": "={{ $env.AGENDA_API_BASE_URL.replace(/\\/$/, '') + $('resolver e decidir').first().json.escrita.caminho }}",
+        "url": "={{ $('normalizar entrada').first().json.api_base + $('resolver e decidir').first().json.escrita.caminho }}",
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
-            {
-              "name": "X-Automation-Token",
-              "value": "={{ $env.AGENDA_AUTOMATION_TOKEN }}"
-            },
             {
               "name": "Content-Type",
               "value": "application/json"
@@ -1448,7 +1465,9 @@
               "neverError": true
             }
           }
-        }
+        },
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth"
       },
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
@@ -1460,7 +1479,13 @@
       "name": "repetir escrita",
       "onError": "continueRegularOutput",
       "retryOnFail": false,
-      "alwaysOutputData": true
+      "alwaysOutputData": true,
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "CONFIGURAR_NO_N8N",
+          "name": "Agenda Magnetica - token da automacao"
+        }
+      }
     },
     {
       "parameters": {
@@ -1544,14 +1569,10 @@
     {
       "parameters": {
         "method": "POST",
-        "url": "={{ $env.AGENDA_API_BASE_URL.replace(/\\/$/, '') + '/api/ai/agendamentos/buscar' }}",
+        "url": "={{ $('normalizar entrada').first().json.api_base + '/api/ai/agendamentos/buscar' }}",
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
-            {
-              "name": "X-Automation-Token",
-              "value": "={{ $env.AGENDA_AUTOMATION_TOKEN }}"
-            },
             {
               "name": "Content-Type",
               "value": "application/json"
@@ -1568,7 +1589,9 @@
               "neverError": true
             }
           }
-        }
+        },
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth"
       },
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
@@ -1582,7 +1605,13 @@
       "retryOnFail": true,
       "maxTries": 2,
       "waitBetweenTries": 1000,
-      "alwaysOutputData": true
+      "alwaysOutputData": true,
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "CONFIGURAR_NO_N8N",
+          "name": "Agenda Magnetica - token da automacao"
+        }
+      }
     },
     {
       "parameters": {
@@ -1600,14 +1629,10 @@
     {
       "parameters": {
         "method": "POST",
-        "url": "={{ $env.AGENDA_API_BASE_URL.replace(/\\/$/, '') + '/api/ai/cliente' }}",
+        "url": "={{ $('normalizar entrada').first().json.api_base + '/api/ai/cliente' }}",
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
-            {
-              "name": "X-Automation-Token",
-              "value": "={{ $env.AGENDA_AUTOMATION_TOKEN }}"
-            },
             {
               "name": "Content-Type",
               "value": "application/json"
@@ -1624,7 +1649,9 @@
               "neverError": true
             }
           }
-        }
+        },
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth"
       },
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
@@ -1638,7 +1665,13 @@
       "retryOnFail": true,
       "maxTries": 2,
       "waitBetweenTries": 1000,
-      "alwaysOutputData": true
+      "alwaysOutputData": true,
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "CONFIGURAR_NO_N8N",
+          "name": "Agenda Magnetica - token da automacao"
+        }
+      }
     },
     {
       "parameters": {
@@ -1811,22 +1844,16 @@
     {
       "parameters": {
         "method": "POST",
-        "url": "={{ $env.EVOLUTION_BASE_URL.replace(/\\/$/, '') + '/chat/sendPresence/' + $('normalizar entrada').first().json.instance }}",
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
-            {
-              "name": "apikey",
-              "value": "={{ $env.EVOLUTION_API_KEY }}"
-            }
-          ]
-        },
+        "url": "={{ $('normalizar entrada').first().json.evolution_base + '/chat/sendPresence/' + $('normalizar entrada').first().json.instance }}",
+        "sendHeaders": false,
         "sendBody": true,
         "specifyBody": "json",
         "jsonBody": "={{ JSON.stringify({ number: $('normalizar entrada').first().json.remote_jid, delay: 1200, presence: 'composing' }) }}",
         "options": {
           "timeout": 10000
-        }
+        },
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth"
       },
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
@@ -1838,27 +1865,27 @@
       "name": "evo digitando",
       "onError": "continueRegularOutput",
       "retryOnFail": true,
-      "maxTries": 2
+      "maxTries": 2,
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "CONFIGURAR_NO_N8N",
+          "name": "Agenda Magnetica - Evolution API"
+        }
+      }
     },
     {
       "parameters": {
         "method": "POST",
-        "url": "={{ $env.EVOLUTION_BASE_URL.replace(/\\/$/, '') + '/message/sendText/' + $('normalizar entrada').first().json.instance }}",
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
-            {
-              "name": "apikey",
-              "value": "={{ $env.EVOLUTION_API_KEY }}"
-            }
-          ]
-        },
+        "url": "={{ $('normalizar entrada').first().json.evolution_base + '/message/sendText/' + $('normalizar entrada').first().json.instance }}",
+        "sendHeaders": false,
         "sendBody": true,
         "specifyBody": "json",
         "jsonBody": "={{ JSON.stringify({ number: $('normalizar entrada').first().json.remote_jid, text: $('enviar em ordem').first().json.partes }) }}",
         "options": {
           "timeout": 15000
-        }
+        },
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth"
       },
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
@@ -1870,7 +1897,13 @@
       "name": "evo enviar mensagem",
       "onError": "continueRegularOutput",
       "retryOnFail": true,
-      "maxTries": 2
+      "maxTries": 2,
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "CONFIGURAR_NO_N8N",
+          "name": "Agenda Magnetica - Evolution API"
+        }
+      }
     },
     {
       "parameters": {

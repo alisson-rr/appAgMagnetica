@@ -87,6 +87,25 @@ rota. `verificar resultado` traduz cada código:
 | `FALHA_TEMPORARIA` (`retryable: true`) | repete **uma** vez com o mesmo pedido; persistindo, chama uma pessoa |
 | qualquer outro código, ou resposta sem envelope | para, chama uma pessoa e **nunca** anuncia sucesso |
 
+### `contexto da empresa` é o único que pode encerrar calado — e só às vezes
+
+`POST /api/ai/contexto` acontece antes de a IA existir na conversa, então não há
+resposta a montar quando ele falha. Mas nem todo `ok: false` é igual, e tratar
+os dois iguais foi o que fez uma mensagem de teste sumir sem rastro:
+
+| `error.code` | O que o fluxo faz |
+| --- | --- |
+| `AUTOMACAO_DESATIVADA`, `INSTANCIA_DESCONHECIDA`, `EMPRESA_NAO_CONFIGURADA` | encerra **calado** — é a empresa dizendo não, não é defeito |
+| qualquer outro código, ou resposta sem envelope | `fim - contexto indisponível` **lança erro**: a execução fica salva e visível |
+
+A diferença importa por causa de `saveDataSuccessExecution: none`: execução que
+termina bem não é guardada. Sem lançar, um `AUTOMACAO_INDISPONIVEL` (token
+ausente na Vercel) some do histórico e o sintoma é "o bot não respondeu".
+
+Falha de rede ou URL inválida também não é engolida: `contexto da empresa` é o
+único nó de agenda **sem** `onError` — `neverError` já entrega o envelope de
+4xx/5xx, que é o caso legítimo.
+
 ## Confirmação antes de qualquer escrita
 
 Agendar, reagendar e cancelar passam por uma **ação pendente** guardada pelo
@@ -138,27 +157,46 @@ não existe nesta fase.
 
 ## Configuração
 
-### Variáveis de ambiente do n8n
+### O fluxo não lê variável de ambiente
 
-| Nome | Conteúdo | Segredo |
-| --- | --- | --- |
-| `EVOLUTION_BASE_URL` | origem da Evolution API | não |
-| `EVOLUTION_API_KEY` | chave da Evolution API | **sim** |
-| `AGENDA_API_BASE_URL` | origem do backend, ex.: `https://api.seudominio.exemplo` | não |
-| `AGENDA_AUTOMATION_TOKEN` | mesmo valor de `AUTOMATION_API_TOKEN` no backend | **sim** |
+A VPS roda com `N8N_BLOCK_ENV_ACCESS_IN_NODE=true`
+(`APP-FixWear/infra/stacks/06-n8n.yml`), e isso vale para **expressão** também,
+não só para Code node: `{{ $env.QUALQUER_COISA }}` lança
+`access to env vars denied` dentro do `n8n-worker`. Como os nós HTTP estão em
+`onError: continueRegularOutput`, o erro não aparecia — o item de entrada
+passava adiante e a execução terminava "com sucesso" sem responder nada.
 
-Os valores ficam no gerenciador de segredos do n8n. Nunca cole chave em nó, nota
-ou prompt. `SUPABASE_URL` e `SUPABASE_SERVICE_ROLE_KEY` **não são mais usadas**
-pela automação: se ainda existirem no ambiente do n8n, remova.
+A flag continua `true` de propósito: com ela em `false`, qualquer expressão de
+qualquer workflow da instância lê `N8N_ENCRYPTION_KEY`, `N8N_DB_PASSWORD` e
+`REDIS_N8N_PASSWORD`. O fluxo é que deixou de depender do ambiente.
+
+**Origem dos serviços** — duas constantes no topo de `normalizar entrada`, o
+único nó que roda antes de todos os outros. É o único lugar a trocar:
+
+```js
+const API_BASE = 'https://agenda-magnetica-painel.vercel.app';
+const EVOLUTION_BASE = 'CONFIGURAR_NO_N8N';
+```
+
+Elas saem no item como `api_base` e `evolution_base` (já sem barra no fim), e
+os 10 nós HTTP montam a URL com `$('normalizar entrada').first().json.api_base`.
+Não são segredo: são origem pública de serviço.
 
 ### Credenciais a religar após importar
 
-- **Webhook** → credencial `Header Auth` (o JSON traz apenas a referência
-  `CONFIGURAR_NO_N8N`). Configure o mesmo header na Evolution API.
-- **Redis** → todos os nós `Redis - ...`.
-- **OpenAI** → `modelo interpretador`, `transcrever áudio`, `analisar imagem`.
+Segredo só entra como **credencial** do n8n, cifrada no banco pela
+`N8N_ENCRYPTION_KEY`. O JSON traz apenas a referência `CONFIGURAR_NO_N8N`.
 
-Não há mais credencial Supabase no workflow.
+| Credencial | Tipo | Onde | Conteúdo |
+| --- | --- | --- | --- |
+| `Agenda Magnetica - webhook Evolution` | Header Auth | `Webhook` | o mesmo header configurado na Evolution API |
+| `Agenda Magnetica - token da automacao` | Header Auth | os 8 nós de `/api/ai/*` | nome `X-Automation-Token`, valor igual ao `AUTOMATION_API_TOKEN` do backend |
+| `Agenda Magnetica - Evolution API` | Header Auth | `evo digitando`, `evo enviar mensagem` | nome `apikey`, valor da chave da Evolution |
+| Redis | Redis | todos os nós `Redis - ...` | **banco 1** (o 0 é a fila do n8n) |
+| OpenAI | OpenAI | `modelo interpretador`, `transcrever áudio`, `analisar imagem` | — |
+
+Uma credencial Header Auth serve os oito nós de agenda ao mesmo tempo: crie uma
+só e selecione nos oito. Não há mais credencial Supabase no workflow.
 
 ### Webhook
 
@@ -198,8 +236,9 @@ destino, referências quebradas, chaves do Redis com instância, ausência de
 segredos e de dados pessoais, autenticação do webhook — e que **nenhum literal
 de acesso direto ao banco** (`SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`,
 `rest/v1`, `id_info_clinica`, `cancelada`) voltou ao arquivo. Cada nó de agenda
-precisa usar `$env.AGENDA_API_BASE_URL`, o header `X-Automation-Token` vindo de
-`$env.AGENDA_AUTOMATION_TOKEN` e ler o corpo em erro HTTP.
+precisa montar a URL a partir de `api_base`, autenticar por credencial
+`Header Auth` (nunca token literal, nunca variável de ambiente) e ler o corpo em
+erro HTTP. `contexto da empresa` não pode ter `onError`.
 
 Os testes executam o **JavaScript real dos nós Code extraído do JSON** contra os
 casos de `TESTES_AUTOMACAO_V2.md`. Mudou o workflow, o teste acusa.
@@ -209,10 +248,18 @@ casos de `TESTES_AUTOMACAO_V2.md`. Mudou o workflow, o teste acusa.
 1. Revogue as credenciais que existiam nas versões antigas do JSON, inclusive a
    credencial Supabase que a V2 não usa mais.
 2. Configure credenciais novas e o header do webhook.
-3. Gere `AUTOMATION_API_TOKEN` no backend (mínimo 32 caracteres) e repita o mesmo
-   valor em `AGENDA_AUTOMATION_TOKEN` no n8n.
-4. Confirme que o backend responde em `AGENDA_API_BASE_URL` (`GET /health`) e que
-   ele é alcançável pelo n8n.
+3. Gere `AUTOMATION_API_TOKEN` (mínimo 32 caracteres) e cadastre-o **nas
+   variáveis de ambiente do projeto na Vercel**, não só no `.env` local — sem
+   ele toda rota `/api/ai/*` responde `503 AUTOMACAO_INDISPONIVEL`. O mesmo
+   valor vai na credencial `Agenda Magnetica - token da automacao` no n8n.
+4. Confirme que o backend responde. **Não use `GET /health`**: o rewrite
+   `/((?!api/).*)` do `vercel.json` devolve o HTML do painel para esse caminho.
+   O teste que vale é uma chamada sem token, que precisa responder
+   `401 AUTENTICACAO_INVALIDA` — `503` significa token ausente no servidor:
+
+   ```bash
+   curl -s -X POST https://agenda-magnetica-painel.vercel.app/api/ai/contexto -H "Content-Type: application/json" -d '{"instance_name":"x","telefone":"5551999999999"}'
+   ```
 5. Valide o vínculo `instância WhatsApp → usuarios.instance_name → empresa` com
    uma chamada a `/api/ai/contexto`.
 6. Teste criar, consultar, remarcar e cancelar em **duas** empresas de

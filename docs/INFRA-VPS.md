@@ -96,37 +96,46 @@ Consequências para este projeto:
 
 ---
 
-## O que este projeto ainda não tem na VPS
+## O que este projeto NÃO usa da VPS
 
-### O backend FastAPI não tem endereço
+### O backend FastAPI não roda aqui — ele está na Vercel
 
-O workflow chama `AGENDA_API_BASE_URL` em **10 nós** (`/api/ai/contexto`,
-`/api/ai/disponibilidade`, `/api/ai/agendamentos*`, `/api/ai/cliente`).
-`services/api` não está hospedado em lugar nenhum desta VPS.
+> **Corrigido em 26/08/2026.** A versão anterior dizia que o backend não tinha
+> endereço. Ele tem: `api/index.py` reexporta o app de `services/api` como
+> função Python da Vercel, e o `vercel.json` manda `/api/(.*)` para lá. Origem:
+> `https://agenda-magnetica-painel.vercel.app` — a mesma do painel.
 
-Se for rodar aqui, o que falta é:
+Consequências para quem mexe na automação:
 
-1. uma stack nova (ex.: `api-agenda`) com a imagem do FastAPI;
-2. um registro `A` para um subdomínio (ex.: `api.` do domínio escolhido),
-   **DNS only** se estiver na Cloudflare;
-3. uma entrada no `Caddyfile` da stack `caddy-proxy` apontando para ela;
-4. a rede `proxy` (para o Caddy alcançar) e, se precisar do Redis, `internal`.
+- **Não suba stack de API nesta VPS** para atender o fluxo. O `n8n-worker` sai
+  pela rede `proxy`, então alcança a Vercel pela internet normalmente.
+- **`GET /health` não serve de teste de vida.** O rewrite
+  `/((?!api/).*)` → `/index.html` devolve o HTML do painel com `200`, mesmo com
+  o backend quebrado. O teste que vale é uma chamada sem token a
+  `POST /api/ai/contexto`: `401 AUTENTICACAO_INVALIDA` = vivo e configurado;
+  `503 AUTOMACAO_INDISPONIVEL` = `AUTOMATION_API_TOKEN` ausente ou com menos de
+  32 caracteres **nas variáveis do projeto na Vercel**.
+- O `.env` local não chega na Vercel. Cadastrar o token só ali derruba toda
+  rota `/api/ai/*` em produção — e o fluxo encerra sem responder ao cliente.
 
-Enquanto isso não existir, `AGENDA_API_BASE_URL` tem que apontar para onde o
-backend realmente estiver, e essa origem precisa ser alcançável pela internet —
-o `n8n-worker` sai pela rede `proxy`, então tem saída.
+### O fluxo não usa variável de ambiente do n8n
 
-### Variáveis de ambiente do n8n
+`N8N_BLOCK_ENV_ACCESS_IN_NODE=true` (bloco `x-n8n-env` de
+`infra/stacks/06-n8n.yml`) vale para **expressão**, não só para Code node:
+`{{ $env.X }}` lança `access to env vars denied` dentro do `n8n-worker`. Com os
+nós HTTP em `onError: continueRegularOutput`, isso não aparecia como erro — a
+execução terminava "com sucesso" sem responder nada.
 
-O `automation/n8n/README.md` lista quatro variáveis que o fluxo espera
-(`EVOLUTION_BASE_URL`, `EVOLUTION_API_KEY`, `AGENDA_API_BASE_URL`,
-`AGENDA_AUTOMATION_TOKEN`). Elas **ainda não foram cadastradas** nas stacks —
-entram no bloco `x-n8n-env` de `infra/stacks/06-n8n.yml` (para valerem nos três
-containers) e nas *Environment variables* da stack `n8n` no Portainer.
+A flag fica `true`. Baixá-la entregaria `N8N_ENCRYPTION_KEY`,
+`N8N_DB_PASSWORD` e `REDIS_N8N_PASSWORD` a qualquer expressão de qualquer
+workflow da instância — inclusive os da FixWear. Quem mudou foi o fluxo:
 
-Nunca no nó, nunca no prompt — e lembre que
-`N8N_BLOCK_ENV_ACCESS_IN_NODE=true` está ligado, então um Code node **não**
-consegue ler o ambiente. Segredo de verdade vai como *Credential* do n8n.
+- **origem de serviço** (não é segredo) → constante no topo de
+  `normalizar entrada`, publicada como `api_base` e `evolution_base`;
+- **segredo** → *Credential* Header Auth do n8n, cifrada pela
+  `N8N_ENCRYPTION_KEY`.
+
+Não há nada a cadastrar em `x-n8n-env` para este projeto.
 
 ---
 

@@ -57,6 +57,10 @@ PROIBIDOS = [
     (r"status=neq", "filtro do PostgREST montado no fluxo"),
     (r"n8n-nodes-base\.supabase", "nó Supabase (a agenda passa por /api/ai/*)"),
     (r"\$fromAI", "valor escolhido pela IA"),
+    # N8N_BLOCK_ENV_ACCESS_IN_NODE=true na VPS (APP-FixWear infra/stacks/06-n8n.yml):
+    # a expressao lanca "access to env vars denied" dentro do worker. Origem publica
+    # vira constante em `normalizar entrada`; segredo vira credencial do n8n.
+    (r"\$env\.", "variavel de ambiente no fluxo (o worker nao consegue ler)"),
 ]
 
 # Cada nó de agenda e a rota que ele precisa chamar.
@@ -182,14 +186,21 @@ def falhas_do_workflow(caminho):
         parametros = no.get("parameters", {})
         url = parametros.get("url", "")
         texto = json.dumps(no, ensure_ascii=False)
-        if "$env.AGENDA_API_BASE_URL" not in url:
-            erros.append(f"'{nome}' não usa $env.AGENDA_API_BASE_URL")
+        if "json.api_base" not in url:
+            erros.append(f"'{nome}' não monta a URL a partir de api_base")
         cabecalhos = {
             c.get("name"): c.get("value", "")
             for c in parametros.get("headerParameters", {}).get("parameters", [])
         }
-        if "$env.AGENDA_AUTOMATION_TOKEN" not in cabecalhos.get("X-Automation-Token", ""):
-            erros.append(f"'{nome}' não envia X-Automation-Token de $env.AGENDA_AUTOMATION_TOKEN")
+        # O token vai como credencial Header Auth, cifrada no banco do n8n. Em
+        # header literal ele entraria no Git; em variável de ambiente ele não
+        # chega a ser lido (N8N_BLOCK_ENV_ACCESS_IN_NODE=true na VPS).
+        if parametros.get("genericAuthType") != "httpHeaderAuth":
+            erros.append(f"'{nome}' não autentica por credencial Header Auth")
+        if not (no.get("credentials") or {}).get("httpHeaderAuth"):
+            erros.append(f"'{nome}' sem credencial httpHeaderAuth ligada")
+        if "X-Automation-Token" in cabecalhos:
+            erros.append(f"'{nome}' manda o token como header literal")
         if rota and rota not in url:
             erros.append(f"'{nome}' não chama {rota}")
         # A API devolve 4xx/5xx COM envelope: sem neverError o código de erro se
@@ -203,6 +214,43 @@ def falhas_do_workflow(caminho):
             erros.append(f"'{nome}' coloca o token na URL")
         if "$fromAI" in texto:
             erros.append(f"'{nome}' aceita valor escolhido pela IA ($fromAI)")
+
+    # Falha de infra em 'contexto da empresa' não pode virar o mesmo silêncio do
+    # liga/desliga por empresa: com `continueRegularOutput` o item de ENTRADA passa
+    # adiante sem `ok`, 'contexto ok?' cai no `false`, a execução termina "com
+    # sucesso" — e `saveDataSuccessExecution: none` não guarda nada para investigar.
+    # `neverError` já entrega o envelope de 4xx/5xx, que é o caso legítimo.
+    if por_nome.get("contexto da empresa", {}).get("onError"):
+        erros.append(
+            "'contexto da empresa' não pode continuar em erro: falha de infra ficaria "
+            "indistinguível de atendimento desligado, e sem execução salva"
+        )
+
+    # O encerramento do contexto precisa separar "a empresa disse não" de "a
+    # integração quebrou". Como noOp, os dois terminam a execução com sucesso —
+    # e `saveDataSuccessExecution: none` apaga o rastro do segundo.
+    fim_contexto = por_nome.get("fim - contexto indisponível", {})
+    codigo_fim = fim_contexto.get("parameters", {}).get("jsCode", "")
+    if fim_contexto.get("type") != "n8n-nodes-base.code":
+        erros.append("'fim - contexto indisponível' precisa ser um nó Code que falha alto")
+    elif "RECUSA_DE_NEGOCIO" not in codigo_fim or "throw" not in codigo_fim:
+        erros.append("'fim - contexto indisponível' não separa recusa de negócio de falha")
+
+    for nome in ("evo digitando", "evo enviar mensagem"):
+        no = por_nome.get(nome)
+        if not no:
+            continue
+        parametros = no.get("parameters", {})
+        if "json.evolution_base" not in parametros.get("url", ""):
+            erros.append(f"'{nome}' não monta a URL a partir de evolution_base")
+        if not (no.get("credentials") or {}).get("httpHeaderAuth"):
+            erros.append(f"'{nome}' sem credencial httpHeaderAuth ligada")
+        cabecalhos = [
+            c.get("name")
+            for c in parametros.get("headerParameters", {}).get("parameters", [])
+        ]
+        if "apikey" in cabecalhos:
+            erros.append(f"'{nome}' manda a chave da Evolution como header literal")
 
     # A repetição precisa repetir o MESMO pedido, senão a chave muda.
     repetir = por_nome.get("repetir escrita")
