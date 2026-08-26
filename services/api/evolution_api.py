@@ -115,6 +115,19 @@ async def logout_instance(instance_name: str) -> dict:
 
 
 async def fetch_instances(instance_name: Optional[str] = None) -> list:
+    """Instâncias conhecidas pela Evolution. Instância inexistente é lista vazia.
+
+    A v2.3 responde `404` quando o filtro `instanceName` não casa com nada, em
+    vez da lista vazia que o nome da rota sugere. Para uma *consulta*, "não
+    existe" é resultado, não falha — e sem esta distinção `garantir_instancia`
+    nunca chegava a criar: o primeiro acesso de todo usuário novo virava `503`.
+    Qualquer outro status continua subindo como erro de verdade.
+    """
     params = {"instanceName": instance_name} if instance_name else None
-    data = await _request("GET", "/instance/fetchInstances", params=params)
+    try:
+        data = await _request("GET", "/instance/fetchInstances", params=params)
+    except httpx.HTTPStatusError as erro:
+        if erro.response.status_code == 404:
+            return []
+        raise
     return data if isinstance(data, list) else []

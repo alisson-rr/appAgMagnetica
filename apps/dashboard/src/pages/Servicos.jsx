@@ -1,22 +1,21 @@
 import React, { useEffect, useState } from 'react';
 import api from '../services/api';
 import { toast } from 'sonner';
-import { Plus, Edit, Trash2, Search, Clock, DollarSign } from 'lucide-react';
+import { Plus, Edit, Trash2, Search, Clock } from 'lucide-react';
 import { Card } from '../components/ui/card';
 import { Button } from '../components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '../components/ui/dialog';
 import { Input } from '../components/ui/input';
-import { Label } from '../components/ui/label';
-import { Textarea } from '../components/ui/textarea';
 import { EmptyState, Loading, PageHeader } from '../components/PageChrome';
+import ServicoForm from '../components/ServicoForm';
 
 const Servicos = () => {
   const [procedimentos, setProcedimentos] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [loading, setLoading] = useState(true);
+  const [salvando, setSalvando] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
-  const [editingProcedimento, setEditingProcedimento] = useState(null);
-  const [formData, setFormData] = useState({ nome: '', descricao: '', duracao_minutos: '', valor: '', orientacoes: '' });
+  const [editando, setEditando] = useState(null);
 
   useEffect(() => { fetchProcedimentos(); }, []);
 
@@ -32,22 +31,15 @@ const Servicos = () => {
   };
 
   const openModal = (procedimento = null) => {
-    if (procedimento) {
-      setEditingProcedimento(procedimento);
-      setFormData({ nome: procedimento.nome || '', descricao: procedimento.descricao || '', duracao_minutos: procedimento.duracao_minutos?.toString() || '', valor: procedimento.valor?.toString() || '', orientacoes: procedimento.orientacoes || '' });
-    } else {
-      setEditingProcedimento(null);
-      setFormData({ nome: '', descricao: '', duracao_minutos: '', valor: '', orientacoes: '' });
-    }
+    setEditando(procedimento);
     setModalOpen(true);
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
+  const salvar = async (payload) => {
+    setSalvando(true);
     try {
-      const payload = { ...formData, duracao_minutos: parseInt(formData.duracao_minutos), valor: parseFloat(formData.valor) };
-      if (editingProcedimento) {
-        await api.put(`/procedimentos/${editingProcedimento.id}`, payload);
+      if (editando) {
+        await api.put(`/procedimentos/${editando.id}`, payload);
         toast.success('Atualizado!');
       } else {
         await api.post('/procedimentos', payload);
@@ -55,8 +47,12 @@ const Servicos = () => {
       }
       setModalOpen(false);
       fetchProcedimentos();
+      return true;
     } catch (error) {
-      toast.error('Erro ao salvar');
+      toast.error(error.response?.data?.detail || 'Erro ao salvar');
+      return false;
+    } finally {
+      setSalvando(false);
     }
   };
 
@@ -87,83 +83,36 @@ const Servicos = () => {
             </Button>
           </DialogTrigger>
         </PageHeader>
-          <DialogContent className="max-w-2xl">
-            <DialogHeader>
-              <DialogTitle>{editingProcedimento ? 'Editar' : 'Novo'} Procedimento</DialogTitle>
-            </DialogHeader>
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div>
-                <Label>Nome *</Label>
-                <Input
-                  data-testid="input-nome"
-                  value={formData.nome}
-                  onChange={(e) => setFormData({ ...formData, nome: e.target.value })}
-                  required
-                  placeholder="Limpeza de Pele"
-                />
-              </div>
-              
-              <div>
-                <Label>Descrição</Label>
-                <Textarea
-                  data-testid="input-descricao"
-                  value={formData.descricao}
-                  onChange={(e) => setFormData({ ...formData, descricao: e.target.value })}
-                />
-              </div>
-              
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label>Duração (min) *</Label>
-                  <Input
-                    data-testid="input-duracao"
-                    type="number"
-                    value={formData.duracao_minutos}
-                    onChange={(e) => setFormData({ ...formData, duracao_minutos: e.target.value })}
-                    required
-                    placeholder="60"
-                  />
-                </div>
-                <div>
-                  <Label>Valor (R$) *</Label>
-                  <Input
-                    data-testid="input-valor"
-                    type="number"
-                    step="0.01"
-                    value={formData.valor}
-                    onChange={(e) => setFormData({ ...formData, valor: e.target.value })}
-                    required
-                    placeholder="150.00"
-                  />
-                </div>
-              </div>
-              
-              <div>
-                <Label>Orientações</Label>
-                <Textarea
-                  data-testid="input-orientacoes"
-                  value={formData.orientacoes}
-                  onChange={(e) => setFormData({ ...formData, orientacoes: e.target.value })}
-                />
-              </div>
-              
-              <div className="flex justify-end space-x-3">
-                <Button type="button" variant="outline" onClick={() => setModalOpen(false)}>
-                  Cancelar
-                </Button>
-                <Button
-                  type="submit"
-                  data-testid="submit-servico"
-                >
-                  Salvar
-                </Button>
-              </div>
-            </form>
-          </DialogContent>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>{editando ? 'Editar' : 'Novo'} Procedimento</DialogTitle>
+          </DialogHeader>
+          {/* `key` remonta o formulário ao trocar de item: sem isso o modal
+              reabriria com os valores do procedimento anterior. */}
+          <ServicoForm
+            key={editando?.id ?? 'novo'}
+            valoresIniciais={
+              editando
+                ? {
+                    nome: editando.nome || '',
+                    descricao: editando.descricao || '',
+                    duracao_minutos: editando.duracao_minutos?.toString() || '',
+                    valor: editando.valor?.toString() || '',
+                    orientacoes: editando.orientacoes || '',
+                  }
+                : null
+            }
+            enviando={salvando}
+            aoSalvar={salvar}
+            aoCancelar={() => setModalOpen(false)}
+          />
+        </DialogContent>
       </Dialog>
       <div className="relative">
         <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-primary" />
+        <label htmlFor="busca-servicos" className="sr-only">Buscar procedimento</label>
         <Input
+          id="busca-servicos"
           data-testid="search-servicos"
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
@@ -192,6 +141,7 @@ const Servicos = () => {
                   <button
                     onClick={() => openModal(proc)}
                     data-testid={`edit-servico-${proc.id}`}
+                    aria-label={`Editar ${proc.nome}`}
                     className="icon-action"
                   >
                     <Edit className="w-4 h-4" />
@@ -199,7 +149,8 @@ const Servicos = () => {
                   <button
                     onClick={() => handleDelete(proc.id)}
                     data-testid={`delete-servico-${proc.id}`}
-                    className="icon-action"
+                    aria-label={`Excluir ${proc.nome}`}
+                    className="icon-action icon-action-danger"
                   >
                     <Trash2 className="w-4 h-4" />
                   </button>
@@ -218,7 +169,7 @@ const Servicos = () => {
                   {proc.duracao_minutos} min
                 </div>
                 <div className="flex items-center text-lg font-bold text-primary">
-                  R$ {proc.valor?.toFixed(2)}
+                  R$ {Number(proc.valor ?? 0).toFixed(2)}
                 </div>
               </div>
             </Card>

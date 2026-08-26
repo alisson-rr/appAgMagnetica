@@ -7,7 +7,10 @@ import {
   CheckCircle2,
   Clock3,
   DollarSign,
+  MessageSquare,
   Plus,
+  Power,
+  Smartphone,
   Users,
 } from 'lucide-react';
 import { toast } from 'sonner';
@@ -15,6 +18,7 @@ import { toast } from 'sonner';
 import api from '../services/api';
 import { Card } from '../components/ui/card';
 import { EmptyState, ErrorState, Loading, PageHeader } from '../components/PageChrome';
+import { resumoImplantacao } from '../lib/onboarding';
 
 const money = new Intl.NumberFormat('pt-BR', {
   style: 'currency',
@@ -41,6 +45,7 @@ const statusLabel = (appointment) => {
 
 const Dashboard = () => {
   const [stats, setStats] = useState(null);
+  const [implantacao, setImplantacao] = useState(null);
   const [loading, setLoading] = useState(true);
   const [failed, setFailed] = useState(false);
 
@@ -60,6 +65,11 @@ const Dashboard = () => {
 
   useEffect(() => {
     fetchStats();
+    // O checklist é acessório: se falhar, a faixa some e a agenda continua.
+    api
+      .get('/config/implantacao')
+      .then((resposta) => setImplantacao(resposta.data))
+      .catch(() => setImplantacao(null));
   }, [fetchStats]);
 
   if (loading) {
@@ -90,6 +100,8 @@ const Dashboard = () => {
           <Plus size={18} /> Novo agendamento
         </Link>
       </PageHeader>
+
+      <FaixaImplantacao implantacao={implantacao} />
 
       <p className="-mt-3 text-sm font-semibold uppercase tracking-[.14em] text-primary">{todayLabel}</p>
 
@@ -212,6 +224,55 @@ const Dashboard = () => {
         </div>
       </section>
     </div>
+  );
+};
+
+/**
+ * Faixa de implantação (contrato §4.4). Fica no topo enquanto faltar algo ou
+ * enquanto o atendimento estiver desligado — é o único lugar onde o dono
+ * descobre, sem procurar, que a recepção ainda não está respondendo.
+ *
+ * O checklist do servidor devolve `whatsapp` como um booleano só, então a
+ * faixa mostra dois estados; "não configurado" e "desconectado" pedem a mesma
+ * ação (ir ao passo 6) e a diferença viria de outra chamada à Evolution.
+ */
+const FaixaImplantacao = ({ implantacao }) => {
+  if (!implantacao) return null;
+
+  const { concluidos, total, faltando, passo, completo, automacaoAtiva } = resumoImplantacao(implantacao);
+  if (completo && automacaoAtiva) return null;
+
+  return (
+    <Card className="border-coral/35 bg-coral-soft/50 p-5">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="min-w-0">
+          <p className="font-display text-base font-bold text-ink">
+            Implantação: {concluidos} de {total}
+            {faltando.length > 0 && (
+              <span className="font-body font-semibold text-coral-deep"> · falta: {faltando.join(', ')}</span>
+            )}
+          </p>
+          <p className="mt-1 text-sm text-muted-foreground">
+            {completo
+              ? 'Está tudo configurado. Falta só ligar o atendimento automático.'
+              : 'Termine a configuração para sua recepção começar a responder.'}
+          </p>
+          <div className="mt-3 flex flex-wrap gap-2">
+            <span className={`badge ${implantacao.whatsapp ? 'badge-success' : 'badge-neutral'}`}>
+              <Smartphone size={14} />
+              {implantacao.whatsapp ? 'WhatsApp conectado' : 'WhatsApp não conectado'}
+            </span>
+            <span className={`badge ${automacaoAtiva ? 'badge-success' : 'badge-attention'}`}>
+              {automacaoAtiva ? <MessageSquare size={14} /> : <Power size={14} />}
+              {automacaoAtiva ? 'Atendimento ativo' : 'Atendimento desligado'}
+            </span>
+          </div>
+        </div>
+        <Link to={`/onboarding?passo=${passo}`} className="btn-brand shrink-0">
+          {completo ? 'Ativar atendimento' : 'Continuar configuração'} <ArrowRight size={16} />
+        </Link>
+      </div>
+    </Card>
   );
 };
 

@@ -21,3 +21,7 @@
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+.vercel
+.env*
+# Regra do projeto: só o exemplo entra no Git.
+!.env.example

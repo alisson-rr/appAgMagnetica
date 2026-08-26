@@ -9,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { format, parseISO, startOfMonth, endOfMonth } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { Loading, PageHeader } from '../components/PageChrome';
+import { escaparHtml } from '../utils/formatters';
 
 const ITEMS_PER_PAGE = 10;
 
@@ -115,11 +116,14 @@ const Pagamentos = () => {
   };
 
   const gerarReciboPDF = (consulta) => {
-    const dataServico = formatDate(consulta.intervalo);
-    const valor = (consulta.procedimento?.valor || 0).toFixed(2);
-    const cliente = consulta.cliente?.nome || 'Cliente';
-    const profissional = consulta.profissional?.nome || 'Profissional';
-    const procedimento = consulta.procedimento?.nome || 'Serviço';
+    // Nome de cliente e de serviço chegam pelo WhatsApp: é texto de terceiro.
+    // Interpolar cru neste HTML executava o que o cliente escrevesse.
+    const dataServico = escaparHtml(formatDate(consulta.intervalo));
+    const valor = escaparHtml(Number(consulta.procedimento?.valor || 0).toFixed(2));
+    const cliente = escaparHtml(consulta.cliente?.nome || 'Cliente');
+    const profissional = escaparHtml(consulta.profissional?.nome || 'Profissional');
+    const procedimento = escaparHtml(consulta.procedimento?.nome || 'Serviço');
+    const geradoEm = escaparHtml(format(new Date(), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR }));
     
     const conteudoHTML = `
       <!DOCTYPE html>
@@ -183,7 +187,7 @@ const Pagamentos = () => {
         </div>
         
         <div class="footer">
-          <p>Documento gerado em ${format(new Date(), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}</p>
+          <p>Documento gerado em ${geradoEm}</p>
           <p>Agenda Magnética - Sistema de Gestão</p>
         </div>
       </body>
@@ -191,6 +195,10 @@ const Pagamentos = () => {
     `;
     
     const printWindow = window.open('', '_blank');
+    if (!printWindow) {
+      toast.error('Libere as janelas pop-up deste site para imprimir o recibo.');
+      return;
+    }
     printWindow.document.write(conteudoHTML);
     printWindow.document.close();
     printWindow.onload = () => {

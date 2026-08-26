@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useNavigate, useSearchParams, Link } from 'react-router-dom';
 import api from '../services/api';
 import { Button } from '../components/ui/button';
@@ -57,6 +57,13 @@ const Cadastro = () => {
   // Plano indicado pela landing page. Valor desconhecido é simplesmente ignorado.
   const planoEscolhido = encontrarPlano(searchParams.get('plano'));
 
+  // Guardado para a Fase 4 (assinatura) ler; nada mais é feito com ele hoje.
+  useEffect(() => {
+    if (planoEscolhido) {
+      localStorage.setItem('plano_escolhido', planoEscolhido.id);
+    }
+  }, [planoEscolhido]);
+
   const handleSubmit = async (e) => {
     e.preventDefault();
 
@@ -70,8 +77,8 @@ const Cadastro = () => {
       return;
     }
 
-    if (formData.senha.length < 6) {
-      toast.error('A senha deve ter pelo menos 6 caracteres');
+    if (formData.senha.length < 8) {
+      toast.error('A senha deve ter pelo menos 8 caracteres');
       return;
     }
 
@@ -159,7 +166,8 @@ const Cadastro = () => {
                   value={formData.senha}
                   onChange={(e) => setFormData({ ...formData, senha: e.target.value })}
                   required
-                  placeholder="Mínimo 6 caracteres"
+                  placeholder="Mínimo 8 caracteres"
+                  minLength={8}
                   className="pr-12"
                 />
                 <button

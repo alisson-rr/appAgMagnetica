@@ -1,19 +1,30 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Check, Clock3, Star } from 'lucide-react';
+import { ArrowLeft, Check, Clock3, LogOut, Star } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import { Card } from '../components/ui/card';
 import { toast } from 'sonner';
 import { PLANOS } from '../data/planos';
+import { useAuth } from '../context/AuthContext';
+
+const dataDoTrial = (valor) => {
+  if (!valor) return null;
+  const data = new Date(valor);
+  return Number.isNaN(data.getTime()) ? null : data.toLocaleDateString('pt-BR');
+};
 
 const EscolherPlano = () => {
   const [planoSelecionado, setPlanoSelecionado] = useState(null);
   const [tipoCobranca, setTipoCobranca] = useState('anual');
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
+  const { user, logout } = useAuth();
+
+  const fimDoTrial = dataDoTrial(user?.trial_fim);
+  const podeVoltarAoPainel = Boolean(user && !user.trial_expirado);
 
   // PONTO DE INTEGRAÇÃO DE COBRANÇA
-  // Hoje este handler apenas confirma a escolha e devolve o usuário ao login.
+  // Hoje este handler só anota a escolha e devolve o usuário ao painel.
   // O agente de billing substitui o corpo por: criar a sessão de checkout no
   // backend (com o preço do plano e o período em `tipoCobranca`) e redirecionar.
   // Nenhuma chave, SDK ou chamada de pagamento existe neste arquivo.
@@ -22,14 +33,22 @@ const EscolherPlano = () => {
     setLoading(true);
 
     try {
+      localStorage.setItem('plano_escolhido', plano.id);
+
       if (plano.id === 'personalizado') {
         toast.success('Entraremos em contato para personalizar seu plano!');
       } else {
-        toast.success(`Plano ${plano.nome} selecionado com sucesso!`);
+        toast.success(
+          fimDoTrial
+            ? `Assinatura disponível em breve; seu teste segue até ${fimDoTrial}.`
+            : `Plano ${plano.nome} anotado. A assinatura fica disponível em breve.`,
+        );
       }
 
+      // Quem já está logado nunca é mandado para o login: isso derrubava a
+      // sessão no meio do trial e parecia erro do sistema (contrato §4.2).
       setTimeout(() => {
-        navigate('/login');
+        navigate(user ? '/dashboard' : '/login');
       }, 1500);
     } catch (error) {
       toast.error('Erro ao selecionar plano');
@@ -41,9 +60,27 @@ const EscolherPlano = () => {
   return (
     <div className="min-h-screen bg-background px-4 py-12">
       <div className="mx-auto max-w-6xl">
-        <div className="flex justify-center">
+        <div className="flex flex-wrap items-center justify-between gap-3">
           <img src="/assets/logo.png" alt="Agenda Magnética" className="h-16" />
+          {user && (
+            <div className="flex flex-wrap items-center gap-2">
+              {podeVoltarAoPainel && (
+                <Button variant="outline" onClick={() => navigate('/dashboard')}>
+                  <ArrowLeft size={16} /> Voltar ao painel
+                </Button>
+              )}
+              <Button variant="outline" onClick={logout}>
+                <LogOut size={16} /> Sair da conta
+              </Button>
+            </div>
+          )}
         </div>
+
+        {user?.trial_expirado && (
+          <p className="mt-6 rounded-2xl bg-coral-soft px-4 py-3 text-center text-sm font-semibold text-coral-deep">
+            Seu período de teste terminou. Escolha um plano para continuar usando o painel.
+          </p>
+        )}
 
         <div className="mt-8 text-center">
           <h1 className="font-display text-3xl font-bold text-ink md:text-4xl">

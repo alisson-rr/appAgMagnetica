@@ -1,0 +1,25 @@
+# O bundle da função Python leva `services/api/**`; sem isto ele levaria junto
+# o virtualenv local (centenas de MB) e estouraria o limite de tamanho.
+services/api/.venv
+**/__pycache__
+**/*.pyc
+services/api/tests
+
+# Segredo nenhum entra no bundle. As variáveis vêm do painel do Vercel, e
+# `settings.py` só lê `.env` quando o arquivo existe — se ele subisse junto,
+# teria precedência sobre o ambiente de produção.
+.env
+.env.*
+!.env.example
+services/api/.env
+
+# Nada disso é usado em runtime nem no build.
+node_modules
+**/node_modules
+apps/*/dist
+docs
+graphify-out
+automation
+scripts
+tests
+.git

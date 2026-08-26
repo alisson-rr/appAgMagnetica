@@ -62,8 +62,21 @@ function AppContent() {
         <Routes>
           <Route path="/login" element={user ? <Navigate to="/dashboard" /> : <Login />} />
           <Route path="/cadastro" element={user ? <Navigate to="/dashboard" /> : <Cadastro />} />
-          <Route path="/planos" element={user && !user.trial_expirado ? <Navigate to="/dashboard" /> : <EscolherPlano />} />
-          <Route path="/onboarding" element={<PrivateRoute skipOnboardingCheck={true}><Onboarding /></PrivateRoute>} />
+          {/*
+            `/planos` fica aberta durante o trial (contrato §4.2). Mandar quem
+            está em teste de volta para o painel transformava o link "Ver
+            planos" do Layout em um ida-e-volta; mandar quem expirou para
+            `/login` trancava a conta do lado de fora.
+          */}
+          <Route path="/planos" element={<EscolherPlano />} />
+          <Route
+            path="/onboarding"
+            element={
+              <PrivateRoute skipOnboardingCheck={true}>
+                <Onboarding />
+              </PrivateRoute>
+            }
+          />
           <Route path="/" element={<Navigate to={user ? "/dashboard" : "/login"} />} />
           <Route path="/dashboard" element={<PrivateRoute><Layout><Dashboard /></Layout></PrivateRoute>} />
           <Route path="/agenda" element={<PrivateRoute><Layout><Agenda /></Layout></PrivateRoute>} />

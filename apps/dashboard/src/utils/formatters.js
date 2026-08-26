@@ -18,3 +18,19 @@ export const formatPhone = (value) => {
 export const unformatPhone = (value) => {
   return value.replace(/\D/g, '');
 };
+
+const ESCAPES_HTML = {
+  '&': '&amp;',
+  '<': '&lt;',
+  '>': '&gt;',
+  '"': '&quot;',
+  "'": '&#39;',
+};
+
+/**
+ * Escapa texto que vai para dentro de um HTML montado à mão (hoje: o recibo
+ * do Financeiro). Nome de cliente e de serviço chegam pelo WhatsApp, então são
+ * texto de terceiro: interpolar cru abre XSS na janela do recibo.
+ */
+export const escaparHtml = (valor) =>
+  String(valor ?? '').replace(/[&<>"']/g, (caractere) => ESCAPES_HTML[caractere]);

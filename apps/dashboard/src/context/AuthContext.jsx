@@ -1,36 +1,77 @@
-import React, { createContext, useState, useContext, useEffect } from 'react';
+import React, { createContext, useCallback, useContext, useEffect, useState } from 'react';
 import api from '../services/api';
 
 const AuthContext = createContext();
 
+/**
+ * O objeto do `localStorage` é só cache de primeira pintura: ele não expira
+ * sozinho e o próprio usuário pode editá-lo. Quem decide trial e onboarding é
+ * `GET /auth/me` (contrato §3.1/§4.1).
+ */
+const usuarioEmCache = () => {
+  try {
+    const bruto = localStorage.getItem('user');
+    if (!bruto) return null;
+    const salvo = JSON.parse(bruto);
+    return salvo && typeof salvo === 'object' ? salvo : null;
+  } catch {
+    localStorage.removeItem('user');
+    return null;
+  }
+};
+
+const guardar = (usuario) => {
+  localStorage.setItem('user', JSON.stringify(usuario));
+  return usuario;
+};
+
 export const AuthProvider = ({ children }) => {
-  const [user, setUser] = useState(null);
+  const [user, setUser] = useState(() => (localStorage.getItem('token') ? usuarioEmCache() : null));
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    const token = localStorage.getItem('token');
-    const savedUser = localStorage.getItem('user');
-    
-    if (token && savedUser) {
-      setUser(JSON.parse(savedUser));
+  /**
+   * Recarrega a sessão a partir do servidor. Devolve o usuário ou `null`.
+   * `401` é tratado pelo interceptor do axios (limpa e vai para /login); outra
+   * falha (API fora do ar) mantém o cache, senão uma queda de rede desloga
+   * todo mundo no meio do onboarding.
+   */
+  const refreshUser = useCallback(async () => {
+    if (!localStorage.getItem('token')) {
+      setUser(null);
+      return null;
     }
-    setLoading(false);
+    try {
+      const { data } = await api.get('/auth/me');
+      setUser(guardar(data));
+      return data;
+    } catch (error) {
+      if (error.response?.status === 401) {
+        setUser(null);
+        return null;
+      }
+      return usuarioEmCache();
+    }
   }, []);
+
+  useEffect(() => {
+    refreshUser().finally(() => setLoading(false));
+  }, [refreshUser]);
 
   const login = async (email, senha) => {
     try {
       const response = await api.post('/auth/login', { email, senha });
       const { access_token, usuario } = response.data;
-      
+
       localStorage.setItem('token', access_token);
-      localStorage.setItem('user', JSON.stringify(usuario));
-      setUser(usuario);
-      
+      // Pinta com o que o login devolveu e confirma com o servidor em seguida.
+      setUser(guardar(usuario));
+      await refreshUser();
+
       return { success: true };
     } catch (error) {
-      return { 
-        success: false, 
-        error: error.response?.data?.detail || 'Erro ao fazer login' 
+      return {
+        success: false,
+        error: error.response?.data?.detail || 'Erro ao fazer login',
       };
     }
   };
@@ -40,9 +81,9 @@ export const AuthProvider = ({ children }) => {
       await api.post('/auth/register', { email, senha, nome });
       return { success: true };
     } catch (error) {
-      return { 
-        success: false, 
-        error: error.response?.data?.detail || 'Erro ao registrar' 
+      return {
+        success: false,
+        error: error.response?.data?.detail || 'Erro ao registrar',
       };
     }
   };
@@ -55,16 +96,14 @@ export const AuthProvider = ({ children }) => {
   };
 
   const updateUser = (newUserData, accessToken) => {
-    const updatedUser = { ...user, ...newUserData };
     if (accessToken) {
       localStorage.setItem('token', accessToken);
     }
-    localStorage.setItem('user', JSON.stringify(updatedUser));
-    setUser(updatedUser);
+    setUser((atual) => guardar({ ...(atual || {}), ...newUserData }));
   };
 
   return (
-    <AuthContext.Provider value={{ user, login, register, logout, loading, updateUser }}>
+    <AuthContext.Provider value={{ user, login, register, logout, loading, updateUser, refreshUser }}>
       {children}
     </AuthContext.Provider>
   );

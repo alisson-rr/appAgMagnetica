@@ -51,3 +51,5 @@ jobs:
       - run: npm ci
       - run: npm run build
       - run: npm run lint --if-present
+      # Lógica pura da implantação (apps/dashboard/tests), com `node --test`.
+      - run: npm test --workspaces --if-present

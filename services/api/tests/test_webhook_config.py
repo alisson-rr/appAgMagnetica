@@ -1,11 +1,13 @@
 """Registro do webhook da Evolution: formato v2.3, autenticidade e sigilo."""
 
+import asyncio
 import json
 import logging
 import os
 import sys
 from pathlib import Path
 
+import httpx
 import pytest
 
 BACKEND_DIR = Path(__file__).resolve().parents[1]
@@ -103,3 +105,59 @@ def test_segredo_nunca_aparece_no_env_example():
     for linha in exemplo.splitlines():
         if linha.startswith("EVOLUTION_WEBHOOK_SECRET="):
             assert "substitua" in linha or "gere-um" in linha, "valor real vazou no exemplo"
+
+
+# --- fetchInstances: "não existe" é resultado, não falha ---------------------
+# A Evolution v2.3 responde 404 quando o filtro `instanceName` não casa com
+# nada. Como `garantir_instancia` decide criar a partir de lista vazia, tratar
+# esse 404 como erro fazia o primeiro acesso de todo usuário novo virar 503.
+
+class _RespostaFalsa:
+    def __init__(self, status, corpo):
+        self.status_code = status
+        self._corpo = corpo
+
+    def json(self):
+        return self._corpo
+
+    def raise_for_status(self):
+        if self.status_code >= 400:
+            raise httpx.HTTPStatusError(
+                f"status {self.status_code}", request=None, response=self
+            )
+
+
+def _cliente_que_responde(status, corpo):
+    class _Cliente:
+        async def __aenter__(self):
+            return self
+
+        async def __aexit__(self, *_):
+            return False
+
+        async def request(self, *_args, **_kwargs):
+            return _RespostaFalsa(status, corpo)
+
+    return lambda **_kwargs: _Cliente()
+
+
+def test_instancia_inexistente_vira_lista_vazia(evolution_configurada, monkeypatch):
+    monkeypatch.setattr(
+        httpx, "AsyncClient", _cliente_que_responde(404, {"status": 404, "error": "Not Found"})
+    )
+    assert asyncio.run(evolution_api.fetch_instances("agm_1_nao_existe")) == []
+
+
+def test_instancia_existente_volta_na_lista(evolution_configurada, monkeypatch):
+    monkeypatch.setattr(
+        httpx, "AsyncClient", _cliente_que_responde(200, [{"name": "agm_1_marina"}])
+    )
+    assert asyncio.run(evolution_api.fetch_instances("agm_1_marina")) == [{"name": "agm_1_marina"}]
+
+
+def test_outro_erro_da_evolution_continua_subindo(evolution_configurada, monkeypatch):
+    """500 é indisponibilidade do provedor: não pode virar "instância não existe",
+    senão o painel tentaria criar uma instância que talvez já exista."""
+    monkeypatch.setattr(httpx, "AsyncClient", _cliente_que_responde(500, {"erro": "interno"}))
+    with pytest.raises(httpx.HTTPStatusError):
+        asyncio.run(evolution_api.fetch_instances("agm_1_marina"))
