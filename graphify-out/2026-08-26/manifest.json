@@ -515,18 +515,18 @@
     "semantic_hash": "588a820f3b4cd8e806e4ed07fbd7162f"
   },
   "automation/n8n/AgendaMagnetica-v2.n8n.json": {
-    "mtime": 1787757266.6196978,
-    "ast_hash": "0744aa7a3af0f4c7a214c9762c70d088",
+    "mtime": 1787756924.4759429,
+    "ast_hash": "d04d32320d82871746ed34f87faeb456",
     "semantic_hash": ""
   },
   "automation/n8n/tests/test_regras.mjs": {
-    "mtime": 1787757296.7774465,
-    "ast_hash": "0e17d596e15e169e5f88797b1b77358d",
+    "mtime": 1787757006.1792812,
+    "ast_hash": "aeaf79f37b6a84302fbb49a88fd2bb89",
     "semantic_hash": ""
   },
   "automation/n8n/validar_workflow.py": {
-    "mtime": 1787757319.863013,
-    "ast_hash": "59f22e0608ab832e17e5b7686c812787",
+    "mtime": 1787756963.3651109,
+    "ast_hash": "69143c8ae1320878cae74558642e58a3",
     "semantic_hash": ""
   },
   ".claude/CLAUDE.md": {
@@ -690,8 +690,8 @@
     "semantic_hash": ""
   },
   "automation/n8n/README.md": {
-    "mtime": 1787757319.863013,
-    "ast_hash": "96ddbfa9489ddca7078f8f3109f208ba",
+    "mtime": 1787757102.4378808,
+    "ast_hash": "6e0a3823870c7f058cf3d72c85d8051a",
     "semantic_hash": ""
   },
   "automation/n8n/TESTES_AUTOMACAO_V2.md": {

@@ -52,8 +52,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "api_index",
-      "community": 48,
-      "community_name": "cmdk",
+      "community": 0,
+      "community_name": "server.py",
       "norm_label": "index.py"
     },
     {
@@ -63,8 +63,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "api_index_rationale_1",
-      "community": 48,
-      "community_name": "cmdk",
+      "community": 0,
+      "community_name": "server.py",
       "norm_label": "ponte entre as funcoes serverless do vercel e o backend em `services/api`.  o ve"
     },
     {
@@ -1174,8 +1174,8 @@
       "source_location": "L46",
       "_origin": "ast",
       "id": "apps_dashboard_package_dependencies_clsx",
-      "community": 184,
-      "community_name": "montar_implantacao",
+      "community": 12,
+      "community_name": "clsx",
       "norm_label": "clsx"
     },
     {
@@ -1185,8 +1185,8 @@
       "source_location": "L46",
       "_origin": "ast",
       "id": "clsx",
-      "community": 184,
-      "community_name": "montar_implantacao",
+      "community": 12,
+      "community_name": "clsx",
       "norm_label": "clsx"
     },
     {
@@ -1196,8 +1196,8 @@
       "source_location": "L47",
       "_origin": "ast",
       "id": "apps_dashboard_package_dependencies_cmdk",
-      "community": 12,
-      "community_name": "clsx",
+      "community": 48,
+      "community_name": "cmdk",
       "norm_label": "cmdk"
     },
     {
@@ -1207,8 +1207,8 @@
       "source_location": "L47",
       "_origin": "ast",
       "id": "cmdk",
-      "community": 12,
-      "community_name": "clsx",
+      "community": 48,
+      "community_name": "cmdk",
       "norm_label": "cmdk"
     },
     {
@@ -7958,7 +7958,7 @@
       "label": "main()",
       "file_type": "code",
       "source_file": "automation/n8n/validar_workflow.py",
-      "source_location": "L295",
+      "source_location": "L285",
       "_origin": "ast",
       "id": "automation_n8n_validar_workflow_main",
       "community": 134,
@@ -9369,8 +9369,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "services_api_dominio",
-      "community": 156,
-      "community_name": "dominio.py",
+      "community": 46,
+      "community_name": "dependencies",
       "norm_label": "dominio.py"
     },
     {
@@ -9380,8 +9380,8 @@
       "source_location": "L25",
       "_origin": "ast",
       "id": "services_api_dominio_com_fuso_de_negocio",
-      "community": 156,
-      "community_name": "dominio.py",
+      "community": 46,
+      "community_name": "dependencies",
       "norm_label": "com_fuso_de_negocio()"
     },
     {
@@ -9391,8 +9391,8 @@
       "source_location": "",
       "_origin": "ast",
       "id": "services_api_dominio_py_datetime",
-      "community": 156,
-      "community_name": "dominio.py",
+      "community": 46,
+      "community_name": "dependencies",
       "norm_label": "datetime"
     },
     {
@@ -9402,8 +9402,8 @@
       "source_location": "L36",
       "_origin": "ast",
       "id": "services_api_dominio_montar_intervalo",
-      "community": 156,
-      "community_name": "dominio.py",
+      "community": 46,
+      "community_name": "dependencies",
       "norm_label": "montar_intervalo()"
     },
     {
@@ -9435,8 +9435,8 @@
       "source_location": "L69",
       "_origin": "ast",
       "id": "services_api_dominio_iso_no_fuso_de_negocio",
-      "community": 156,
-      "community_name": "dominio.py",
+      "community": 46,
+      "community_name": "dependencies",
       "norm_label": "iso_no_fuso_de_negocio()"
     },
     {
@@ -9457,8 +9457,8 @@
       "source_location": "",
       "_origin": "ast",
       "id": "decimal",
-      "community": 156,
-      "community_name": "dominio.py",
+      "community": 145,
+      "community_name": "test_ai_api_integracao.py",
       "norm_label": "decimal"
     },
     {
@@ -9479,8 +9479,8 @@
       "source_location": "L112",
       "_origin": "ast",
       "id": "services_api_dominio_dinheiro_para_json",
-      "community": 156,
-      "community_name": "dominio.py",
+      "community": 46,
+      "community_name": "dependencies",
       "norm_label": "dinheiro_para_json()"
     },
     {
@@ -9490,8 +9490,8 @@
       "source_location": "L126",
       "_origin": "ast",
       "id": "services_api_dominio_digitos",
-      "community": 156,
-      "community_name": "dominio.py",
+      "community": 46,
+      "community_name": "dependencies",
       "norm_label": "_digitos()"
     },
     {
@@ -9534,8 +9534,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "services_api_dominio_rationale_1",
-      "community": 156,
-      "community_name": "dominio.py",
+      "community": 46,
+      "community_name": "dependencies",
       "norm_label": "regras de dominio compartilhadas pelo painel e pela automacao.  fuso, dinheiro"
     },
     {
@@ -9545,8 +9545,8 @@
       "source_location": "L26",
       "_origin": "ast",
       "id": "services_api_dominio_rationale_26",
-      "community": 156,
-      "community_name": "dominio.py",
+      "community": 46,
+      "community_name": "dependencies",
       "norm_label": "resolve horario sem offset como local de sao paulo, nunca como utc.      trata"
     },
     {
@@ -9556,8 +9556,8 @@
       "source_location": "L37",
       "_origin": "ast",
       "id": "services_api_dominio_rationale_37",
-      "community": 156,
-      "community_name": "dominio.py",
+      "community": 46,
+      "community_name": "dependencies",
       "norm_label": "literal `tstzrange` fechado-aberto a partir de inicio e duracao."
     },
     {
@@ -9578,8 +9578,8 @@
       "source_location": "L70",
       "_origin": "ast",
       "id": "services_api_dominio_rationale_70",
-      "community": 156,
-      "community_name": "dominio.py",
+      "community": 46,
+      "community_name": "dependencies",
       "norm_label": "data de resposta sempre em -03:00.      o postgrest devolve `timestamptz` no f"
     },
     {
@@ -9611,8 +9611,8 @@
       "source_location": "L113",
       "_origin": "ast",
       "id": "services_api_dominio_rationale_113",
-      "community": 156,
-      "community_name": "dominio.py",
+      "community": 46,
+      "community_name": "dependencies",
       "norm_label": "numero json para a resposta http.      o contrato com o painel e com a automac"
     },
     {
@@ -9831,8 +9831,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "services_api_server",
-      "community": 153,
-      "community_name": "get_user_clinica_id",
+      "community": 0,
+      "community_name": "server.py",
       "norm_label": "server.py"
     },
     {
@@ -9886,8 +9886,8 @@
       "source_location": "L57",
       "_origin": "ast",
       "id": "services_api_server_clientecreate",
-      "community": 153,
-      "community_name": "get_user_clinica_id",
+      "community": 0,
+      "community_name": "server.py",
       "norm_label": "clientecreate"
     },
     {
@@ -9897,8 +9897,8 @@
       "source_location": "L67",
       "_origin": "ast",
       "id": "services_api_server_clienteupdate",
-      "community": 153,
-      "community_name": "get_user_clinica_id",
+      "community": 0,
+      "community_name": "server.py",
       "norm_label": "clienteupdate"
     },
     {
@@ -9908,8 +9908,8 @@
       "source_location": "L78",
       "_origin": "ast",
       "id": "services_api_server_profissionalcreate",
-      "community": 153,
-      "community_name": "get_user_clinica_id",
+      "community": 0,
+      "community_name": "server.py",
       "norm_label": "profissionalcreate"
     },
     {
@@ -9930,8 +9930,8 @@
       "source_location": "L95",
       "_origin": "ast",
       "id": "services_api_server_procedimentocreate",
-      "community": 0,
-      "community_name": "server.py",
+      "community": 156,
+      "community_name": "dominio.py",
       "norm_label": "procedimentocreate"
     },
     {
@@ -9941,8 +9941,8 @@
       "source_location": "L104",
       "_origin": "ast",
       "id": "services_api_server_procedimentoupdate",
-      "community": 0,
-      "community_name": "server.py",
+      "community": 156,
+      "community_name": "dominio.py",
       "norm_label": "procedimentoupdate"
     },
     {
@@ -9963,8 +9963,8 @@
       "source_location": "L120",
       "_origin": "ast",
       "id": "services_api_server_consultaupdate",
-      "community": 0,
-      "community_name": "server.py",
+      "community": 156,
+      "community_name": "dominio.py",
       "norm_label": "consultaupdate"
     },
     {
@@ -10007,8 +10007,8 @@
       "source_location": "L151",
       "_origin": "ast",
       "id": "services_api_server_horarioclinicacreate",
-      "community": 153,
-      "community_name": "get_user_clinica_id",
+      "community": 0,
+      "community_name": "server.py",
       "norm_label": "horarioclinicacreate"
     },
     {
@@ -10018,8 +10018,8 @@
       "source_location": "L165",
       "_origin": "ast",
       "id": "services_api_server_validar_nome_assistente",
-      "community": 153,
-      "community_name": "get_user_clinica_id",
+      "community": 0,
+      "community_name": "server.py",
       "norm_label": "validar_nome_assistente()"
     },
     {
@@ -10029,8 +10029,8 @@
       "source_location": "L182",
       "_origin": "ast",
       "id": "services_api_server_infoclinicaupdate",
-      "community": 153,
-      "community_name": "get_user_clinica_id",
+      "community": 0,
+      "community_name": "server.py",
       "norm_label": "infoclinicaupdate"
     },
     {
@@ -10040,8 +10040,8 @@
       "source_location": "L197",
       "_origin": "ast",
       "id": "services_api_server_automacaoupdate",
-      "community": 182,
-      "community_name": "instancia_do_usuario",
+      "community": 184,
+      "community_name": "montar_implantacao",
       "norm_label": "automacaoupdate"
     },
     {
@@ -10095,8 +10095,8 @@
       "source_location": "L221",
       "_origin": "ast",
       "id": "services_api_server_verify_token",
-      "community": 186,
-      "community_name": "raise_if_in_use",
+      "community": 0,
+      "community_name": "server.py",
       "norm_label": "verify_token()"
     },
     {
@@ -10106,8 +10106,8 @@
       "source_location": "",
       "_origin": "ast",
       "id": "httpauthorizationcredentials",
-      "community": 186,
-      "community_name": "raise_if_in_use",
+      "community": 0,
+      "community_name": "server.py",
       "norm_label": "httpauthorizationcredentials"
     },
     {
@@ -10172,8 +10172,8 @@
       "source_location": "L339",
       "_origin": "ast",
       "id": "services_api_server_raise_if_in_use",
-      "community": 153,
-      "community_name": "get_user_clinica_id",
+      "community": 186,
+      "community_name": "raise_if_in_use",
       "norm_label": "raise_if_in_use()"
     },
     {
@@ -10183,8 +10183,8 @@
       "source_location": "",
       "_origin": "ast",
       "id": "services_api_server_py_exception",
-      "community": 153,
-      "community_name": "get_user_clinica_id",
+      "community": 186,
+      "community_name": "raise_if_in_use",
       "norm_label": "exception"
     },
     {
@@ -10260,8 +10260,8 @@
       "source_location": "L600",
       "_origin": "ast",
       "id": "services_api_server_create_cliente",
-      "community": 153,
-      "community_name": "get_user_clinica_id",
+      "community": 0,
+      "community_name": "server.py",
       "norm_label": "create_cliente()"
     },
     {
@@ -10271,8 +10271,8 @@
       "source_location": "L618",
       "_origin": "ast",
       "id": "services_api_server_update_cliente",
-      "community": 153,
-      "community_name": "get_user_clinica_id",
+      "community": 0,
+      "community_name": "server.py",
       "norm_label": "update_cliente()"
     },
     {
@@ -10282,8 +10282,8 @@
       "source_location": "L635",
       "_origin": "ast",
       "id": "services_api_server_delete_cliente",
-      "community": 153,
-      "community_name": "get_user_clinica_id",
+      "community": 186,
+      "community_name": "raise_if_in_use",
       "norm_label": "delete_cliente()"
     },
     {
@@ -10315,8 +10315,8 @@
       "source_location": "L679",
       "_origin": "ast",
       "id": "services_api_server_create_profissional",
-      "community": 153,
-      "community_name": "get_user_clinica_id",
+      "community": 0,
+      "community_name": "server.py",
       "norm_label": "create_profissional()"
     },
     {
@@ -10359,8 +10359,8 @@
       "source_location": "L746",
       "_origin": "ast",
       "id": "services_api_server_delete_profissional",
-      "community": 153,
-      "community_name": "get_user_clinica_id",
+      "community": 186,
+      "community_name": "raise_if_in_use",
       "norm_label": "delete_profissional()"
     },
     {
@@ -10414,8 +10414,8 @@
       "source_location": "L842",
       "_origin": "ast",
       "id": "services_api_server_create_procedimento",
-      "community": 0,
-      "community_name": "server.py",
+      "community": 156,
+      "community_name": "dominio.py",
       "norm_label": "create_procedimento()"
     },
     {
@@ -10425,8 +10425,8 @@
       "source_location": "L859",
       "_origin": "ast",
       "id": "services_api_server_update_procedimento",
-      "community": 0,
-      "community_name": "server.py",
+      "community": 156,
+      "community_name": "dominio.py",
       "norm_label": "update_procedimento()"
     },
     {
@@ -10436,8 +10436,8 @@
       "source_location": "L875",
       "_origin": "ast",
       "id": "services_api_server_delete_procedimento",
-      "community": 153,
-      "community_name": "get_user_clinica_id",
+      "community": 186,
+      "community_name": "raise_if_in_use",
       "norm_label": "delete_procedimento()"
     },
     {
@@ -10524,8 +10524,8 @@
       "source_location": "L1052",
       "_origin": "ast",
       "id": "services_api_server_get_areas_atuacao",
-      "community": 153,
-      "community_name": "get_user_clinica_id",
+      "community": 0,
+      "community_name": "server.py",
       "norm_label": "get_areas_atuacao()"
     },
     {
@@ -10535,8 +10535,8 @@
       "source_location": "L1073",
       "_origin": "ast",
       "id": "services_api_server_equipe_agendavel",
-      "community": 182,
-      "community_name": "instancia_do_usuario",
+      "community": 184,
+      "community_name": "montar_implantacao",
       "norm_label": "equipe_agendavel()"
     },
     {
@@ -10546,8 +10546,8 @@
       "source_location": "L1108",
       "_origin": "ast",
       "id": "services_api_server_montar_implantacao",
-      "community": 182,
-      "community_name": "instancia_do_usuario",
+      "community": 184,
+      "community_name": "montar_implantacao",
       "norm_label": "montar_implantacao()"
     },
     {
@@ -10557,8 +10557,8 @@
       "source_location": "L1153",
       "_origin": "ast",
       "id": "services_api_server_get_implantacao",
-      "community": 182,
-      "community_name": "instancia_do_usuario",
+      "community": 184,
+      "community_name": "montar_implantacao",
       "norm_label": "get_implantacao()"
     },
     {
@@ -10568,8 +10568,8 @@
       "source_location": "L1167",
       "_origin": "ast",
       "id": "services_api_server_update_automacao",
-      "community": 182,
-      "community_name": "instancia_do_usuario",
+      "community": 184,
+      "community_name": "montar_implantacao",
       "norm_label": "update_automacao()"
     },
     {
@@ -10590,8 +10590,8 @@
       "source_location": "L1217",
       "_origin": "ast",
       "id": "services_api_server_create_horario_clinica",
-      "community": 153,
-      "community_name": "get_user_clinica_id",
+      "community": 0,
+      "community_name": "server.py",
       "norm_label": "create_horario_clinica()"
     },
     {
@@ -10601,8 +10601,8 @@
       "source_location": "L1236",
       "_origin": "ast",
       "id": "services_api_server_get_info_clinica",
-      "community": 153,
-      "community_name": "get_user_clinica_id",
+      "community": 0,
+      "community_name": "server.py",
       "norm_label": "get_info_clinica()"
     },
     {
@@ -10612,8 +10612,8 @@
       "source_location": "L1250",
       "_origin": "ast",
       "id": "services_api_server_update_info_clinica",
-      "community": 153,
-      "community_name": "get_user_clinica_id",
+      "community": 0,
+      "community_name": "server.py",
       "norm_label": "update_info_clinica()"
     },
     {
@@ -10634,8 +10634,8 @@
       "source_location": "L1305",
       "_origin": "ast",
       "id": "services_api_server_update_horario_clinica",
-      "community": 153,
-      "community_name": "get_user_clinica_id",
+      "community": 0,
+      "community_name": "server.py",
       "norm_label": "update_horario_clinica()"
     },
     {
@@ -10777,8 +10777,8 @@
       "source_location": "L1602",
       "_origin": "ast",
       "id": "services_api_server_health_check",
-      "community": 153,
-      "community_name": "get_user_clinica_id",
+      "community": 0,
+      "community_name": "server.py",
       "norm_label": "health_check()"
     },
     {
@@ -10788,8 +10788,8 @@
       "source_location": "L166",
       "_origin": "ast",
       "id": "services_api_server_rationale_166",
-      "community": 153,
-      "community_name": "get_user_clinica_id",
+      "community": 0,
+      "community_name": "server.py",
       "norm_label": "nome da assistente: so letras e espacos, 2 a 40 caracteres.      o valor entra"
     },
     {
@@ -10843,8 +10843,8 @@
       "source_location": "L340",
       "_origin": "ast",
       "id": "services_api_server_rationale_340",
-      "community": 153,
-      "community_name": "get_user_clinica_id",
+      "community": 186,
+      "community_name": "raise_if_in_use",
       "norm_label": "traduz violacao de chave estrangeira em 409 explicativo.      as fks de `consu"
     },
     {
@@ -10865,8 +10865,8 @@
       "source_location": "L1074",
       "_origin": "ast",
       "id": "services_api_server_rationale_1074",
-      "community": 182,
-      "community_name": "instancia_do_usuario",
+      "community": 184,
+      "community_name": "montar_implantacao",
       "norm_label": "existe profissional que a automacao consiga oferecer de verdade.      ativo, c"
     },
     {
@@ -10876,8 +10876,8 @@
       "source_location": "L1109",
       "_origin": "ast",
       "id": "services_api_server_rationale_1109",
-      "community": 182,
-      "community_name": "instancia_do_usuario",
+      "community": 184,
+      "community_name": "montar_implantacao",
       "norm_label": "checklist de implantacao calculado no servidor.      unica fonte de verdade de"
     },
     {
@@ -10887,8 +10887,8 @@
       "source_location": "L1168",
       "_origin": "ast",
       "id": "services_api_server_rationale_1168",
-      "community": 182,
-      "community_name": "instancia_do_usuario",
+      "community": 184,
+      "community_name": "montar_implantacao",
       "norm_label": "liga e desliga o atendimento automatico desta empresa.      desligar e sempre"
     },
     {
@@ -11822,8 +11822,8 @@
       "source_location": "L636",
       "_origin": "ast",
       "id": "services_api_tests_test_ai_api_test_dinheiro_usa_decimal_e_nao_float",
-      "community": 156,
-      "community_name": "dominio.py",
+      "community": 145,
+      "community_name": "test_ai_api_integracao.py",
       "norm_label": "test_dinheiro_usa_decimal_e_nao_float()"
     },
     {
@@ -11833,8 +11833,8 @@
       "source_location": "L641",
       "_origin": "ast",
       "id": "services_api_tests_test_ai_api_test_dinheiro_para_o_banco_vai_como_texto_exato",
-      "community": 144,
-      "community_name": "test_ai_api.py",
+      "community": 145,
+      "community_name": "test_ai_api_integracao.py",
       "norm_label": "test_dinheiro_para_o_banco_vai_como_texto_exato()"
     },
     {
@@ -11855,8 +11855,8 @@
       "source_location": "L653",
       "_origin": "ast",
       "id": "services_api_tests_test_ai_api_test_modelo_de_procedimento_recebe_decimal",
-      "community": 156,
-      "community_name": "dominio.py",
+      "community": 145,
+      "community_name": "test_ai_api_integracao.py",
       "norm_label": "test_modelo_de_procedimento_recebe_decimal()"
     },
     {
@@ -12108,8 +12108,8 @@
       "source_location": "L939",
       "_origin": "ast",
       "id": "services_api_tests_test_ai_api_test_corrida_na_criacao_de_cliente_rele_o_cadastro_existente",
-      "community": 194,
-      "community_name": "test_corrida_na_criacao_de_cliente_rele_o_cadastro_existente",
+      "community": 146,
+      "community_name": "settings.py",
       "norm_label": "test_corrida_na_criacao_de_cliente_rele_o_cadastro_existente()"
     },
     {
@@ -12636,8 +12636,8 @@
       "source_location": "L642",
       "_origin": "ast",
       "id": "services_api_tests_test_ai_api_rationale_642",
-      "community": 144,
-      "community_name": "test_ai_api.py",
+      "community": 145,
+      "community_name": "test_ai_api_integracao.py",
       "norm_label": "`decimal` nao e serializavel em json e `float` traz erro de binario."
     },
     {
@@ -12746,8 +12746,8 @@
       "source_location": "L940",
       "_origin": "ast",
       "id": "services_api_tests_test_ai_api_rationale_940",
-      "community": 194,
-      "community_name": "test_corrida_na_criacao_de_cliente_rele_o_cadastro_existente",
+      "community": 146,
+      "community_name": "settings.py",
       "norm_label": "duas mensagens do mesmo contato: 23505 nao pode virar falha_temporaria."
     },
     {
@@ -16029,21 +16029,10 @@
       "norm_label": "a automacao nao fala com o banco"
     },
     {
-      "label": "`contexto da empresa` \u00e9 o \u00fanico que pode encerrar calado \u2014 e s\u00f3 \u00e0s vezes",
-      "file_type": "document",
-      "source_file": "automation/n8n/README.md",
-      "source_location": "L90",
-      "_origin": "ast",
-      "id": "automation_n8n_readme_contexto_da_empresa_\u00e9_o_\u00fanico_que_pode_encerrar_calado_e_s\u00f3_\u00e0s_vezes",
-      "community": 113,
-      "community_name": "Automa\u00e7\u00e3o de atendimento \u2014 homologa\u00e7\u00e3o",
-      "norm_label": "`contexto da empresa` e o unico que pode encerrar calado \u2014 e so as vezes"
-    },
-    {
       "label": "Confirma\u00e7\u00e3o antes de qualquer escrita",
       "file_type": "document",
       "source_file": "automation/n8n/README.md",
-      "source_location": "L109",
+      "source_location": "L90",
       "_origin": "ast",
       "id": "automation_n8n_readme_confirma\u00e7\u00e3o_antes_de_qualquer_escrita",
       "community": 113,
@@ -16054,7 +16043,7 @@
       "label": "Chaves do Redis",
       "file_type": "document",
       "source_file": "automation/n8n/README.md",
-      "source_location": "L134",
+      "source_location": "L115",
       "_origin": "ast",
       "id": "automation_n8n_readme_chaves_do_redis",
       "community": 113,
@@ -16065,7 +16054,7 @@
       "label": "Transfer\u00eancia para uma pessoa: o que acontece de verdade",
       "file_type": "document",
       "source_file": "automation/n8n/README.md",
-      "source_location": "L148",
+      "source_location": "L129",
       "_origin": "ast",
       "id": "automation_n8n_readme_transfer\u00eancia_para_uma_pessoa_o_que_acontece_de_verdade",
       "community": 113,
@@ -16076,7 +16065,7 @@
       "label": "Configura\u00e7\u00e3o",
       "file_type": "document",
       "source_file": "automation/n8n/README.md",
-      "source_location": "L158",
+      "source_location": "L139",
       "_origin": "ast",
       "id": "automation_n8n_readme_configura\u00e7\u00e3o",
       "community": 113,
@@ -16087,7 +16076,7 @@
       "label": "O fluxo n\u00e3o l\u00ea vari\u00e1vel de ambiente",
       "file_type": "document",
       "source_file": "automation/n8n/README.md",
-      "source_location": "L160",
+      "source_location": "L141",
       "_origin": "ast",
       "id": "automation_n8n_readme_o_fluxo_n\u00e3o_l\u00ea_vari\u00e1vel_de_ambiente",
       "community": 113,
@@ -16098,7 +16087,7 @@
       "label": "Credenciais a religar ap\u00f3s importar",
       "file_type": "document",
       "source_file": "automation/n8n/README.md",
-      "source_location": "L185",
+      "source_location": "L166",
       "_origin": "ast",
       "id": "automation_n8n_readme_credenciais_a_religar_ap\u00f3s_importar",
       "community": 113,
@@ -16109,7 +16098,7 @@
       "label": "Webhook",
       "file_type": "document",
       "source_file": "automation/n8n/README.md",
-      "source_location": "L201",
+      "source_location": "L182",
       "_origin": "ast",
       "id": "automation_n8n_readme_webhook",
       "community": 113,
@@ -16120,7 +16109,7 @@
       "label": "Ajustes r\u00e1pidos",
       "file_type": "document",
       "source_file": "automation/n8n/README.md",
-      "source_location": "L206",
+      "source_location": "L187",
       "_origin": "ast",
       "id": "automation_n8n_readme_ajustes_r\u00e1pidos",
       "community": 113,
@@ -16131,7 +16120,7 @@
       "label": "Valida\u00e7\u00e3o",
       "file_type": "document",
       "source_file": "automation/n8n/README.md",
-      "source_location": "L224",
+      "source_location": "L205",
       "_origin": "ast",
       "id": "automation_n8n_readme_valida\u00e7\u00e3o",
       "community": 113,
@@ -16142,7 +16131,7 @@
       "label": "Antes de ativar",
       "file_type": "document",
       "source_file": "automation/n8n/README.md",
-      "source_location": "L246",
+      "source_location": "L227",
       "_origin": "ast",
       "id": "automation_n8n_readme_antes_de_ativar",
       "community": 113,
@@ -16153,7 +16142,7 @@
       "label": "Limita\u00e7\u00f5es conhecidas",
       "file_type": "document",
       "source_file": "automation/n8n/README.md",
-      "source_location": "L271",
+      "source_location": "L252",
       "_origin": "ast",
       "id": "automation_n8n_readme_limita\u00e7\u00f5es_conhecidas",
       "community": 113,
@@ -16164,7 +16153,7 @@
       "label": "O que mudou da V1 para a V2",
       "file_type": "document",
       "source_file": "automation/n8n/README.md",
-      "source_location": "L292",
+      "source_location": "L273",
       "_origin": "ast",
       "id": "automation_n8n_readme_o_que_mudou_da_v1_para_a_v2",
       "community": 113,
@@ -31955,7 +31944,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "automation/n8n/validar_workflow.py",
-      "source_location": "L295",
+      "source_location": "L285",
       "weight": 1.0,
       "_origin": "ast",
       "source": "automation_n8n_validar_workflow",
@@ -31978,7 +31967,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "automation/n8n/validar_workflow.py",
-      "source_location": "L300",
+      "source_location": "L290",
       "weight": 1.0,
       "_origin": "ast",
       "source": "automation_n8n_validar_workflow_main",
@@ -47145,7 +47134,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "automation/n8n/README.md",
-      "source_location": "L206",
+      "source_location": "L187",
       "weight": 1.0,
       "_origin": "ast",
       "source": "automation_n8n_readme_automa\u00e7\u00e3o_de_atendimento_homologa\u00e7\u00e3o",
@@ -47156,7 +47145,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "automation/n8n/README.md",
-      "source_location": "L246",
+      "source_location": "L227",
       "weight": 1.0,
       "_origin": "ast",
       "source": "automation_n8n_readme_automa\u00e7\u00e3o_de_atendimento_homologa\u00e7\u00e3o",
@@ -47167,7 +47156,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "automation/n8n/README.md",
-      "source_location": "L134",
+      "source_location": "L115",
       "weight": 1.0,
       "_origin": "ast",
       "source": "automation_n8n_readme_automa\u00e7\u00e3o_de_atendimento_homologa\u00e7\u00e3o",
@@ -47178,7 +47167,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "automation/n8n/README.md",
-      "source_location": "L158",
+      "source_location": "L139",
       "weight": 1.0,
       "_origin": "ast",
       "source": "automation_n8n_readme_automa\u00e7\u00e3o_de_atendimento_homologa\u00e7\u00e3o",
@@ -47189,7 +47178,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "automation/n8n/README.md",
-      "source_location": "L109",
+      "source_location": "L90",
       "weight": 1.0,
       "_origin": "ast",
       "source": "automation_n8n_readme_automa\u00e7\u00e3o_de_atendimento_homologa\u00e7\u00e3o",
@@ -47200,7 +47189,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "automation/n8n/README.md",
-      "source_location": "L271",
+      "source_location": "L252",
       "weight": 1.0,
       "_origin": "ast",
       "source": "automation_n8n_readme_automa\u00e7\u00e3o_de_atendimento_homologa\u00e7\u00e3o",
@@ -47222,7 +47211,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "automation/n8n/README.md",
-      "source_location": "L292",
+      "source_location": "L273",
       "weight": 1.0,
       "_origin": "ast",
       "source": "automation_n8n_readme_automa\u00e7\u00e3o_de_atendimento_homologa\u00e7\u00e3o",
@@ -47233,7 +47222,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "automation/n8n/README.md",
-      "source_location": "L148",
+      "source_location": "L129",
       "weight": 1.0,
       "_origin": "ast",
       "source": "automation_n8n_readme_automa\u00e7\u00e3o_de_atendimento_homologa\u00e7\u00e3o",
@@ -47244,7 +47233,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "automation/n8n/README.md",
-      "source_location": "L224",
+      "source_location": "L205",
       "weight": 1.0,
       "_origin": "ast",
       "source": "automation_n8n_readme_automa\u00e7\u00e3o_de_atendimento_homologa\u00e7\u00e3o",
@@ -47255,18 +47244,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "automation/n8n/README.md",
-      "source_location": "L90",
-      "weight": 1.0,
-      "_origin": "ast",
-      "source": "automation_n8n_readme_a_automa\u00e7\u00e3o_n\u00e3o_fala_com_o_banco",
-      "target": "automation_n8n_readme_contexto_da_empresa_\u00e9_o_\u00fanico_que_pode_encerrar_calado_e_s\u00f3_\u00e0s_vezes",
-      "confidence_score": 1.0
-    },
-    {
-      "relation": "contains",
-      "confidence": "EXTRACTED",
-      "source_file": "automation/n8n/README.md",
-      "source_location": "L185",
+      "source_location": "L166",
       "weight": 1.0,
       "_origin": "ast",
       "source": "automation_n8n_readme_configura\u00e7\u00e3o",
@@ -47277,7 +47255,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "automation/n8n/README.md",
-      "source_location": "L160",
+      "source_location": "L141",
       "weight": 1.0,
       "_origin": "ast",
       "source": "automation_n8n_readme_configura\u00e7\u00e3o",
@@ -47288,7 +47266,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "automation/n8n/README.md",
-      "source_location": "L201",
+      "source_location": "L182",
       "weight": 1.0,
       "_origin": "ast",
       "source": "automation_n8n_readme_configura\u00e7\u00e3o",
