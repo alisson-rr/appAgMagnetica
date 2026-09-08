@@ -583,6 +583,29 @@ class AtualizarClienteRequest(BaseAutomacao):
     interesses: Optional[str] = Field(default=None, max_length=280)
 
 
+IDADE_MAXIMA_ANOS = 120
+
+
+def exigir_nascimento_plausivel(valor: date) -> str:
+    """Data de nascimento que uma pessoa poderia ter.
+
+    A data chega de uma conversa de WhatsApp interpretada por um modelo: "faço
+    aniversário em maio" já virou 2026-05-10 em teste. Data futura ou de mais de
+    120 anos atrás é erro de leitura, não cadastro — e uma vez gravada some do
+    radar, porque ninguém revisa aniversário de cliente.
+    """
+    limite = agora().date()
+    if valor > limite:
+        raise AiError(
+            "ENTRADA_INVALIDA", "Data de nascimento no futuro.", status=422
+        )
+    if valor.year < limite.year - IDADE_MAXIMA_ANOS:
+        raise AiError(
+            "ENTRADA_INVALIDA", "Data de nascimento fora do intervalo aceito.", status=422
+        )
+    return valor.isoformat()
+
+
 def exigir_inicio_valido(valor: datetime) -> datetime:
     """Instante de início aceito para escrita: com fuso resolvido e no minuto.
 
@@ -662,6 +685,12 @@ async def contexto(requisicao: ContextoRequest):
                 "telefone": detalhes.get("clinica_telefone"),
                 "email": detalhes.get("clinica_email"),
                 "endereco": detalhes.get("clinica_endereco"),
+                # Texto livre do assinante sobre o negócio. É a única fonte
+                # para o que não cabe no catálogo — forma de pagamento,
+                # convênio, estacionamento, o que levar na primeira sessão.
+                # Sai cru: quem delimita e higieniza antes do prompt é o nó
+                # `montar contexto`, que é quem monta o texto enviado ao modelo.
+                "descricao": detalhes.get("clinica_descricao"),
                 "assistente_nome": detalhes.get("assistente_nome"),
                 "assistente_tom": detalhes.get("assistente_tom"),
                 "exige_profissional": bool(detalhes.get("exige_profissional")),
@@ -1030,7 +1059,7 @@ async def atualizar_cliente(requisicao: AtualizarClienteRequest):
     if requisicao.email is not None:
         atualizacao["email"] = str(requisicao.email)
     if requisicao.data_nascimento is not None:
-        atualizacao["data_nascimento"] = requisicao.data_nascimento.isoformat()
+        atualizacao["data_nascimento"] = exigir_nascimento_plausivel(requisicao.data_nascimento)
     if requisicao.interesses is not None:
         atualizacao["interesses"] = texto_seguro(requisicao.interesses, 280)
 

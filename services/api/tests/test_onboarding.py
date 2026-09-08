@@ -43,6 +43,9 @@ def empresa(**extras):
     linha = {
         "id": EMPRESA,
         "nome": "Studio Aurora",
+        # Explícito e vazio: o passo "Negócio" passou a exigir também o texto
+        # que a recepção usa para responder o que não está no catálogo.
+        "descricao": None,
         "onboarding_completo": False,
         "assistente_nome": None,
         "assistente_tom": None,
@@ -226,18 +229,23 @@ def test_implantacao_parcial_marca_so_o_que_existe(monkeypatch, evolution_muda):
 
     corpo = http_com(monkeypatch, banco).get("/api/config/implantacao").json()
 
-    assert corpo["negocio"] is True
+    # `negocio` é falso porque a empresa tem nome e não tem o texto do negócio:
+    # sem ele a recepção não sabe responder pagamento, convênio nem
+    # estacionamento, e o campo é opcional no primeiro passo — se o checklist
+    # não apontasse, ninguém voltaria lá.
+    assert corpo["negocio"] is False
     assert corpo["horarios"] is True
     assert corpo["servicos"] is True
     assert corpo["equipe"] is False
-    assert corpo["pendencias"] == ["equipe", "atendente", "whatsapp"]
+    assert corpo["pendencias"] == ["negocio", "equipe", "atendente", "whatsapp"]
 
 
 def test_implantacao_completa(monkeypatch):
     conectada(monkeypatch)
     banco = banco_com(
         usuarios=[usuario(instance_name="agm_12_marinasouza")],
-        info_clinica=[empresa(assistente_nome="Aurora")],
+        info_clinica=[empresa(assistente_nome="Aurora",
+                              descricao="Aceitamos pix. Estacionamento na porta.")],
         **pronto_para_ativar(),
     )
 
@@ -246,6 +254,30 @@ def test_implantacao_completa(monkeypatch):
     assert corpo["pendencias"] == []
     assert corpo["completo"] is True
     assert corpo["whatsapp"] is True
+
+
+def test_negocio_sem_texto_aponta_o_passo_mas_nao_trava_a_ativacao(monkeypatch):
+    """O texto do negócio é nudge de checklist, não requisito de operação.
+
+    Uma recepção sem ele ainda consulta agenda, marca, remarca e cancela — ela
+    só não sabe responder o que está fora do catálogo. Travar a ativação por
+    causa disso deixaria de fora quem já está pronto para atender.
+    """
+    conectada(monkeypatch)
+    banco = banco_com(
+        usuarios=[usuario(instance_name="agm_12_marinasouza")],
+        info_clinica=[empresa(assistente_nome="Aurora", descricao=None)],
+        **pronto_para_ativar(),
+    )
+    http = http_com(monkeypatch, banco)
+
+    checklist = http.get("/api/config/implantacao").json()
+    assert checklist["negocio"] is False
+    assert checklist["pendencias"] == ["negocio"]
+
+    ligado = http.put("/api/config/automacao", json={"ativa": True})
+    assert ligado.status_code == 200
+    assert banco.tabelas["info_clinica"][0]["automacao_ativa"] is True
 
 
 def test_profissional_inativo_nao_conta_como_equipe(monkeypatch, evolution_muda):
@@ -426,6 +458,58 @@ def test_get_info_clinica_devolve_os_campos_da_atendente(monkeypatch, evolution_
     assert corpo["assistente_tom"] == "acolhedor"
     assert corpo["exige_profissional"] is True
     assert corpo["automacao_ativa"] is True
+
+
+def test_texto_do_negocio_tem_teto_no_servidor(monkeypatch, evolution_muda):
+    """O texto vai para dentro do system prompt: o teto é do servidor.
+
+    O zod do painel para em 2000, mas o painel não é a fronteira — qualquer
+    cliente HTTP fala direto com a rota. Sem teto aqui, um texto de 200 mil
+    caracteres empurraria o prompt inteiro para fora da janela do modelo e a
+    recepção pararia de responder para aquela empresa.
+    """
+    banco = banco_com(info_clinica=[empresa()])
+    http = http_com(monkeypatch, banco)
+
+    recusado = http.put(f"/api/config/info-clinica/{EMPRESA}",
+                        json={"descricao": "x" * 2001})
+    assert recusado.status_code == 422
+    assert banco.tabelas["info_clinica"][0].get("descricao") != "x" * 2001
+
+    aceito = http.put(f"/api/config/info-clinica/{EMPRESA}",
+                      json={"descricao": "x" * 2000})
+    assert aceito.status_code == 200
+    assert banco.tabelas["info_clinica"][0]["descricao"] == "x" * 2000
+
+    # O POST é o caminho PRIMÁRIO do campo: quem ainda não tem empresa cria pelo
+    # passo 1 do onboarding. Testar só o PUT deixava metade da fronteira sem
+    # verificação — e é a metade por onde o texto entra pela primeira vez.
+    criado = http.post("/api/config/info-clinica",
+                       json={"nome": "Nova", "descricao": "x" * 2001})
+    assert criado.status_code == 422
+
+
+def test_dono_consegue_apagar_o_texto_do_negocio(monkeypatch, evolution_muda):
+    """Apagar no painel tem de apagar no banco — e no WhatsApp.
+
+    `model_dump(exclude_none=True)` descartava `descricao=None`: o `update` saía
+    sem a coluna, a tela dizia "salvo" e o texto antigo continuava sendo
+    respondido para qualquer contato. É o único campo que o dono pode querer
+    tirar do ar depois de escrito.
+    """
+    banco = banco_com(info_clinica=[empresa(descricao="Chave pix 51999887766.")])
+    http = http_com(monkeypatch, banco)
+
+    apagado = http.put(f"/api/config/info-clinica/{EMPRESA}", json={"descricao": None})
+    assert apagado.status_code == 200
+    assert banco.tabelas["info_clinica"][0]["descricao"] is None
+
+    # A direção oposta, que é a razão de o guard existir: um PUT que NÃO menciona
+    # `descricao` não pode apagá-la. É o corpo que a aba de mensagem de lembrete
+    # do painel envia, e sem esta asserção trocar o guard por um `or ''` passaria.
+    http.put(f"/api/config/info-clinica/{EMPRESA}", json={"descricao": "Aceitamos pix."})
+    http.put(f"/api/config/info-clinica/{EMPRESA}", json={"mensagem_lembrete": "oi"})
+    assert banco.tabelas["info_clinica"][0]["descricao"] == "Aceitamos pix."
 
 
 # ===== POST /whatsapp/instancia =====

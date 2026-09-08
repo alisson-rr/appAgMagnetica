@@ -1,7 +1,9 @@
 -- =============================================================================
 -- v_clinica_detalhes — contexto de atendimento por empresa
--- Versão: 2 (2026-08-23). Rodar depois de scripts/bootstrap_schema.sql e, para
+-- Versão: 3 (2026-09-07). Rodar depois de scripts/bootstrap_schema.sql e, para
 -- a coluna `automacao_ativa`, depois de scripts/ajustes_onboarding.sql.
+-- A v3 acrescenta `clinica_descricao`; é `create or replace`, não precisa de
+-- migração de tabela e pode rodar com a automação no ar.
 --
 -- UMA LINHA POR EMPRESA. A automação lê com `operation: get` filtrando
 -- id_info_clinica, então a view precisa entregar tudo agregado em uma linha só.
@@ -17,6 +19,11 @@
 --   assistente_tom      empresa.assistente_tom    (nulo -> fallback do fluxo)
 --   exige_profissional  empresa.exige_profissional
 --   automacao_ativa     trava por empresa; false encerra o atendimento
+--   clinica_descricao   empresa.descricao — texto livre do assinante sobre o
+--                       negócio, única fonte para o que não cabe no catálogo
+--                       (formas de pagamento, convênio, estacionamento, o que
+--                       levar na primeira sessão). Entra no prompt dentro de um
+--                       delimitador; a higienização é do lado do fluxo.
 --   procedimentos       [{id, nome, valor, duracao_minutos}]
 --   profissionais       [{id, nome, area}]
 --   horarios            [{dia_semana, hora_inicio, hora_fim}]
@@ -27,7 +34,8 @@
 -- NÃO EXPÕE: nada de `usuarios` (senha_hash, e-mail de login, instance_name),
 -- nenhuma credencial, nenhum dado de cliente, nenhum agendamento, e nenhuma
 -- linha de outra empresa — toda agregação é correlacionada por id_info_clinica.
--- `mensagem_lembrete` e `descricao` ficam de fora: nenhum consumidor os lê.
+-- `mensagem_lembrete` fica de fora: nenhum consumidor o lê. `descricao` saiu
+-- dessa lista na v3 — o prompt da recepção passou a ser o consumidor dela.
 -- =============================================================================
 
 create or replace view public.v_clinica_detalhes
@@ -98,7 +106,14 @@ select
   -- produção pela automação.
   -- `/api/ai/contexto` lê esta coluna ANTES de localizar ou criar o cliente:
   -- empresa com atendimento desligado não cadastra ninguém.
-  ic.automacao_ativa
+  ic.automacao_ativa,
+
+  -- Depois de `automacao_ativa` pela mesma razão que ela é penúltima agora:
+  -- `create or replace view` só aceita coluna nova no fim da lista.
+  -- Texto que o assinante escreve e que a IA vai LER, não executar: quem
+  -- delimita e higieniza é o nó `montar contexto`, e o teto de tamanho é da
+  -- API (`InfoClinicaUpdate.descricao`). A view entrega o valor cru.
+  ic.descricao                            as clinica_descricao
 
 from public.info_clinica ic;
 

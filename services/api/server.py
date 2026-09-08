@@ -161,6 +161,13 @@ TONS_ASSISTENTE = ("acolhedor", "objetivo", "descontraido")
 
 LIMITE_NOME_ASSISTENTE = (2, 40)
 
+# `descricao` é o texto que o assinante escreve sobre o negócio e que entra no
+# prompt de sistema da recepção (view v_clinica_detalhes v3 -> /api/ai/contexto).
+# Antes não tinha teto nenhum no servidor: só o zod do painel, que qualquer
+# cliente HTTP ignora. Um texto sem limite empurraria o prompt inteiro para fora
+# da janela do modelo — e a fronteira é aqui, não no navegador.
+LIMITE_DESCRICAO = 2000
+
 
 def validar_nome_assistente(valor: Optional[str]) -> Optional[str]:
     """Nome da assistente: só letras e espaços, 2 a 40 caracteres.
@@ -183,7 +190,7 @@ class InfoClinicaUpdate(BaseModel):
     nome: Optional[str] = None
     telefone: Optional[str] = None
     email: Optional[str] = None
-    descricao: Optional[str] = None
+    descricao: Optional[str] = Field(default=None, max_length=LIMITE_DESCRICAO)
     endereco: Optional[str] = None
     onboarding_completo: Optional[bool] = None
     mensagem_lembrete: Optional[str] = None
@@ -201,7 +208,7 @@ class InfoClinicaCreate(BaseModel):
     nome: str
     telefone: Optional[str] = None
     email: Optional[str] = None
-    descricao: Optional[str] = None
+    descricao: Optional[str] = Field(default=None, max_length=LIMITE_DESCRICAO)
     endereco: Optional[str] = None
 
 # ===== AUTH HELPERS =====
@@ -1065,8 +1072,10 @@ async def get_areas_atuacao(current_user: dict = Depends(verify_token)):
 ITENS_IMPLANTACAO = ('negocio', 'horarios', 'servicos', 'equipe', 'atendente', 'whatsapp')
 
 # Mínimo para ligar o atendimento. `negocio` e `atendente` ficam de fora porque
-# o fluxo tem padrão para nome e tom; sem horário, serviço, profissional
-# agendável ou WhatsApp, a atendente não consegue marcar nada.
+# o fluxo tem padrão para nome e tom, e porque uma recepção sem o texto do
+# negócio ainda marca horário — ela só não sabe responder o que está fora do
+# catálogo. Sem horário, serviço, profissional agendável ou WhatsApp, ela não
+# consegue marcar nada, e aí ligar seria pior do que não ter.
 ITENS_PARA_ATIVAR = ('horarios', 'servicos', 'equipe', 'whatsapp')
 
 
@@ -1114,7 +1123,7 @@ async def montar_implantacao(clinica_id: int, user_id: Optional[int]) -> dict:
     """
     empresa = (
         supabase.table('info_clinica')
-        .select('nome, assistente_nome, automacao_ativa')
+        .select('nome, descricao, assistente_nome, automacao_ativa')
         .eq('id', clinica_id)
         .limit(1)
         .execute()
@@ -1131,7 +1140,13 @@ async def montar_implantacao(clinica_id: int, user_id: Optional[int]) -> dict:
     )
 
     itens = {
-        'negocio': bool((dados.get('nome') or '').strip()),
+        # O passo "Negócio" inclui o texto que a recepção usa para responder o
+        # que não está no catálogo (pagamento, convênio, estacionamento, o que
+        # levar na primeira sessão). Sem ele o campo nasceria morto: é opcional
+        # e fica no primeiro passo, que ninguém revisita por conta própria.
+        # Não bloqueia a ativação — só aponta o passo no painel.
+        'negocio': bool((dados.get('nome') or '').strip())
+        and bool((dados.get('descricao') or '').strip()),
         'horarios': bool(horarios.data),
         'servicos': bool(servicos.data),
         'equipe': equipe_agendavel(clinica_id),
@@ -1253,10 +1268,14 @@ async def update_info_clinica(info_id: int, info: InfoClinicaUpdate, current_use
         if info_id != clinica_id:
             raise HTTPException(status_code=404, detail="Empresa não encontrada")
         data = info.model_dump(exclude_none=True)
-        # `null` limpa a identidade da assistente. As duas colunas aceitam
-        # nulo; nas demais, null continua sendo ignorado para não gravar vazio
-        # em coluna obrigatória.
-        for campo in ('assistente_nome', 'assistente_tom'):
+        # `null` limpa a identidade da assistente e o texto do negócio. As três
+        # colunas aceitam nulo; nas demais, null continua sendo ignorado para
+        # não gravar vazio em coluna obrigatória.
+        # `descricao` precisa disso porque é o único campo que o dono pode
+        # querer TIRAR DO AR: sem a linha, apagar no painel não apagava nada e o
+        # texto continuava sendo respondido no WhatsApp — uma chave PIX antiga
+        # inclusive.
+        for campo in ('assistente_nome', 'assistente_tom', 'descricao'):
             if campo in info.model_fields_set:
                 data[campo] = getattr(info, campo)
         # `automacao_ativa` não entra aqui de propósito: ligar o atendimento
