@@ -600,8 +600,8 @@
     "semantic_hash": ""
   },
   "services/api/server.py": {
-    "mtime": 1788800655.806712,
-    "seen": 1788800746.127841,
+    "mtime": 1788791896.0011325,
+    "seen": 1788791989.031749,
     "ast_hash": "3c3a276a2bb8e67072822e39283d48af",
     "semantic_hash": ""
   },
@@ -618,21 +618,21 @@
     "semantic_hash": "588a820f3b4cd8e806e4ed07fbd7162f"
   },
   "automation/n8n/AgendaMagnetica-v2.n8n.json": {
-    "mtime": 1788800727.6006477,
-    "seen": 1788800746.127841,
-    "ast_hash": "88e25a72b43b99c9f739f2534a261633",
+    "mtime": 1788791924.922117,
+    "seen": 1788791989.031749,
+    "ast_hash": "d6da4c391e66ca3f4248144a07598cc2",
     "semantic_hash": ""
   },
   "automation/n8n/tests/test_regras.mjs": {
-    "mtime": 1788800509.389912,
-    "seen": 1788800746.127841,
-    "ast_hash": "f3298769b43ec4b1c19a03fc6ac8392c",
+    "mtime": 1788791853.269869,
+    "seen": 1788791989.031749,
+    "ast_hash": "03f54e25d5ea9a5d52bf13e41c1e1bde",
     "semantic_hash": ""
   },
   "automation/n8n/validar_workflow.py": {
-    "mtime": 1788800436.9046037,
-    "seen": 1788800746.127841,
-    "ast_hash": "ab93acc31860b123b0c849fd7bfc90f2",
+    "mtime": 1788774075.6832967,
+    "seen": 1788783524.913205,
+    "ast_hash": "f518550087ffb4854ab5b0cddc10d190",
     "semantic_hash": ""
   },
   ".claude/CLAUDE.md": {
@@ -828,15 +828,15 @@
     "semantic_hash": ""
   },
   "automation/n8n/README.md": {
-    "mtime": 1788800305.4526577,
-    "seen": 1788800746.127841,
-    "ast_hash": "4720798afa49e284eaed7c44f18c56b1",
+    "mtime": 1788789073.0101497,
+    "seen": 1788789088.763043,
+    "ast_hash": "3d570aca9ea090c77261c0d556e9a533",
     "semantic_hash": ""
   },
   "automation/n8n/TESTES_AUTOMACAO_V2.md": {
-    "mtime": 1788800305.4541934,
-    "seen": 1788800746.127841,
-    "ast_hash": "ef48686d0ce48234a2d62549b9c91674",
+    "mtime": 1788786138.8129861,
+    "seen": 1788786280.8089879,
+    "ast_hash": "5bf77af529a93c2db39dfea03b0b93aa",
     "semantic_hash": ""
   },
   "docs/DATABASE_SCHEMA.md": {
@@ -1134,8 +1134,8 @@
     "semantic_hash": ""
   },
   "services/api/ai_api.py": {
-    "mtime": 1788800655.806712,
-    "seen": 1788800746.127841,
+    "mtime": 1788791896.0011325,
+    "seen": 1788791989.031749,
     "ast_hash": "ce4a2f5e400cd052c1c5290a00c16a93",
     "semantic_hash": ""
   },
@@ -1152,9 +1152,9 @@
     "semantic_hash": ""
   },
   "services/api/tests/test_ai_api.py": {
-    "mtime": 1788800509.3889105,
-    "seen": 1788800746.127841,
-    "ast_hash": "35c40e1fa03ab2a2de55b4a63bc8e677",
+    "mtime": 1788782919.881155,
+    "seen": 1788783524.913205,
+    "ast_hash": "6b8711d1cd0fa573b371f1f1187beb79",
     "semantic_hash": ""
   },
   "services/api/tests/test_ai_api_integracao.py": {
@@ -1224,8 +1224,8 @@
     "semantic_hash": ""
   },
   "apps/dashboard/src/lib/onboarding.js": {
-    "mtime": 1788800655.806712,
-    "seen": 1788800746.127841,
+    "mtime": 1788791896.0011325,
+    "seen": 1788791989.031749,
     "ast_hash": "f4d5eeb52148bdf65f63e54cd78fa477",
     "semantic_hash": ""
   },
@@ -1290,9 +1290,9 @@
     "semantic_hash": ""
   },
   "docs/planning/CORRECOES_AUTOMACAO_2026-09.md": {
-    "mtime": 1788800735.9490123,
-    "seen": 1788800746.127841,
-    "ast_hash": "b7dd19b12fd50d06a015cfed43be180f",
+    "mtime": 1788791971.4797108,
+    "seen": 1788791989.031749,
+    "ast_hash": "29c76f5fa55a766d7948d2324d5ef566",
     "semantic_hash": ""
   }
 }

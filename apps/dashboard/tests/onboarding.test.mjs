@@ -297,6 +297,24 @@ test('HORAS cobre as meias horas do dia inteiro', () => {
 
 // ===== Esquemas de fronteira =====
 
+test('negocioSchema aceita o texto do negócio até o mesmo teto do servidor', () => {
+  // Este texto entra no system prompt da recepção. O número aqui precisa
+  // concordar com LIMITE_DESCRICAO em services/api/server.py: menor no painel
+  // e o assinante é impedido de escrever o que o servidor aceitaria; maior e o
+  // formulário promete um tamanho que o servidor recusa com 422 sem explicar.
+  const LIMITE_DESCRICAO = 2000;
+  assert.equal(
+    negocioSchema.safeParse({ nome: 'Studio', descricao: 'x'.repeat(LIMITE_DESCRICAO) }).success,
+    true,
+    'o painel recusa um texto que o servidor aceita',
+  );
+  assert.equal(
+    negocioSchema.safeParse({ nome: 'Studio', descricao: 'x'.repeat(LIMITE_DESCRICAO + 1) }).success,
+    false,
+    'o painel promete um tamanho que o servidor devolve como 422',
+  );
+});
+
 test('negocioSchema exige nome e valida telefone e e-mail quando preenchidos', () => {
   assert.equal(negocioSchema.safeParse({ nome: 'Studio Bem Estar' }).success, true);
   assert.equal(negocioSchema.safeParse({ nome: 'A' }).success, false);

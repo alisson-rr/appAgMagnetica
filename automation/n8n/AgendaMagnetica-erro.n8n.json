@@ -1,0 +1,206 @@
+{
+  "name": "Agenda Magnética - erro",
+  "nodes": [
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.errorTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        0
+      ],
+      "id": "b7450af5-b891-ddf2-cfde-c1dfc7572527",
+      "name": "gatilho de erro"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Mensagem de alerta para quem opera. So metadados: nada de telefone do\n// cliente, texto da conversa, transcricao ou token. Quem precisa do detalhe\n// abre a execucao no n8n pelo id.\nconst OPERADOR = 'CONFIGURAR_NO_N8N'; // telefone do operador, com pais e DDD e sem sinais\nconst EVOLUTION_BASE = 'CONFIGURAR_NO_N8N';\nconst INSTANCIA_ALERTA = 'CONFIGURAR_NO_N8N';\n\nconst e = $input.first().json || {};\nconst execucao = e.execution || {};\n// Erro no proprio no de gatilho vem noutra forma: o n8n entrega\n// `{ trigger: { error, mode }, workflow }` - sem `execution` e SEM nome de no.\n// Quem procurar `trigger.name` aqui nao vai achar: esse campo nao existe.\nconst gatilho = e.trigger || {};\nconst fluxo = e.workflow || {};\nconst erro = execucao.error || gatilho.error || {};\n\n// O texto do erro NAO sai daqui. Ele carrega o que estava em transito quando a\n// execucao caiu: a saida do modelo, o corpo que a Evolution recusou, a linha do\n// banco. Isso ja foi visto levar nome, telefone e condicao de saude do cliente -\n// e o destino e um WhatsApp externo, fora do controle do assinante. Sai a\n// CLASSE do erro, que basta para triagem; o detalhe fica na execucao, que so\n// quem tem acesso ao n8n abre.\nconst CLASSES = ['ETIMEDOUT', 'ECONNREFUSED', 'ECONNRESET', 'ENOTFOUND', 'EAI_AGAIN',\n  'timeout', '401', '403', '404', '409', '422', '429', '500', '502', '503', '504',\n  // A Evolution abre a mensagem com estes prefixos; sem eles o operador recebia\n  // \"sem classificacao\" no erro mais comum de todos.\n  'Bad request', 'Request failed with status code', 'Unauthorized', 'Forbidden',\n  'Not Found', 'Connection Closed', 'socket hang up'];\n// Nome de classe e identificador, nunca frase: `erro.name` e o unico campo livre\n// que sobrou e sai daqui para um WhatsApp externo.\nconst NOME_DE_CLASSE = /^[A-Za-z][A-Za-z0-9_]{2,39}$/;\nconst textoDoErro = String(erro.message || '');\nconst nome = String(erro.name || '').trim();\nconst classe = (NOME_DE_CLASSE.test(nome) ? nome : '')\n  || CLASSES.find((c) => textoDoErro.includes(c))\n  || 'sem classificacao';\nconst configurado = ![OPERADOR, EVOLUTION_BASE, INSTANCIA_ALERTA]\n  .some((v) => !v || v === 'CONFIGURAR_NO_N8N');\n\nconst texto = [\n  'Agenda Magnetica: uma execucao falhou.',\n  'Fluxo: ' + (fluxo.name || 'desconhecido'),\n  'No: ' + (execucao.lastNodeExecuted\n    || (gatilho.error ? 'gatilho do fluxo (' + (gatilho.mode || 'sem modo') + ')' : 'desconhecido')),\n  'Execucao: ' + (execucao.id || 'sem id'),\n  'Erro: ' + classe,\n].join('\\n');\n\nreturn [{ json: { configurado, numero: OPERADOR, evolution_base: EVOLUTION_BASE,\n                  instancia: INSTANCIA_ALERTA, texto } }];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        220,
+        0
+      ],
+      "id": "a6038e85-63a6-ae9f-d2c4-a3fb36f8aaea",
+      "name": "montar alerta"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "6ed7efe0-ffde-e78d-655e-5ad60691472f",
+              "leftValue": "={{ $json.configurado }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        440,
+        0
+      ],
+      "id": "eceaa6ad-94e6-4914-e878-80e67eac1574",
+      "name": "operador configurado?"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $json.evolution_base + '/message/sendText/' + $json.instancia }}",
+        "sendHeaders": false,
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ number: $json.numero, text: $json.texto }) }}",
+        "options": {
+          "timeout": 15000
+        },
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth"
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        660,
+        -80
+      ],
+      "id": "dfffad82-a718-8b72-8899-c84edd59a958",
+      "name": "avisar operador",
+      "onError": "continueErrorOutput",
+      "retryOnFail": false,
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "CONFIGURAR_NO_N8N_EVO",
+          "name": "Agenda Magnetica - Evolution API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Chegar aqui significa que uma execucao falhou E o alerta nao pode ser\n// enviado, porque o operador, a origem da Evolution ou a instancia ainda\n// estao com o marcador de configuracao. Encerrar calado esconderia as duas\n// falhas de uma vez, entao este no lanca: a execucao fica salva.\nthrow new Error('alerta nao enviado: configure OPERADOR, EVOLUTION_BASE e INSTANCIA_ALERTA no no \"montar alerta\"');\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        660,
+        120
+      ],
+      "id": "7a214d74-5a95-fef1-6f4b-07983aded516",
+      "name": "fim - alerta não configurado"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        880,
+        -80
+      ],
+      "id": "426f0fc3-f6dd-b3a0-41dc-ea1a23888190",
+      "name": "fim - operador avisado"
+    },
+    {
+      "parameters": {
+        "jsCode": "// A Evolution recusou o envio do alerta — possivelmente a mesma queda que\n// causou a falha original. Lancar deixa esta execucao salva no historico,\n// que passa a ser o unico registro de que alguem deveria ter sido avisado.\nthrow new Error('falha ao enviar o alerta pela Evolution');\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        880,
+        60
+      ],
+      "id": "b7c1e4a0-3d92-4f68-9a15-2e7f0c8d4b31",
+      "name": "fim - alerta não enviado"
+    }
+  ],
+  "connections": {
+    "gatilho de erro": {
+      "main": [
+        [
+          {
+            "node": "montar alerta",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "montar alerta": {
+      "main": [
+        [
+          {
+            "node": "operador configurado?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "operador configurado?": {
+      "main": [
+        [
+          {
+            "node": "avisar operador",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "fim - alerta não configurado",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "avisar operador": {
+      "main": [
+        [
+          {
+            "node": "fim - operador avisado",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "fim - alerta não enviado",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1",
+    "saveDataSuccessExecution": "all",
+    "saveDataErrorExecution": "all",
+    "saveManualExecutions": false,
+    "callerPolicy": "workflowsFromSameOwner",
+    "executionTimeout": 120
+  },
+  "versionId": "erro-v1",
+  "meta": {
+    "templateCredsSetupCompleted": false
+  },
+  "tags": []
+}

@@ -154,6 +154,9 @@ CONTRATO_VIEW = {
     "procedimentos",
     "profissionais",
     "horarios",
+    # v3: texto livre do assinante sobre o negócio. Some daqui e a recepção
+    # volta a não ter fonte para pagamento, convênio ou estacionamento.
+    "clinica_descricao",
 }
 
 

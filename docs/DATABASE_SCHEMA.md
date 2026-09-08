@@ -58,7 +58,7 @@ Convenção: 🔑 chave primária, 🔗 chave estrangeira, **N** `NOT NULL`.
 | `nome` | text | **N** | |
 | `telefone` | text | | |
 | `email` | text | | |
-| `descricao` | text | | |
+| `descricao` | text | | **texto livre do assinante sobre o negócio**; entra no prompt da recepção pela view, teto de 2000 na API |
 | `endereco` | text | | |
 | `mensagem_lembrete` | text | | modelo de lembrete |
 | `onboarding_completo` | bool | **N** | default `false`; `true` ao fim do onboarding |
@@ -78,6 +78,15 @@ de horários, serviço, profissional agendável e WhatsApp conectado.
 O `CHECK` de `assistente_tom` existe porque o valor entra no prompt de sistema
 da IA: a validação da API não protege contra script de manutenção, correção
 manual no banco ou rota futura.
+
+`descricao` é a **única fonte** do que não cabe no catálogo: forma de pagamento,
+convênio, estacionamento, o que levar na primeira sessão, política de
+cancelamento. Ela também entra no prompt de sistema, mas sem `CHECK`: é texto
+livre por definição, e o que o banco não pode garantir o fluxo garante na
+renderização — `montar contexto` delimita em `<negocio>`, tira `<` `>`,
+invisíveis, bidi e rótulo de papel, e corta em 2000 caracteres. A API recusa
+acima de 2000 (`LIMITE_DESCRICAO`); linha antiga, gravada quando não havia teto
+nenhum, é cortada pelo fluxo em vez de derrubar o atendimento.
 
 ### 2. `usuarios` — login do painel e vínculo com a instância do WhatsApp
 
@@ -398,6 +407,7 @@ Uma linha por empresa, `security_invoker = true`. Contrato conferido no nó
 |---|---|---|
 | `id_info_clinica` | int8 | filtro obrigatório |
 | `clinica_nome`, `clinica_telefone`, `clinica_email`, `clinica_endereco` | text | identificação pública |
+| `clinica_descricao` | text | v3: texto do assinante sobre o negócio; vai cru, quem higieniza é `montar contexto` |
 | `assistente_nome`, `assistente_tom` | text | nulo usa o padrão do fluxo |
 | `exige_profissional` | bool | |
 | `procedimentos` | jsonb | `[{id, nome, valor, duracao_minutos, agendavel}]`, ordenado por nome |
@@ -502,6 +512,7 @@ barreira não vale para ele — é a razão de `/api/ai/*` existir. Ver
 | 2026-08-21 | `integridade_tenant.sql`: I1–I4 aplicadas; FKs de `consulta` e `agenda_bloqueio` passam a ser compostas com a empresa |
 | 2026-08-23 | `ajustes_onboarding.sql`: O1–O2 aplicadas (`info_clinica.automacao_ativa`, `CHECK` de `assistente_tom`) |
 | 2026-08-23 | `v_clinica_detalhes` v2: passa a expor `automacao_ativa` (12ª coluna) |
+| 2026-09-07 | `v_clinica_detalhes` v3: passa a expor `clinica_descricao` (13ª coluna). `create or replace`, sem migração de tabela — pode rodar com a automação no ar |
 
 ---
 

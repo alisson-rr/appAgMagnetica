@@ -642,16 +642,16 @@ const PassoNegocio = ({ clinica, salvando, aoSalvar }) => {
       </div>
 
       <div>
-        <Label htmlFor="negocio-descricao">Descrição</Label>
+        <Label htmlFor="negocio-descricao">Sobre o negócio</Label>
         <Textarea
           id="negocio-descricao"
-          rows={3}
-          placeholder="Em uma frase, o que o seu negócio faz."
+          rows={6}
+          placeholder="Formas de pagamento, convênios, estacionamento, o que levar na primeira sessão, política de cancelamento."
           {...descricaoDoCampo('negocio-descricao', errors.descricao?.message)}
           {...register('descricao')}
         />
         <CampoErro id="negocio-descricao-erro" mensagem={errors.descricao?.message} />
-        <p className="field-hint">Ajuda a sua recepção a se apresentar do jeito certo.</p>
+        <p className="field-hint">A sua recepção usa este texto para responder o que não está no catálogo. Qualquer pessoa que escrever no WhatsApp pode receber este texto de volta. Uma informação por linha, e nada de nome, telefone ou dado de cliente.</p>
       </div>
 
       <div className="flex justify-end pt-2">

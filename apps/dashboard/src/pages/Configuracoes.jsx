@@ -265,15 +265,17 @@ const Configuracoes = () => {
                 </div>
 
                 <div className="mt-6">
-                  <Label htmlFor="config-descricao">Descrição</Label>
+                  <Label htmlFor="config-descricao">Sobre o negócio</Label>
                   <Textarea
                     id="config-descricao"
-                    rows={3}
+                    rows={6}
                     className="mt-1"
+                    placeholder="Formas de pagamento, convênios, estacionamento, o que levar na primeira sessão, política de cancelamento."
                     {...descricaoDoCampo('config-descricao', errors.descricao?.message)}
                     {...register('descricao')}
                   />
                   <CampoErro id="config-descricao-erro" mensagem={errors.descricao?.message} />
+                  <p className="field-hint">A sua recepção usa este texto para responder o que não está no catálogo. Qualquer pessoa que escrever no WhatsApp pode receber este texto de volta. Uma informação por linha, e nada de nome, telefone ou dado de cliente.</p>
                 </div>
 
                 <div className="mt-8 flex justify-end">

@@ -236,7 +236,7 @@ def falhas_do_workflow(caminho):
     elif "RECUSA_DE_NEGOCIO" not in codigo_fim or "throw" not in codigo_fim:
         erros.append("'fim - contexto indisponível' não separa recusa de negócio de falha")
 
-    for nome in ("evo digitando", "evo enviar mensagem"):
+    for nome in ("evo digitando", "evo enviar mensagem", "buscar áudio", "buscar imagem"):
         no = por_nome.get(nome)
         if not no:
             continue
@@ -251,6 +251,79 @@ def falhas_do_workflow(caminho):
         ]
         if "apikey" in cabecalhos:
             erros.append(f"'{nome}' manda a chave da Evolution como header literal")
+
+    # Toda falha que lança erro precisa avisar alguém: sem workflow de erro, o
+    # cliente fica sem resposta e ninguém fica sabendo.
+    if not wf.get("settings", {}).get("errorWorkflow"):
+        erros.append("settings.errorWorkflow vazio: falha lançada não avisa ninguém")
+
+    # Falha ao enviar a resposta não pode terminar "com sucesso": pode haver
+    # agendamento criado nesta execução e o cliente sem saber.
+    envio = por_nome.get("evo enviar mensagem", {})
+    if envio.get("onError") != "continueErrorOutput":
+        erros.append("'evo enviar mensagem' precisa de continueErrorOutput (falha de envio tem de aparecer)")
+    elif len(conexoes.get("evo enviar mensagem", {}).get("main", [])) < 2:
+        erros.append("'evo enviar mensagem' sem destino para a saída de erro")
+
+    # O eco do próprio envio não pode pausar a IA: a Evolution reemite como
+    # `messages.upsert` com fromMe a mensagem que a própria API mandou.
+    saidas_entrada = conexoes.get("rota de entrada", {}).get("main", [])
+    if len(saidas_entrada) > 1:
+        destino_proprio = [l["node"] for l in (saidas_entrada[1] or [])]
+        if any(d.startswith("Redis - pausar IA") for d in destino_proprio):
+            erros.append(
+                "a rota 'humano' pausa a IA sem checar se a mensagem foi o eco do próprio envio"
+            )
+
+    # O primeiro nó do ramo do próprio dono não pode falhar aberto: sem onError,
+    # uma queda do Redis mata o ramo inteiro e a mensagem que o negócio mandou
+    # não é nem ignorada nem tratada como resposta humana. Com continueRegularOutput
+    # o valor chega vazio, o IF manda para o ramo que pausa a IA, e pausar é o
+    # lado seguro quando pode haver gente atendendo do outro lado.
+    if len(saidas_entrada) > 1:
+        for ligacao in (saidas_entrada[1] or []):
+            no = por_nome.get(ligacao["node"], {})
+            if no.get("type") == "n8n-nodes-base.redis" and no.get("onError") != "continueRegularOutput":
+                erros.append(
+                    f"'{ligacao['node']}' abre o ramo do próprio envio sem onError: "
+                    "Redis fora do ar mataria o ramo"
+                )
+
+    # Atendimento respondido precisa deixar rastro: com saveDataSuccessExecution
+    # 'none', um NoOp no fim apaga a única evidência do que a IA decidiu.
+    auditoria = [
+        n for n in nos
+        if n.get("type") == "n8n-nodes-base.redis"
+        and "am:auditoria:" in (n.get("parameters", {}).get("key") or n.get("parameters", {}).get("list") or "")
+    ]
+    if not auditoria:
+        erros.append("nenhum nó persiste a auditoria do atendimento (am:auditoria:...)")
+    elif "registrar decisão" in conexoes:
+        alvos = [l["node"] for saida in conexoes["registrar decisão"].get("main", []) for l in (saida or [])]
+        if not any(a in {n["name"] for n in auditoria} for a in alvos):
+            erros.append("'registrar decisão' não entrega o registro ao nó de auditoria")
+
+    # O webhook é registrado com base64 desligado: sem buscar a mídia, todo
+    # áudio e toda imagem chegam vazios e o cliente recebe "não entendi".
+    for nome in ("buscar áudio", "buscar imagem"):
+        no = por_nome.get(nome)
+        if not no:
+            erros.append(f"nó de mídia ausente: {nome} (áudio/imagem chegariam vazios)")
+            continue
+        if "getBase64FromMediaMessage" not in no.get("parameters", {}).get("url", ""):
+            erros.append(f"'{nome}' não busca a mídia na Evolution")
+        # O buffer agrupa mensagens: com áudio seguido de texto, o msg_id da
+        # entrada é o do TEXTO, e a Evolution responde 400 para todo áudio.
+        if "midia_msg_id" not in no.get("parameters", {}).get("jsonBody", ""):
+            erros.append(f"'{nome}' não usa o id da mídia agrupada (pediria o arquivo errado)")
+
+    # Quem consome um item degradado precisa degradar também: sem onError, o
+    # conversor lança com base64 vazio, a execução morre e o cliente fica sem
+    # resposta — tornando inalcançável a guarda que responde "não consegui ouvir".
+    for nome in ("converter áudio", "converter imagem"):
+        no = por_nome.get(nome)
+        if no and not no.get("onError"):
+            erros.append(f"'{nome}' sem onError: mídia vazia derrubaria a execução")
 
     # A repetição precisa repetir o MESMO pedido, senão a chave muda.
     repetir = por_nome.get("repetir escrita")
@@ -267,6 +340,97 @@ def falhas_do_workflow(caminho):
         if "chave_idempotencia" in bloco:
             erros.append("reagendar não pode enviar chave_idempotencia (a API recusa)")
 
+    # Toda escrita no Redis expira. A chave carrega o telefone do cliente no nome
+    # e o conteúdo dele no valor: sem expiração, uma execução interrompida entre
+    # a escrita e a limpeza deixa esse dado no db1 para sempre. O teto de 30 dias
+    # vale para o número fixo e para cada número dentro de um TTL calculado.
+    TETO_TTL = 30 * 24 * 3600
+    for no in nos:
+        if no.get("type") != "n8n-nodes-base.redis":
+            continue
+        parametros = no.get("parameters", {})
+        # Só as leituras e o delete escapam; qualquer outra operação escreve.
+        operacao = parametros.get("operation")
+        if operacao in ("get", "delete", "keys", "info"):
+            continue
+        nome = no["name"]
+        # O nó Redis do n8n só honra `expire`/`ttl` em `set` e `incr`. Em `push`
+        # o campo é aceito e ignorado: a chave fica sem expiração e o validador
+        # aprovaria, que foi exatamente como a lista sem TTL passou antes.
+        if operacao not in ("set", "incr"):
+            erros.append(
+                f"'{nome}' escreve com operation '{operacao}', que ignora TTL: use set ou incr"
+            )
+            continue
+        if parametros.get("expire") is not True:
+            erros.append(f"'{nome}' escreve no Redis sem expiração (dado do cliente ficaria órfão)")
+            continue
+        ttl = str(parametros.get("ttl"))
+        # Conta aritmética numa expressão engana a leitura por número: o maior
+        # literal de `{{ 60 * 60 * 24 * 365 }}` é 365, e um ano de retenção
+        # passaria como se fosse seis minutos. TTL é número, ou ternário de
+        # números escolhendo entre faixas.
+        # Segundos em número inteiro, ou um ternário que escolhe entre inteiros.
+        # Conta (`60 * 60 * 24 * 365`) e notação científica (`60e6`) enganavam a
+        # leitura por literal: a maior parte do valor não aparece como dígito.
+        numeros = [int(v) for v in re.findall(r"\d+", ttl)]
+        limpo = re.sub(r"\s+", "", ttl)
+        expressao = "{{" in limpo
+        corpo = limpo.replace("={{", "").replace("}}", "")
+        so_inteiros = re.fullmatch(r"[0-9'\"\[\]().,?:|&!=<>a-zA-Z_$]*", corpo) is not None
+        if re.search(r"\d\s*[*/+-]\s*\d", ttl) or re.search(r"\de[+-]?\d", ttl, re.I):
+            erros.append(f"'{nome}' com TTL calculado: escreva o valor em segundos")
+            continue
+        if not numeros:
+            erros.append(f"'{nome}' com expire ligado e sem TTL")
+        elif max(numeros) > TETO_TTL:
+            erros.append(f"'{nome}' guarda dado por mais de 30 dias ({max(numeros)} s)")
+        elif not expressao and not re.fullmatch(r"\d+", limpo):
+            erros.append(f"'{nome}' com TTL que não é número de segundos: {ttl[:40]}")
+        elif expressao and not so_inteiros:
+            erros.append(f"'{nome}' com TTL em expressão não conferível: {ttl[:40]}")
+
+    # Sem timeout, o nó espera até o limite da execução: o cliente fica sem
+    # resposta e o worker segura a vaga na fila.
+    for no in nos:
+        if no.get("type") != "n8n-nodes-base.httpRequest":
+            continue
+        tempo = no.get("parameters", {}).get("options", {}).get("timeout")
+        if not isinstance(tempo, int):
+            erros.append(f"'{no['name']}' sem timeout")
+        elif tempo > 30000:
+            erros.append(f"'{no['name']}' com timeout acima de 30 s ({tempo} ms)")
+
+    # A janela da ação pendente vive em dois lugares: a constante do nó que a
+    # cria e o TTL da chave. Divergindo, ou a chave morre antes de a pendência
+    # vencer (o "sim" válido vira "não tenho nada pendente"), ou sobrevive depois
+    # (o "sim" tardio executa o que já venceu).
+    salvar = por_nome.get("Redis - salvar ação pendente", {})
+    minutos = re.search(r"PENDENTE_MINUTOS\s*=\s*(\d+)",
+                        por_nome.get("avaliar horários", {}).get("parameters", {}).get("jsCode", ""))
+    if salvar and minutos:
+        esperado = int(minutos.group(1)) * 60
+        if salvar.get("parameters", {}).get("ttl") != esperado:
+            erros.append(
+                "TTL de 'Redis - salvar ação pendente' "
+                f"({salvar.get('parameters', {}).get('ttl')}) não bate com PENDENTE_MINUTOS ({esperado} s)"
+            )
+
+    # Repetir um POST de envio não é idempotente: a Evolution entrega, a resposta
+    # estoura o timeout e o cliente recebe a mesma mensagem duas vezes. A regra é
+    # do ENDEREÇO, não do nome do nó: um segundo nó de envio com outro nome
+    # reintroduziria o defeito com o validador verde.
+    for no in nos:
+        if no.get("type") != "n8n-nodes-base.httpRequest":
+            continue
+        # A URL é expressão montada por concatenação: sem tirar aspas, espaços e
+        # `+`, bastava partir a string para a regra não casar.
+        url = re.sub(r"[\s'\"+]", "", str(no.get("parameters", {}).get("url", "")))
+        if "/message/send" in url and no.get("retryOnFail"):
+            erros.append(
+                f"'{no['name']}' envia mensagem e repete: o cliente receberia duas vezes"
+            )
+
     for padrao, descricao in PROIBIDOS:
         achado = re.search(padrao, bruto)
         if achado:
@@ -278,6 +442,74 @@ def falhas_do_workflow(caminho):
             trecho = achado.group(0)
             mascara = trecho[:6] + "..." + trecho[-4:] if len(trecho) > 12 else "..."
             erros.append(f"{descricao}: {mascara}")
+
+    # ===== Fiação do caminho do dinheiro =====
+    # Trocar duas saídas do switch manda o corpo de agendar para /cancelar. A
+    # API recusa com 422, `verificar resultado` classifica falha_ferramenta e o
+    # fluxo transfere — ninguém agenda errado, mas ninguém agenda. As duas
+    # suítes ficam verdes: elas testam o texto, não a fiação.
+    ACAO_PARA_NO = {
+        "cancelar": "cancelar consulta",
+        "agendar": "criar consulta",
+        "reagendar": "reagendar consulta",
+    }
+    switch = por_nome.get("tipo da ação")
+    if switch:
+        regras = switch.get("parameters", {}).get("rules", {}).get("values", [])
+        saidas = conexoes.get("tipo da ação", {}).get("main", [])
+        for indice, regra in enumerate(regras):
+            chave = regra.get("outputKey")
+            esperado = ACAO_PARA_NO.get(chave)
+            if not esperado:
+                erros.append(f"'tipo da ação' tem uma saída desconhecida: {chave!r}")
+                continue
+            destinos = [c.get("node") for c in (saidas[indice] if indice < len(saidas) else [])]
+            if destinos != [esperado]:
+                erros.append(
+                    f"'tipo da ação' manda {chave!r} para {destinos} — o certo é ['{esperado}']"
+                )
+
+    # ===== Idempotência de entrada e de escrita =====
+    # As duas travas são INCR no Redis lidos por um IF. Inverter o IF, ou trocar
+    # o comparador, some com a proteção sem quebrar teste nenhum: a de entrada
+    # deixa a mesma mensagem ser respondida duas vezes na reentrega da Evolution,
+    # e a de escrita deixa dois "sim" seguidos criarem dois agendamentos.
+    TRAVAS = [
+        # (nó IF, operação esperada, saída que ENCERRA, nó de encerramento)
+        ("mensagem duplicada?", "gt", 0, "fim - mensagem duplicada"),
+        ("primeira execução da ação?", "equals", 1, "fim - ação já executada"),
+    ]
+    for nome_if, operacao, saida_que_encerra, terminal in TRAVAS:
+        no_if = por_nome.get(nome_if)
+        if not no_if:
+            erros.append(f"trava de idempotência ausente: '{nome_if}'")
+            continue
+        condicoes = no_if.get("parameters", {}).get("conditions", {}).get("conditions", [])
+        if len(condicoes) != 1 or condicoes[0].get("operator", {}).get("operation") != operacao:
+            erros.append(f"'{nome_if}' deixou de comparar o INCR com {operacao!r}")
+        # O INCR precisa ser lido do primeiro valor do item, que é como o nó
+        # Redis do n8n devolve o contador.
+        if "Object.values($json)[0]" not in str(condicoes[0].get("leftValue", "")) if condicoes else True:
+            erros.append(f"'{nome_if}' não lê mais o contador que o Redis devolveu")
+        destinos = conexoes.get(nome_if, {}).get("main", [])
+        alvo = [c.get("node") for c in (destinos[saida_que_encerra] if saida_que_encerra < len(destinos) else [])]
+        if alvo != [terminal]:
+            erros.append(f"'{nome_if}' deixou de encerrar em '{terminal}' (vai para {alvo})")
+
+    # ===== Eco do próprio envio =====
+    # A chave gravada depois de enviar e a chave lida quando a mensagem volta
+    # precisam ter a MESMA forma. Se divergirem, nenhum eco é reconhecido: a
+    # própria resposta do robô chega como se o dono tivesse digitado e a IA se
+    # pausa sozinha por 30 minutos, em toda conversa.
+    escrita = por_nome.get("Redis - marcar envio próprio", {}).get("parameters", {}).get("key", "")
+    leitura = por_nome.get("Redis - envio próprio?", {}).get("parameters", {}).get("key", "")
+    for rotulo, chave in (("escrita", escrita), ("leitura", leitura)):
+        if "am:enviada:" not in str(chave):
+            erros.append(f"chave de eco ({rotulo}) não usa o prefixo am:enviada:")
+    if escrita and leitura:
+        prefixo = "am:enviada:{{ $('normalizar entrada').first().json.instance }}:"
+        if not (str(escrita).startswith("=" + prefixo) and str(leitura).startswith("=" + prefixo)):
+            erros.append("as chaves de eco deixaram de concordar no prefixo por instância")
 
     agentes = [n for n in nos if n.get("type") == "@n8n/n8n-nodes-langchain.agent"]
     if len(agentes) > 1:
@@ -292,12 +524,52 @@ def falhas_do_workflow(caminho):
     return erros
 
 
+def falhas_de_forma(caminho):
+    """Regras que valem para QUALQUER workflow do projeto: inativo, sem segredo,
+    sem repetição no envio e sem timeout ausente. O fluxo de erro não passa pelas
+    regras específicas do V2, e sem isto ninguém olhava para ele."""
+    erros = []
+    with open(caminho, encoding="utf-8") as arquivo:
+        bruto = arquivo.read()
+    try:
+        wf = json.loads(bruto)
+    except ValueError as exc:
+        return [f"JSON inválido: {exc}"]
+
+    if wf.get("active") is not False:
+        erros.append("workflow precisa continuar inativo (active: false)")
+    if wf.get("pinData"):
+        erros.append("pinData deve ficar vazio (pode conter payload real)")
+
+    for no in wf.get("nodes", []):
+        if no.get("type") != "n8n-nodes-base.httpRequest":
+            continue
+        url = re.sub(r"[\s'\"+]", "", str(no.get("parameters", {}).get("url", "")))
+        if "/message/send" in url and no.get("retryOnFail"):
+            erros.append(f"'{no['name']}' envia mensagem e repete: o destinatário receberia duas vezes")
+        tempo = no.get("parameters", {}).get("options", {}).get("timeout")
+        if not isinstance(tempo, int):
+            erros.append(f"'{no['name']}' sem timeout")
+
+    for padrao, descricao in SEGREDOS:
+        achado = re.search(padrao, bruto)
+        if achado:
+            erros.append(f"{descricao}: mascarado")
+    return erros
+
+
 def main():
     caminho = sys.argv[1] if len(sys.argv) > 1 else PADRAO
     if not os.path.exists(caminho):
         print(f"arquivo não encontrado: {caminho}")
         return 1
     erros = falhas_do_workflow(caminho)
+    # O fluxo de erro é um workflow do projeto como qualquer outro: as regras de
+    # forma valem nele também.
+    if caminho == PADRAO:
+        erro_wf = os.path.join(os.path.dirname(PADRAO), "AgendaMagnetica-erro.n8n.json")
+        if os.path.exists(erro_wf):
+            erros += [f"[erro] {e}" for e in falhas_de_forma(erro_wf)]
     if erros:
         print(f"FALHOU ({len(erros)}):")
         for erro in erros:

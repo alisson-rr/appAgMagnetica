@@ -266,7 +266,11 @@ export const negocioSchema = z.object({
   telefone: telefoneOpcional,
   email: emailOpcional,
   endereco: textoOpcional(200, 'O endereço pode ter até 200 caracteres.'),
-  descricao: textoOpcional(500, 'A descrição pode ter até 500 caracteres.'),
+  // 2000, e não 500: este texto é a única fonte da recepção para o que não
+  // cabe no catálogo (pagamento, convênio, estacionamento, o que levar na
+  // primeira sessão). Precisa concordar com LIMITE_DESCRICAO em
+  // services/api/server.py — o servidor é quem recusa de verdade.
+  descricao: textoOpcional(2000, 'O texto pode ter até 2000 caracteres.'),
 });
 
 export const servicoSchema = z.object({

@@ -7,7 +7,7 @@ da empresa pela instância.
 """
 
 import asyncio
-from datetime import datetime, timedelta, timezone
+from datetime import date, datetime, timedelta, timezone
 from decimal import Decimal
 
 import pytest
@@ -184,6 +184,7 @@ BANCO_PADRAO = {
             "clinica_telefone": "(51) 3333-0000",
             "clinica_email": "contato@studio.example",
             "clinica_endereco": "Rua A, 1",
+            "clinica_descricao": "Aceitamos pix e cartão. Estacionamento na porta.",
             "assistente_nome": "Aurora",
             "assistente_tom": "acolhedor",
             "exige_profissional": False,
@@ -1216,6 +1217,38 @@ def test_data_de_nascimento_impossivel_e_entrada_invalida(monkeypatch):
     assert "data_nascimento" in corpo["error"]["message"]
 
 
+def test_data_de_nascimento_no_futuro_e_recusada(monkeypatch):
+    """A data vem de uma conversa interpretada por um modelo.
+
+    "faço aniversário em maio" já virou uma data do ano que vem. Gravada, ela
+    some do radar: ninguém revisa aniversário de cliente.
+    """
+    banco = banco_com(cliente=[dict(CLIENTE_A)])
+    futuro = (date.today() + timedelta(days=1)).isoformat()
+
+    with http_com(monkeypatch, banco) as http:
+        resposta = http.post("/api/ai/cliente", headers=CABECALHO, json={
+            "instance_name": "agm_1_studio", "telefone": TELEFONE,
+            "data_nascimento": futuro})
+
+    assert resposta.status_code == 422
+    assert resposta.json()["error"]["code"] == "ENTRADA_INVALIDA"
+    assert banco.tabelas["cliente"][0]["data_nascimento"] is None
+
+
+def test_data_de_nascimento_antiga_demais_e_recusada(monkeypatch):
+    banco = banco_com(cliente=[dict(CLIENTE_A)])
+
+    with http_com(monkeypatch, banco) as http:
+        resposta = http.post("/api/ai/cliente", headers=CABECALHO, json={
+            "instance_name": "agm_1_studio", "telefone": TELEFONE,
+            "data_nascimento": "1850-03-12"})
+
+    assert resposta.status_code == 422
+    assert resposta.json()["error"]["code"] == "ENTRADA_INVALIDA"
+    assert banco.tabelas["cliente"][0]["data_nascimento"] is None
+
+
 def test_data_de_nascimento_valida_e_gravada(monkeypatch):
     banco = banco_com(cliente=[dict(CLIENTE_A)])
 
@@ -1254,6 +1287,57 @@ def test_atualizacao_sem_nenhum_campo_e_recusada(monkeypatch):
 
 
 # ===== Contexto =====
+def test_busca_filtra_por_empresa_e_por_cliente(monkeypatch):
+    """A rota que abre todo cancelamento e reagendamento isola nas duas pontas.
+
+    `decidir sobre consultas` tem 12 testes, todos do lado de quem LÊ o que esta
+    rota devolveu. Nenhum provava que ela filtra — e é a única rota de
+    `/api/ai/*` nessa situação. Um filtro a menos aqui mostra a agenda de outra
+    pessoa, ou de outra empresa, dentro da tela de "qual desses você quer
+    cancelar?".
+    """
+    banco = banco_com(
+        cliente=[dict(CLIENTE_A)],
+        consulta=[
+            {"id": 1, "id_info_clinica": EMPRESA_A, "id_cliente": CLIENTE_A["id"],
+             "status": "agendado", "intervalo": "[2026-08-21 14:00,2026-08-21 15:00)"},
+            # Mesma empresa, OUTRO cliente.
+            {"id": 2, "id_info_clinica": EMPRESA_A, "id_cliente": CLIENTE_A["id"] + 1,
+             "status": "agendado", "intervalo": "[2026-08-21 16:00,2026-08-21 17:00)"},
+            # Mesmo cliente, OUTRA empresa.
+            {"id": 3, "id_info_clinica": EMPRESA_A + 1, "id_cliente": CLIENTE_A["id"],
+             "status": "agendado", "intervalo": "[2026-08-21 18:00,2026-08-21 19:00)"},
+        ],
+    )
+
+    with http_com(monkeypatch, banco) as http:
+        resposta = http.post("/api/ai/agendamentos/buscar", headers=CABECALHO, json={
+            "instance_name": "agm_1_studio", "telefone": TELEFONE})
+
+    corpo = resposta.json()
+    assert corpo["ok"] is True
+    ids = [a["id"] for a in corpo["data"]["agendamentos"]]
+    assert ids == [1], f"a busca vazou agenda de outro cliente ou de outra empresa: {ids}"
+
+
+def test_contexto_entrega_o_texto_do_negocio(monkeypatch):
+    """O que o assinante escreveu sobre o negócio é o que a IA tem para responder.
+
+    A view excluía `descricao` de propósito enquanto ninguém a lia. Com o prompt
+    lendo, ela é a única fonte para forma de pagamento, convênio, estacionamento
+    e o que levar na primeira sessão — sem ela a recepção só sabe dizer que não
+    sabe. Sai crua: quem delimita e higieniza é `montar contexto`.
+    """
+    banco = banco_com(cliente=[])
+
+    with http_com(monkeypatch, banco) as http:
+        resposta = http.post("/api/ai/contexto", headers=CABECALHO, json={
+            "instance_name": "agm_1_studio", "telefone": TELEFONE, "nome": "Ana"})
+
+    empresa = resposta.json()["data"]["empresa"]
+    assert empresa["descricao"] == "Aceitamos pix e cartão. Estacionamento na porta."
+
+
 def test_contexto_nao_sobrescreve_o_nome_de_quem_ja_e_cliente(monkeypatch):
     """`push_name` do WhatsApp não vale mais que o cadastro do painel."""
     banco = banco_com(cliente=[dict(CLIENTE_A)])

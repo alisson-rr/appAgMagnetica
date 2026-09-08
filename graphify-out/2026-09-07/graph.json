@@ -108,19 +108,6 @@
       "source_location": "L47"
     },
     {
-      "id": "services_api_server_procedimentoupdate",
-      "label": "ProcedimentoUpdate",
-      "_callable": true,
-      "_callable_class": true,
-      "_origin": "ast",
-      "community": 0,
-      "community_name": "server.py",
-      "file_type": "code",
-      "norm_label": "procedimentoupdate",
-      "source_file": "services/api/server.py",
-      "source_location": "L104"
-    },
-    {
       "id": "services_api_server_profissionalcreate",
       "label": "ProfissionalCreate",
       "_callable": true,
@@ -277,6 +264,19 @@
       "source_location": "L95"
     },
     {
+      "id": "services_api_server_procedimentoupdate",
+      "label": "ProcedimentoUpdate",
+      "_callable": true,
+      "_callable_class": true,
+      "_origin": "ast",
+      "community": 156,
+      "community_name": "dinheiro_para_banco",
+      "file_type": "code",
+      "norm_label": "procedimentoupdate",
+      "source_file": "services/api/server.py",
+      "source_location": "L104"
+    },
+    {
       "id": "services_api_tests_test_webhook_config_respostafalsa",
       "label": "_RespostaFalsa",
       "_callable": true,
@@ -300,7 +300,7 @@
       "file_type": "code",
       "norm_label": "bancoindisponivel",
       "source_file": "services/api/tests/test_ai_api.py",
-      "source_location": "L1470"
+      "source_location": "L1437"
     },
     {
       "id": "services_api_server_bloqueiocreate",
@@ -308,7 +308,7 @@
       "_callable": true,
       "_callable_class": true,
       "_origin": "ast",
-      "community": 185,
+      "community": 182,
       "community_name": "post",
       "file_type": "code",
       "norm_label": "bloqueiocreate",
@@ -322,7 +322,7 @@
       "_callable_class": true,
       "_origin": "ast",
       "community": 185,
-      "community_name": "post",
+      "community_name": "assert_owned_record",
       "file_type": "code",
       "norm_label": "consultacreate",
       "source_file": "services/api/server.py",
@@ -335,7 +335,7 @@
       "_callable_class": true,
       "_origin": "ast",
       "community": 185,
-      "community_name": "post",
+      "community_name": "assert_owned_record",
       "file_type": "code",
       "norm_label": "consultaupdate",
       "source_file": "services/api/server.py",
@@ -348,7 +348,7 @@
       "_callable_class": true,
       "_origin": "ast",
       "community": 185,
-      "community_name": "post",
+      "community_name": "assert_owned_record",
       "file_type": "code",
       "norm_label": "disponibilidadeitem",
       "source_file": "services/api/server.py",
@@ -374,7 +374,7 @@
       "_callable_class": true,
       "_origin": "ast",
       "community": 41,
-      "community_name": "montar_implantacao",
+      "community_name": "get_whatsapp_status",
       "file_type": "code",
       "norm_label": "automacaoupdate",
       "source_file": "services/api/server.py",
@@ -628,18 +628,6 @@
       "norm_label": "update_info_clinica()",
       "source_file": "services/api/server.py",
       "source_location": "L1265"
-    },
-    {
-      "id": "services_api_server_update_procedimento",
-      "label": "update_procedimento()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 0,
-      "community_name": "server.py",
-      "file_type": "code",
-      "norm_label": "update_procedimento()",
-      "source_file": "services/api/server.py",
-      "source_location": "L866"
     },
     {
       "id": "services_api_server_update_profissional",
@@ -1251,7 +1239,7 @@
       "file_type": "code",
       "norm_label": "falhas_de_forma()",
       "source_file": "automation/n8n/validar_workflow.py",
-      "source_location": "L527"
+      "source_location": "L459"
     },
     {
       "id": "automation_n8n_validar_workflow_falhas_do_workflow",
@@ -1275,7 +1263,7 @@
       "file_type": "code",
       "norm_label": "main()",
       "source_file": "automation/n8n/validar_workflow.py",
-      "source_location": "L561"
+      "source_location": "L493"
     },
     {
       "id": "services_api_tests_test_onboarding_banco_com",
@@ -2295,7 +2283,7 @@
       "file_type": "code",
       "norm_label": "test_catalogo_marca_servico_sem_profissional_como_nao_agendavel()",
       "source_file": "services/api/tests/test_ai_api.py",
-      "source_location": "L1368"
+      "source_location": "L1335"
     },
     {
       "id": "services_api_tests_test_ai_api_test_chave_de_idempotencia_e_isolada_por_empresa",
@@ -2319,7 +2307,7 @@
       "file_type": "code",
       "norm_label": "test_contexto_nao_devolve_a_empresa_como_id()",
       "source_file": "services/api/tests/test_ai_api.py",
-      "source_location": "L1412"
+      "source_location": "L1379"
     },
     {
       "id": "services_api_tests_test_ai_api_test_dinheiro_na_resposta_json_continua_numerico",
@@ -2403,7 +2391,7 @@
       "file_type": "code",
       "norm_label": "test_erro_inesperado_fora_de_api_ai_mantem_o_500_do_framework()",
       "source_file": "services/api/tests/test_ai_api.py",
-      "source_location": "L1512"
+      "source_location": "L1479"
     },
     {
       "id": "services_api_tests_test_ai_api_test_escrita_sem_id_nunca_vira_sucesso",
@@ -2547,7 +2535,7 @@
       "file_type": "code",
       "norm_label": "test_limites_de_passo_e_de_quantidade()",
       "source_file": "services/api/tests/test_ai_api.py",
-      "source_location": "L1457"
+      "source_location": "L1424"
     },
     {
       "id": "services_api_tests_test_ai_api_test_modelo_de_procedimento_recebe_decimal",
@@ -3198,16 +3186,16 @@
       "source_location": "L214"
     },
     {
-      "id": "services_api_tests_test_ai_api_consulta_em",
-      "label": "consulta_em()",
+      "id": "services_api_tests_test_ai_api_cliente_http",
+      "label": "cliente_http()",
       "_callable": true,
       "_origin": "ast",
       "community": 146,
       "community_name": "banco_com",
       "file_type": "code",
-      "norm_label": "consulta_em()",
+      "norm_label": "cliente_http()",
       "source_file": "services/api/tests/test_ai_api.py",
-      "source_location": "L249"
+      "source_location": "L227"
     },
     {
       "id": "services_api_tests_test_ai_api_http_com",
@@ -3234,6 +3222,18 @@
       "source_location": "L237"
     },
     {
+      "id": "services_api_tests_test_ai_api_test_atendimento_desligado_recusa_antes_de_cadastrar_o_cliente",
+      "label": "test_atendimento_desligado_recusa_antes_de_cadastrar_o_cliente()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 146,
+      "community_name": "banco_com",
+      "file_type": "code",
+      "norm_label": "test_atendimento_desligado_recusa_antes_de_cadastrar_o_cliente()",
+      "source_file": "services/api/tests/test_ai_api.py",
+      "source_location": "L1345"
+    },
+    {
       "id": "services_api_tests_test_ai_api_test_atendimento_ligado_segue_o_fluxo_normal",
       "label": "test_atendimento_ligado_segue_o_fluxo_normal()",
       "_callable": true,
@@ -3243,91 +3243,19 @@
       "file_type": "code",
       "norm_label": "test_atendimento_ligado_segue_o_fluxo_normal()",
       "source_file": "services/api/tests/test_ai_api.py",
-      "source_location": "L1401"
+      "source_location": "L1368"
     },
     {
-      "id": "services_api_tests_test_ai_api_test_busca_filtra_por_empresa_e_por_cliente",
-      "label": "test_busca_filtra_por_empresa_e_por_cliente()",
+      "id": "services_api_tests_test_ai_api_test_atualizacao_sem_nenhum_campo_e_recusada",
+      "label": "test_atualizacao_sem_nenhum_campo_e_recusada()",
       "_callable": true,
       "_origin": "ast",
       "community": 146,
       "community_name": "banco_com",
       "file_type": "code",
-      "norm_label": "test_busca_filtra_por_empresa_e_por_cliente()",
+      "norm_label": "test_atualizacao_sem_nenhum_campo_e_recusada()",
       "source_file": "services/api/tests/test_ai_api.py",
-      "source_location": "L1290"
-    },
-    {
-      "id": "services_api_tests_test_ai_api_test_cancelamento_grava_o_motivo_do_enum_e_o_instante",
-      "label": "test_cancelamento_grava_o_motivo_do_enum_e_o_instante()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 146,
-      "community_name": "banco_com",
-      "file_type": "code",
-      "norm_label": "test_cancelamento_grava_o_motivo_do_enum_e_o_instante()",
-      "source_file": "services/api/tests/test_ai_api.py",
-      "source_location": "L1144"
-    },
-    {
-      "id": "services_api_tests_test_ai_api_test_cancelamento_repetido_e_idempotente",
-      "label": "test_cancelamento_repetido_e_idempotente()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 146,
-      "community_name": "banco_com",
-      "file_type": "code",
-      "norm_label": "test_cancelamento_repetido_e_idempotente()",
-      "source_file": "services/api/tests/test_ai_api.py",
-      "source_location": "L1161"
-    },
-    {
-      "id": "services_api_tests_test_ai_api_test_chave_de_agendamento_cancelado_nao_volta_como_sucesso",
-      "label": "test_chave_de_agendamento_cancelado_nao_volta_como_sucesso()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 146,
-      "community_name": "banco_com",
-      "file_type": "code",
-      "norm_label": "test_chave_de_agendamento_cancelado_nao_volta_como_sucesso()",
-      "source_file": "services/api/tests/test_ai_api.py",
-      "source_location": "L922"
-    },
-    {
-      "id": "services_api_tests_test_ai_api_test_chave_reaproveitada_com_outro_pedido_e_conflito",
-      "label": "test_chave_reaproveitada_com_outro_pedido_e_conflito()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 146,
-      "community_name": "banco_com",
-      "file_type": "code",
-      "norm_label": "test_chave_reaproveitada_com_outro_pedido_e_conflito()",
-      "source_file": "services/api/tests/test_ai_api.py",
-      "source_location": "L903"
-    },
-    {
-      "id": "services_api_tests_test_ai_api_test_consulta_concluida_nao_e_cancelavel",
-      "label": "test_consulta_concluida_nao_e_cancelavel()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 146,
-      "community_name": "banco_com",
-      "file_type": "code",
-      "norm_label": "test_consulta_concluida_nao_e_cancelavel()",
-      "source_file": "services/api/tests/test_ai_api.py",
-      "source_location": "L1176"
-    },
-    {
-      "id": "services_api_tests_test_ai_api_test_consulta_concluida_nao_e_reagendavel",
-      "label": "test_consulta_concluida_nao_e_reagendavel()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 146,
-      "community_name": "banco_com",
-      "file_type": "code",
-      "norm_label": "test_consulta_concluida_nao_e_reagendavel()",
-      "source_file": "services/api/tests/test_ai_api.py",
-      "source_location": "L1116"
+      "source_location": "L1277"
     },
     {
       "id": "services_api_tests_test_ai_api_test_contexto_entrega_o_texto_do_negocio",
@@ -3339,7 +3267,7 @@
       "file_type": "code",
       "norm_label": "test_contexto_entrega_o_texto_do_negocio()",
       "source_file": "services/api/tests/test_ai_api.py",
-      "source_location": "L1323"
+      "source_location": "L1290"
     },
     {
       "id": "services_api_tests_test_ai_api_test_contexto_nao_sobrescreve_o_nome_de_quem_ja_e_cliente",
@@ -3351,7 +3279,7 @@
       "file_type": "code",
       "norm_label": "test_contexto_nao_sobrescreve_o_nome_de_quem_ja_e_cliente()",
       "source_file": "services/api/tests/test_ai_api.py",
-      "source_location": "L1341"
+      "source_location": "L1308"
     },
     {
       "id": "services_api_tests_test_ai_api_test_contexto_remove_caracteres_de_controle_do_nome",
@@ -3363,19 +3291,7 @@
       "file_type": "code",
       "norm_label": "test_contexto_remove_caracteres_de_controle_do_nome()",
       "source_file": "services/api/tests/test_ai_api.py",
-      "source_location": "L1355"
-    },
-    {
-      "id": "services_api_tests_test_ai_api_test_corrida_de_chave_unica_na_criacao_vira_repeticao",
-      "label": "test_corrida_de_chave_unica_na_criacao_vira_repeticao()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 146,
-      "community_name": "banco_com",
-      "file_type": "code",
-      "norm_label": "test_corrida_de_chave_unica_na_criacao_vira_repeticao()",
-      "source_file": "services/api/tests/test_ai_api.py",
-      "source_location": "L880"
+      "source_location": "L1322"
     },
     {
       "id": "services_api_tests_test_ai_api_test_corrida_de_sobreposicao_com_a_chave_ja_gravada_vira_repeticao",
@@ -3400,6 +3316,18 @@
       "norm_label": "test_corrida_de_sobreposicao_sem_chave_gravada_continua_conflito()",
       "source_file": "services/api/tests/test_ai_api.py",
       "source_location": "L860"
+    },
+    {
+      "id": "services_api_tests_test_ai_api_test_corrida_na_criacao_de_cliente_rele_o_cadastro_existente",
+      "label": "test_corrida_na_criacao_de_cliente_rele_o_cadastro_existente()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 146,
+      "community_name": "banco_com",
+      "file_type": "code",
+      "norm_label": "test_corrida_na_criacao_de_cliente_rele_o_cadastro_existente()",
+      "source_file": "services/api/tests/test_ai_api.py",
+      "source_location": "L940"
     },
     {
       "id": "services_api_tests_test_ai_api_test_criacao_congela_o_preco_e_rele_o_registro",
@@ -3471,7 +3399,7 @@
       "file_type": "code",
       "norm_label": "test_disponibilidade_sem_truncamento_avisa_o_contrario()",
       "source_file": "services/api/tests/test_ai_api.py",
-      "source_location": "L1438"
+      "source_location": "L1405"
     },
     {
       "id": "services_api_tests_test_ai_api_test_disponibilidade_trunca_e_avisa",
@@ -3483,7 +3411,7 @@
       "file_type": "code",
       "norm_label": "test_disponibilidade_trunca_e_avisa()",
       "source_file": "services/api/tests/test_ai_api.py",
-      "source_location": "L1422"
+      "source_location": "L1389"
     },
     {
       "id": "services_api_tests_test_ai_api_test_email_invalido_e_recusado",
@@ -3496,6 +3424,18 @@
       "norm_label": "test_email_invalido_e_recusado()",
       "source_file": "services/api/tests/test_ai_api.py",
       "source_location": "L1266"
+    },
+    {
+      "id": "services_api_tests_test_ai_api_test_erro_inesperado_em_api_ai_vira_envelope_e_nao_texto_puro",
+      "label": "test_erro_inesperado_em_api_ai_vira_envelope_e_nao_texto_puro()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 146,
+      "community_name": "banco_com",
+      "file_type": "code",
+      "norm_label": "test_erro_inesperado_em_api_ai_vira_envelope_e_nao_texto_puro()",
+      "source_file": "services/api/tests/test_ai_api.py",
+      "source_location": "L1459"
     },
     {
       "id": "services_api_tests_test_ai_api_test_instancia_ambigua_e_recusada",
@@ -3532,30 +3472,6 @@
       "norm_label": "test_reagendar_com_corrida_no_banco_vira_conflito()",
       "source_file": "services/api/tests/test_ai_api.py",
       "source_location": "L1098"
-    },
-    {
-      "id": "services_api_tests_test_ai_api_test_reagendar_para_horario_ocupado_e_recusado",
-      "label": "test_reagendar_para_horario_ocupado_e_recusado()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 146,
-      "community_name": "banco_com",
-      "file_type": "code",
-      "norm_label": "test_reagendar_para_horario_ocupado_e_recusado()",
-      "source_file": "services/api/tests/test_ai_api.py",
-      "source_location": "L1086"
-    },
-    {
-      "id": "services_api_tests_test_ai_api_test_reagendar_para_profissional_de_outra_empresa_e_recusado",
-      "label": "test_reagendar_para_profissional_de_outra_empresa_e_recusado()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 146,
-      "community_name": "banco_com",
-      "file_type": "code",
-      "norm_label": "test_reagendar_para_profissional_de_outra_empresa_e_recusado()",
-      "source_file": "services/api/tests/test_ai_api.py",
-      "source_location": "L1131"
     },
     {
       "id": "services_api_tests_test_ai_api_test_reagendar_repetido_depois_do_horario_ainda_e_repeticao",
@@ -4050,6 +3966,18 @@
       "source_location": "L232"
     },
     {
+      "id": "services_api_tests_test_ai_api_consulta_em",
+      "label": "consulta_em()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 154,
+      "community_name": "amanha_as",
+      "file_type": "code",
+      "norm_label": "consulta_em()",
+      "source_file": "services/api/tests/test_ai_api.py",
+      "source_location": "L249"
+    },
+    {
       "id": "services_api_tests_test_ai_api_test_ausencia_de_horario_nao_e_erro",
       "label": "test_ausencia_de_horario_nao_e_erro()",
       "_callable": true,
@@ -4062,6 +3990,78 @@
       "source_location": "L480"
     },
     {
+      "id": "services_api_tests_test_ai_api_test_cancelamento_grava_o_motivo_do_enum_e_o_instante",
+      "label": "test_cancelamento_grava_o_motivo_do_enum_e_o_instante()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 154,
+      "community_name": "amanha_as",
+      "file_type": "code",
+      "norm_label": "test_cancelamento_grava_o_motivo_do_enum_e_o_instante()",
+      "source_file": "services/api/tests/test_ai_api.py",
+      "source_location": "L1144"
+    },
+    {
+      "id": "services_api_tests_test_ai_api_test_cancelamento_repetido_e_idempotente",
+      "label": "test_cancelamento_repetido_e_idempotente()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 154,
+      "community_name": "amanha_as",
+      "file_type": "code",
+      "norm_label": "test_cancelamento_repetido_e_idempotente()",
+      "source_file": "services/api/tests/test_ai_api.py",
+      "source_location": "L1161"
+    },
+    {
+      "id": "services_api_tests_test_ai_api_test_chave_de_agendamento_cancelado_nao_volta_como_sucesso",
+      "label": "test_chave_de_agendamento_cancelado_nao_volta_como_sucesso()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 154,
+      "community_name": "amanha_as",
+      "file_type": "code",
+      "norm_label": "test_chave_de_agendamento_cancelado_nao_volta_como_sucesso()",
+      "source_file": "services/api/tests/test_ai_api.py",
+      "source_location": "L922"
+    },
+    {
+      "id": "services_api_tests_test_ai_api_test_chave_reaproveitada_com_outro_pedido_e_conflito",
+      "label": "test_chave_reaproveitada_com_outro_pedido_e_conflito()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 154,
+      "community_name": "amanha_as",
+      "file_type": "code",
+      "norm_label": "test_chave_reaproveitada_com_outro_pedido_e_conflito()",
+      "source_file": "services/api/tests/test_ai_api.py",
+      "source_location": "L903"
+    },
+    {
+      "id": "services_api_tests_test_ai_api_test_consulta_concluida_nao_e_cancelavel",
+      "label": "test_consulta_concluida_nao_e_cancelavel()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 154,
+      "community_name": "amanha_as",
+      "file_type": "code",
+      "norm_label": "test_consulta_concluida_nao_e_cancelavel()",
+      "source_file": "services/api/tests/test_ai_api.py",
+      "source_location": "L1176"
+    },
+    {
+      "id": "services_api_tests_test_ai_api_test_consulta_concluida_nao_e_reagendavel",
+      "label": "test_consulta_concluida_nao_e_reagendavel()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 154,
+      "community_name": "amanha_as",
+      "file_type": "code",
+      "norm_label": "test_consulta_concluida_nao_e_reagendavel()",
+      "source_file": "services/api/tests/test_ai_api.py",
+      "source_location": "L1116"
+    },
+    {
       "id": "services_api_tests_test_ai_api_test_corpo_com_id_info_clinica_e_recusado",
       "label": "test_corpo_com_id_info_clinica_e_recusado()",
       "_callable": true,
@@ -4072,6 +4072,18 @@
       "norm_label": "test_corpo_com_id_info_clinica_e_recusado()",
       "source_file": "services/api/tests/test_ai_api.py",
       "source_location": "L375"
+    },
+    {
+      "id": "services_api_tests_test_ai_api_test_corrida_de_chave_unica_na_criacao_vira_repeticao",
+      "label": "test_corrida_de_chave_unica_na_criacao_vira_repeticao()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 154,
+      "community_name": "amanha_as",
+      "file_type": "code",
+      "norm_label": "test_corrida_de_chave_unica_na_criacao_vira_repeticao()",
+      "source_file": "services/api/tests/test_ai_api.py",
+      "source_location": "L880"
     },
     {
       "id": "services_api_tests_test_ai_api_test_criacao_sem_horario_livre_nao_grava",
@@ -4170,6 +4182,30 @@
       "source_location": "L1012"
     },
     {
+      "id": "services_api_tests_test_ai_api_test_reagendar_para_horario_ocupado_e_recusado",
+      "label": "test_reagendar_para_horario_ocupado_e_recusado()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 154,
+      "community_name": "amanha_as",
+      "file_type": "code",
+      "norm_label": "test_reagendar_para_horario_ocupado_e_recusado()",
+      "source_file": "services/api/tests/test_ai_api.py",
+      "source_location": "L1086"
+    },
+    {
+      "id": "services_api_tests_test_ai_api_test_reagendar_para_profissional_de_outra_empresa_e_recusado",
+      "label": "test_reagendar_para_profissional_de_outra_empresa_e_recusado()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 154,
+      "community_name": "amanha_as",
+      "file_type": "code",
+      "norm_label": "test_reagendar_para_profissional_de_outra_empresa_e_recusado()",
+      "source_file": "services/api/tests/test_ai_api.py",
+      "source_location": "L1131"
+    },
+    {
       "id": "services_api_tests_test_ai_api_test_reagendar_recusa_chave_de_idempotencia_no_corpo",
       "label": "test_reagendar_recusa_chave_de_idempotencia_no_corpo()",
       "_callable": true,
@@ -4206,18 +4242,6 @@
       "source_location": "L541"
     },
     {
-      "id": "services_api_dominio_dinheiro",
-      "label": "dinheiro()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 156,
-      "community_name": "dinheiro_para_banco",
-      "file_type": "code",
-      "norm_label": "dinheiro()",
-      "source_file": "services/api/dominio.py",
-      "source_location": "L87"
-    },
-    {
       "id": "services_api_dominio_dinheiro_para_banco",
       "label": "dinheiro_para_banco()",
       "_callable": true,
@@ -4240,6 +4264,18 @@
       "norm_label": "create_procedimento()",
       "source_file": "services/api/server.py",
       "source_location": "L849"
+    },
+    {
+      "id": "services_api_server_update_procedimento",
+      "label": "update_procedimento()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 156,
+      "community_name": "dinheiro_para_banco",
+      "file_type": "code",
+      "norm_label": "update_procedimento()",
+      "source_file": "services/api/server.py",
+      "source_location": "L866"
     },
     {
       "id": "apps_dashboard_src_components_pagechrome_errorstate",
@@ -4719,7 +4755,7 @@
       "file_type": "code",
       "norm_label": ".rpc()",
       "source_file": "services/api/tests/test_ai_api.py",
-      "source_location": "L1474"
+      "source_location": "L1441"
     },
     {
       "id": "services_api_tests_test_ai_api_bancoindisponivel_table",
@@ -4731,7 +4767,7 @@
       "file_type": "code",
       "norm_label": ".table()",
       "source_file": "services/api/tests/test_ai_api.py",
-      "source_location": "L1471"
+      "source_location": "L1438"
     },
     {
       "id": "services_api_tests_test_ai_api_test_banco_indisponivel_atravessa_a_rota_como_falha_temporaria",
@@ -4743,7 +4779,7 @@
       "file_type": "code",
       "norm_label": "test_banco_indisponivel_atravessa_a_rota_como_falha_temporaria()",
       "source_file": "services/api/tests/test_ai_api.py",
-      "source_location": "L1478"
+      "source_location": "L1445"
     },
     {
       "id": "apps_dashboard_src_components_ui_breadcrumb_breadcrumbellipsis",
@@ -4842,28 +4878,40 @@
       "source_location": "L4"
     },
     {
+      "id": "services_api_server_create_bloqueio",
+      "label": "create_bloqueio()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 182,
+      "community_name": "post",
+      "file_type": "code",
+      "norm_label": "create_bloqueio()",
+      "source_file": "services/api/server.py",
+      "source_location": "L1018"
+    },
+    {
+      "id": "services_api_server_criar_instancia_whatsapp",
+      "label": "criar_instancia_whatsapp()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 182,
+      "community_name": "post",
+      "file_type": "code",
+      "norm_label": "criar_instancia_whatsapp()",
+      "source_file": "services/api/server.py",
+      "source_location": "L1477"
+    },
+    {
       "id": "services_api_server_disconnect_whatsapp",
       "label": "disconnect_whatsapp()",
       "_callable": true,
       "_origin": "ast",
       "community": 182,
-      "community_name": "instancia_do_usuario",
+      "community_name": "post",
       "file_type": "code",
       "norm_label": "disconnect_whatsapp()",
       "source_file": "services/api/server.py",
       "source_location": "L1577"
-    },
-    {
-      "id": "services_api_server_estado_da_conexao",
-      "label": "estado_da_conexao()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 182,
-      "community_name": "instancia_do_usuario",
-      "file_type": "code",
-      "norm_label": "estado_da_conexao()",
-      "source_file": "services/api/server.py",
-      "source_location": "L1383"
     },
     {
       "id": "services_api_server_garantir_instancia",
@@ -4871,7 +4919,7 @@
       "_callable": true,
       "_origin": "ast",
       "community": 182,
-      "community_name": "instancia_do_usuario",
+      "community_name": "post",
       "file_type": "code",
       "norm_label": "garantir_instancia()",
       "source_file": "services/api/server.py",
@@ -4883,23 +4931,11 @@
       "_callable": true,
       "_origin": "ast",
       "community": 182,
-      "community_name": "instancia_do_usuario",
+      "community_name": "post",
       "file_type": "code",
       "norm_label": "get_whatsapp_qrcode()",
       "source_file": "services/api/server.py",
       "source_location": "L1516"
-    },
-    {
-      "id": "services_api_server_get_whatsapp_status",
-      "label": "get_whatsapp_status()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 182,
-      "community_name": "instancia_do_usuario",
-      "file_type": "code",
-      "norm_label": "get_whatsapp_status()",
-      "source_file": "services/api/server.py",
-      "source_location": "L1493"
     },
     {
       "id": "services_api_server_instancia_do_usuario",
@@ -4907,7 +4943,7 @@
       "_callable": true,
       "_origin": "ast",
       "community": 182,
-      "community_name": "instancia_do_usuario",
+      "community_name": "post",
       "file_type": "code",
       "norm_label": "instancia_do_usuario()",
       "source_file": "services/api/server.py",
@@ -4919,23 +4955,11 @@
       "_callable": true,
       "_origin": "ast",
       "community": 182,
-      "community_name": "instancia_do_usuario",
+      "community_name": "post",
       "file_type": "code",
       "norm_label": "montar_nome_instancia()",
       "source_file": "services/api/server.py",
       "source_location": "L1373"
-    },
-    {
-      "id": "services_api_server_numero_conectado",
-      "label": "numero_conectado()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 182,
-      "community_name": "instancia_do_usuario",
-      "file_type": "code",
-      "norm_label": "numero_conectado()",
-      "source_file": "services/api/server.py",
-      "source_location": "L1402"
     },
     {
       "id": "services_api_server_restart_whatsapp",
@@ -4943,23 +4967,11 @@
       "_callable": true,
       "_origin": "ast",
       "community": 182,
-      "community_name": "instancia_do_usuario",
+      "community_name": "post",
       "file_type": "code",
       "norm_label": "restart_whatsapp()",
       "source_file": "services/api/server.py",
       "source_location": "L1559"
-    },
-    {
-      "id": "services_api_server_whatsapp_conectado",
-      "label": "whatsapp_conectado()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 182,
-      "community_name": "instancia_do_usuario",
-      "file_type": "code",
-      "norm_label": "whatsapp_conectado()",
-      "source_file": "services/api/server.py",
-      "source_location": "L1424"
     },
     {
       "id": "services_api_server_add_procedimentos_profissional",
@@ -4967,7 +4979,7 @@
       "_callable": true,
       "_origin": "ast",
       "community": 185,
-      "community_name": "post",
+      "community_name": "assert_owned_record",
       "file_type": "code",
       "norm_label": "add_procedimentos_profissional()",
       "source_file": "services/api/server.py",
@@ -4979,23 +4991,11 @@
       "_callable": true,
       "_origin": "ast",
       "community": 185,
-      "community_name": "post",
+      "community_name": "assert_owned_record",
       "file_type": "code",
       "norm_label": "assert_owned_record()",
       "source_file": "services/api/server.py",
       "source_location": "L318"
-    },
-    {
-      "id": "services_api_server_create_bloqueio",
-      "label": "create_bloqueio()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 185,
-      "community_name": "post",
-      "file_type": "code",
-      "norm_label": "create_bloqueio()",
-      "source_file": "services/api/server.py",
-      "source_location": "L1018"
     },
     {
       "id": "services_api_server_create_consulta",
@@ -5003,23 +5003,11 @@
       "_callable": true,
       "_origin": "ast",
       "community": 185,
-      "community_name": "post",
+      "community_name": "assert_owned_record",
       "file_type": "code",
       "norm_label": "create_consulta()",
       "source_file": "services/api/server.py",
       "source_location": "L925"
-    },
-    {
-      "id": "services_api_server_criar_instancia_whatsapp",
-      "label": "criar_instancia_whatsapp()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 185,
-      "community_name": "post",
-      "file_type": "code",
-      "norm_label": "criar_instancia_whatsapp()",
-      "source_file": "services/api/server.py",
-      "source_location": "L1477"
     },
     {
       "id": "services_api_server_delete_disponibilidade",
@@ -5027,7 +5015,7 @@
       "_callable": true,
       "_origin": "ast",
       "community": 185,
-      "community_name": "post",
+      "community_name": "assert_owned_record",
       "file_type": "code",
       "norm_label": "delete_disponibilidade()",
       "source_file": "services/api/server.py",
@@ -5039,7 +5027,7 @@
       "_callable": true,
       "_origin": "ast",
       "community": 185,
-      "community_name": "post",
+      "community_name": "assert_owned_record",
       "file_type": "code",
       "norm_label": "get_procedimento_da_empresa()",
       "source_file": "services/api/server.py",
@@ -5051,7 +5039,7 @@
       "_callable": true,
       "_origin": "ast",
       "community": 185,
-      "community_name": "post",
+      "community_name": "assert_owned_record",
       "file_type": "code",
       "norm_label": "save_disponibilidade_profissional()",
       "source_file": "services/api/server.py",
@@ -5063,7 +5051,7 @@
       "_callable": true,
       "_origin": "ast",
       "community": 185,
-      "community_name": "post",
+      "community_name": "assert_owned_record",
       "file_type": "code",
       "norm_label": "update_consulta()",
       "source_file": "services/api/server.py",
@@ -5332,66 +5320,6 @@
       "norm_label": "useformfield()",
       "source_file": "apps/dashboard/src/components/ui/form.jsx",
       "source_location": "L24"
-    },
-    {
-      "id": "services_api_tests_test_ai_api_test_atualizacao_sem_nenhum_campo_e_recusada",
-      "label": "test_atualizacao_sem_nenhum_campo_e_recusada()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 202,
-      "community_name": "test_atualizacao_sem_nenhum_campo_e_recusada",
-      "file_type": "code",
-      "norm_label": "test_atualizacao_sem_nenhum_campo_e_recusada()",
-      "source_file": "services/api/tests/test_ai_api.py",
-      "source_location": "L1277"
-    },
-    {
-      "id": "services_api_tests_test_ai_api_test_erro_inesperado_em_api_ai_vira_envelope_e_nao_texto_puro",
-      "label": "test_erro_inesperado_em_api_ai_vira_envelope_e_nao_texto_puro()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 202,
-      "community_name": "test_atualizacao_sem_nenhum_campo_e_recusada",
-      "file_type": "code",
-      "norm_label": "test_erro_inesperado_em_api_ai_vira_envelope_e_nao_texto_puro()",
-      "source_file": "services/api/tests/test_ai_api.py",
-      "source_location": "L1492"
-    },
-    {
-      "id": "services_api_tests_test_ai_api_cliente_http",
-      "label": "cliente_http()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 203,
-      "community_name": "cliente_http",
-      "file_type": "code",
-      "norm_label": "cliente_http()",
-      "source_file": "services/api/tests/test_ai_api.py",
-      "source_location": "L227"
-    },
-    {
-      "id": "services_api_tests_test_ai_api_test_atendimento_desligado_recusa_antes_de_cadastrar_o_cliente",
-      "label": "test_atendimento_desligado_recusa_antes_de_cadastrar_o_cliente()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 204,
-      "community_name": "test_atendimento_desligado_recusa_antes_de_cadastrar_o_cliente",
-      "file_type": "code",
-      "norm_label": "test_atendimento_desligado_recusa_antes_de_cadastrar_o_cliente()",
-      "source_file": "services/api/tests/test_ai_api.py",
-      "source_location": "L1378"
-    },
-    {
-      "id": "services_api_tests_test_ai_api_test_corrida_na_criacao_de_cliente_rele_o_cadastro_existente",
-      "label": "test_corrida_na_criacao_de_cliente_rele_o_cadastro_existente()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 205,
-      "community_name": "test_corrida_na_criacao_de_cliente_rele_o_cadastro_existente",
-      "file_type": "code",
-      "norm_label": "test_corrida_na_criacao_de_cliente_rele_o_cadastro_existente()",
-      "source_file": "services/api/tests/test_ai_api.py",
-      "source_location": "L940"
     },
     {
       "id": "apps_dashboard_src_components_ui_alert_dialog_alertdialogfooter",
@@ -5987,11 +5915,23 @@
       "_callable": true,
       "_origin": "ast",
       "community": 41,
-      "community_name": "montar_implantacao",
+      "community_name": "get_whatsapp_status",
       "file_type": "code",
       "norm_label": "equipe_agendavel()",
       "source_file": "services/api/server.py",
       "source_location": "L1082"
+    },
+    {
+      "id": "services_api_server_estado_da_conexao",
+      "label": "estado_da_conexao()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 41,
+      "community_name": "get_whatsapp_status",
+      "file_type": "code",
+      "norm_label": "estado_da_conexao()",
+      "source_file": "services/api/server.py",
+      "source_location": "L1383"
     },
     {
       "id": "services_api_server_get_implantacao",
@@ -5999,11 +5939,23 @@
       "_callable": true,
       "_origin": "ast",
       "community": 41,
-      "community_name": "montar_implantacao",
+      "community_name": "get_whatsapp_status",
       "file_type": "code",
       "norm_label": "get_implantacao()",
       "source_file": "services/api/server.py",
       "source_location": "L1168"
+    },
+    {
+      "id": "services_api_server_get_whatsapp_status",
+      "label": "get_whatsapp_status()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 41,
+      "community_name": "get_whatsapp_status",
+      "file_type": "code",
+      "norm_label": "get_whatsapp_status()",
+      "source_file": "services/api/server.py",
+      "source_location": "L1493"
     },
     {
       "id": "services_api_server_montar_implantacao",
@@ -6011,11 +5963,23 @@
       "_callable": true,
       "_origin": "ast",
       "community": 41,
-      "community_name": "montar_implantacao",
+      "community_name": "get_whatsapp_status",
       "file_type": "code",
       "norm_label": "montar_implantacao()",
       "source_file": "services/api/server.py",
       "source_location": "L1117"
+    },
+    {
+      "id": "services_api_server_numero_conectado",
+      "label": "numero_conectado()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 41,
+      "community_name": "get_whatsapp_status",
+      "file_type": "code",
+      "norm_label": "numero_conectado()",
+      "source_file": "services/api/server.py",
+      "source_location": "L1402"
     },
     {
       "id": "services_api_server_update_automacao",
@@ -6023,11 +5987,23 @@
       "_callable": true,
       "_origin": "ast",
       "community": 41,
-      "community_name": "montar_implantacao",
+      "community_name": "get_whatsapp_status",
       "file_type": "code",
       "norm_label": "update_automacao()",
       "source_file": "services/api/server.py",
       "source_location": "L1182"
+    },
+    {
+      "id": "services_api_server_whatsapp_conectado",
+      "label": "whatsapp_conectado()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 41,
+      "community_name": "get_whatsapp_status",
+      "file_type": "code",
+      "norm_label": "whatsapp_conectado()",
+      "source_file": "services/api/server.py",
+      "source_location": "L1424"
     },
     {
       "id": "services_api_ai_api_aierror_init",
@@ -6472,6 +6448,18 @@
       "norm_label": "_digitos()",
       "source_file": "services/api/dominio.py",
       "source_location": "L126"
+    },
+    {
+      "id": "services_api_dominio_dinheiro",
+      "label": "dinheiro()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 46,
+      "community_name": "ai_api.py",
+      "file_type": "code",
+      "norm_label": "dinheiro()",
+      "source_file": "services/api/dominio.py",
+      "source_location": "L87"
     },
     {
       "id": "services_api_dominio_dinheiro_para_json",
@@ -7852,7 +7840,7 @@
       "node_kind": "heading",
       "norm_label": "o que mudou da v1 para a v2",
       "source_file": "automation/n8n/README.md",
-      "source_location": "L635"
+      "source_location": "L634"
     },
     {
       "id": "automation_n8n_readme_rollback",
@@ -10149,7 +10137,7 @@
       "node_kind": "heading",
       "norm_label": "invariantes da quarta rodada",
       "source_file": "automation/n8n/TESTES_AUTOMACAO_V2.md",
-      "source_location": "L215"
+      "source_location": "L214"
     },
     {
       "id": "automation_n8n_testes_automacao_v2_invariantes_da_quinta_rodada",
@@ -10161,7 +10149,7 @@
       "node_kind": "heading",
       "norm_label": "invariantes da quinta rodada",
       "source_file": "automation/n8n/TESTES_AUTOMACAO_V2.md",
-      "source_location": "L227"
+      "source_location": "L226"
     },
     {
       "id": "automation_n8n_testes_automacao_v2_invariantes_da_rodada_de_setembro",
@@ -10173,7 +10161,7 @@
       "node_kind": "heading",
       "norm_label": "invariantes da rodada de setembro",
       "source_file": "automation/n8n/TESTES_AUTOMACAO_V2.md",
-      "source_location": "L184"
+      "source_location": "L183"
     },
     {
       "id": "automation_n8n_testes_automacao_v2_invariantes_da_terceira_rodada",
@@ -10185,7 +10173,7 @@
       "node_kind": "heading",
       "norm_label": "invariantes da terceira rodada",
       "source_file": "automation/n8n/TESTES_AUTOMACAO_V2.md",
-      "source_location": "L198"
+      "source_location": "L197"
     },
     {
       "id": "automation_n8n_testes_automacao_v2_matriz_de_testes_atendimento_v2",
@@ -10209,7 +10197,7 @@
       "node_kind": "heading",
       "norm_label": "o que so a homologacao com ambiente real cobre",
       "source_file": "automation/n8n/TESTES_AUTOMACAO_V2.md",
-      "source_location": "L243"
+      "source_location": "L242"
     },
     {
       "id": "automation_n8n_testes_automacao_v2_testes_de_estrutura",
@@ -10221,7 +10209,7 @@
       "node_kind": "heading",
       "norm_label": "testes de estrutura",
       "source_file": "automation/n8n/TESTES_AUTOMACAO_V2.md",
-      "source_location": "L165"
+      "source_location": "L164"
     },
     {
       "id": "scripts_ajustes_onboarding_sql_public_info_clinica",
@@ -10257,7 +10245,7 @@
       "source_location": "L1"
     },
     {
-      "id": "automation_n8n_validar_workflow_rationale_528",
+      "id": "automation_n8n_validar_workflow_rationale_460",
       "label": "Regras que valem para QUALQUER workflow do projeto: inativo, sem segredo, sem\u2026",
       "_origin": "ast",
       "community": 134,
@@ -10265,7 +10253,7 @@
       "file_type": "rationale",
       "norm_label": "regras que valem para qualquer workflow do projeto: inativo, sem segredo, sem...",
       "source_file": "automation/n8n/validar_workflow.py",
-      "source_location": "L528"
+      "source_location": "L460"
     },
     {
       "id": "services_api_tests_conftest",
@@ -11419,7 +11407,7 @@
       "source_location": "L1192"
     },
     {
-      "id": "services_api_tests_test_ai_api_rationale_1369",
+      "id": "services_api_tests_test_ai_api_rationale_1336",
       "label": "`agendavel: false` \u00e9 transfer\u00eancia para pessoa, n\u00e3o 'sem vaga hoje'.",
       "_origin": "ast",
       "community": 144,
@@ -11427,10 +11415,10 @@
       "file_type": "rationale",
       "norm_label": "`agendavel: false` e transferencia para pessoa, nao 'sem vaga hoje'.",
       "source_file": "services/api/tests/test_ai_api.py",
-      "source_location": "L1369"
+      "source_location": "L1336"
     },
     {
-      "id": "services_api_tests_test_ai_api_rationale_1513",
+      "id": "services_api_tests_test_ai_api_rationale_1480",
       "label": "O painel n\u00e3o pode passar a receber o envelope da automa\u00e7\u00e3o.",
       "_origin": "ast",
       "community": 144,
@@ -11438,7 +11426,7 @@
       "file_type": "rationale",
       "norm_label": "o painel nao pode passar a receber o envelope da automacao.",
       "source_file": "services/api/tests/test_ai_api.py",
-      "source_location": "L1513"
+      "source_location": "L1480"
     },
     {
       "id": "services_api_tests_test_ai_api_rationale_308",
@@ -11661,6 +11649,17 @@
       "source_location": "L85"
     },
     {
+      "id": "services_api_tests_test_ai_api_py_fixture",
+      "label": "fixture",
+      "_origin": "ast",
+      "community": 146,
+      "community_name": "banco_com",
+      "file_type": "code",
+      "norm_label": "fixture",
+      "source_file": "",
+      "source_location": ""
+    },
+    {
       "id": "services_api_tests_test_ai_api_rationale_1060",
       "label": "Estado desejado j\u00e1 no banco: repetir n\u00e3o pode virar HORARIO_INDISPONIVEL.",
       "_origin": "ast",
@@ -11694,18 +11693,18 @@
       "source_location": "L1221"
     },
     {
-      "id": "services_api_tests_test_ai_api_rationale_1291",
-      "label": "A rota que abre todo cancelamento e reagendamento isola nas duas pontas.\u2026",
+      "id": "services_api_tests_test_ai_api_rationale_1278",
+      "label": "Pelo menos um dos quatro campos permitidos \u00e9 obrigat\u00f3rio.",
       "_origin": "ast",
       "community": 146,
       "community_name": "banco_com",
       "file_type": "rationale",
-      "norm_label": "a rota que abre todo cancelamento e reagendamento isola nas duas pontas....",
+      "norm_label": "pelo menos um dos quatro campos permitidos e obrigatorio.",
       "source_file": "services/api/tests/test_ai_api.py",
-      "source_location": "L1291"
+      "source_location": "L1278"
     },
     {
-      "id": "services_api_tests_test_ai_api_rationale_1324",
+      "id": "services_api_tests_test_ai_api_rationale_1291",
       "label": "O que o assinante escreveu sobre o neg\u00f3cio \u00e9 o que a IA tem para responder. A\u2026",
       "_origin": "ast",
       "community": 146,
@@ -11713,10 +11712,10 @@
       "file_type": "rationale",
       "norm_label": "o que o assinante escreveu sobre o negocio e o que a ia tem para responder. a...",
       "source_file": "services/api/tests/test_ai_api.py",
-      "source_location": "L1324"
+      "source_location": "L1291"
     },
     {
-      "id": "services_api_tests_test_ai_api_rationale_1342",
+      "id": "services_api_tests_test_ai_api_rationale_1309",
       "label": "`push_name` do WhatsApp n\u00e3o vale mais que o cadastro do painel.",
       "_origin": "ast",
       "community": 146,
@@ -11724,7 +11723,29 @@
       "file_type": "rationale",
       "norm_label": "`push_name` do whatsapp nao vale mais que o cadastro do painel.",
       "source_file": "services/api/tests/test_ai_api.py",
-      "source_location": "L1342"
+      "source_location": "L1309"
+    },
+    {
+      "id": "services_api_tests_test_ai_api_rationale_1346",
+      "label": "Trava por empresa: o `active` do n8n \u00e9 um s\u00f3 para todos os clientes. A recusa\u2026",
+      "_origin": "ast",
+      "community": 146,
+      "community_name": "banco_com",
+      "file_type": "rationale",
+      "norm_label": "trava por empresa: o `active` do n8n e um so para todos os clientes. a recusa...",
+      "source_file": "services/api/tests/test_ai_api.py",
+      "source_location": "L1346"
+    },
+    {
+      "id": "services_api_tests_test_ai_api_rationale_1460",
+      "label": "Sem o tratador gen\u00e9rico, a automa\u00e7\u00e3o recebia 500 sem `ok` nem `error`.",
+      "_origin": "ast",
+      "community": 146,
+      "community_name": "banco_com",
+      "file_type": "rationale",
+      "norm_label": "sem o tratador generico, a automacao recebia 500 sem `ok` nem `error`.",
+      "source_file": "services/api/tests/test_ai_api.py",
+      "source_location": "L1460"
     },
     {
       "id": "services_api_tests_test_ai_api_rationale_215",
@@ -11747,17 +11768,6 @@
       "norm_label": "linha de `fn_buscar_slots` como a rpc a devolve.",
       "source_file": "services/api/tests/test_ai_api.py",
       "source_location": "L238"
-    },
-    {
-      "id": "services_api_tests_test_ai_api_rationale_250",
-      "label": "Linha de `consulta` como o PostgREST devolve, com os joins embutidos.",
-      "_origin": "ast",
-      "community": 146,
-      "community_name": "banco_com",
-      "file_type": "rationale",
-      "norm_label": "linha de `consulta` como o postgrest devolve, com os joins embutidos.",
-      "source_file": "services/api/tests/test_ai_api.py",
-      "source_location": "L250"
     },
     {
       "id": "services_api_tests_test_ai_api_rationale_786",
@@ -11793,26 +11803,15 @@
       "source_location": "L861"
     },
     {
-      "id": "services_api_tests_test_ai_api_rationale_881",
-      "label": "23505 no \u00edndice da chave: a repeti\u00e7\u00e3o concorrente j\u00e1 gravou.",
+      "id": "services_api_tests_test_ai_api_rationale_941",
+      "label": "Duas mensagens do mesmo contato: 23505 n\u00e3o pode virar FALHA_TEMPORARIA.",
       "_origin": "ast",
       "community": 146,
       "community_name": "banco_com",
       "file_type": "rationale",
-      "norm_label": "23505 no indice da chave: a repeticao concorrente ja gravou.",
+      "norm_label": "duas mensagens do mesmo contato: 23505 nao pode virar falha_temporaria.",
       "source_file": "services/api/tests/test_ai_api.py",
-      "source_location": "L881"
-    },
-    {
-      "id": "services_api_tests_test_ai_api_rationale_904",
-      "label": "Idempot\u00eancia s\u00f3 vale para o MESMO pedido.",
-      "_origin": "ast",
-      "community": 146,
-      "community_name": "banco_com",
-      "file_type": "rationale",
-      "norm_label": "idempotencia so vale para o mesmo pedido.",
-      "source_file": "services/api/tests/test_ai_api.py",
-      "source_location": "L904"
+      "source_location": "L941"
     },
     {
       "id": "services_api_tests_test_ai_api_rationale_998",
@@ -12609,6 +12608,17 @@
       "source_location": "L1075"
     },
     {
+      "id": "services_api_tests_test_ai_api_rationale_250",
+      "label": "Linha de `consulta` como o PostgREST devolve, com os joins embutidos.",
+      "_origin": "ast",
+      "community": 154,
+      "community_name": "amanha_as",
+      "file_type": "rationale",
+      "norm_label": "linha de `consulta` como o postgrest devolve, com os joins embutidos.",
+      "source_file": "services/api/tests/test_ai_api.py",
+      "source_location": "L250"
+    },
+    {
       "id": "services_api_tests_test_ai_api_rationale_376",
       "label": "`extra=forbid` impede a automa\u00e7\u00e3o de tentar escolher a empresa.",
       "_origin": "ast",
@@ -12629,6 +12639,28 @@
       "norm_label": "desativar o profissional depois nao apaga o agendamento ja gravado.",
       "source_file": "services/api/tests/test_ai_api.py",
       "source_location": "L812"
+    },
+    {
+      "id": "services_api_tests_test_ai_api_rationale_881",
+      "label": "23505 no \u00edndice da chave: a repeti\u00e7\u00e3o concorrente j\u00e1 gravou.",
+      "_origin": "ast",
+      "community": 154,
+      "community_name": "amanha_as",
+      "file_type": "rationale",
+      "norm_label": "23505 no indice da chave: a repeticao concorrente ja gravou.",
+      "source_file": "services/api/tests/test_ai_api.py",
+      "source_location": "L881"
+    },
+    {
+      "id": "services_api_tests_test_ai_api_rationale_904",
+      "label": "Idempot\u00eancia s\u00f3 vale para o MESMO pedido.",
+      "_origin": "ast",
+      "community": 154,
+      "community_name": "amanha_as",
+      "file_type": "rationale",
+      "norm_label": "idempotencia so vale para o mesmo pedido.",
+      "source_file": "services/api/tests/test_ai_api.py",
+      "source_location": "L904"
     },
     {
       "id": "docs_planning_automation_v2_api_handoff",
@@ -12835,17 +12867,6 @@
       "source_location": "L1"
     },
     {
-      "id": "decimal",
-      "label": "Decimal",
-      "_origin": "ast",
-      "community": 156,
-      "community_name": "dinheiro_para_banco",
-      "file_type": "code",
-      "norm_label": "decimal",
-      "source_file": "",
-      "source_location": ""
-    },
-    {
       "id": "services_api_dominio_rationale_103",
       "label": "Texto para o corpo JSON do PostgREST. `Decimal` n\u00e3o \u00e9 serializ\u00e1vel em JSON e\u2026",
       "_origin": "ast",
@@ -12855,17 +12876,6 @@
       "norm_label": "texto para o corpo json do postgrest. `decimal` nao e serializavel em json e...",
       "source_file": "services/api/dominio.py",
       "source_location": "L103"
-    },
-    {
-      "id": "services_api_dominio_rationale_88",
-      "label": "Normaliza qualquer entrada monet\u00e1ria em `Decimal` com dois d\u00edgitos. `float`\u2026",
-      "_origin": "ast",
-      "community": 156,
-      "community_name": "dinheiro_para_banco",
-      "file_type": "rationale",
-      "norm_label": "normaliza qualquer entrada monetaria em `decimal` com dois digitos. `float`...",
-      "source_file": "services/api/dominio.py",
-      "source_location": "L88"
     },
     {
       "id": "docs_planning_fase3_onboarding_contrato",
@@ -14761,11 +14771,22 @@
       "source_location": "L179"
     },
     {
+      "id": "services_api_server_py_post",
+      "label": "post",
+      "_origin": "ast",
+      "community": 182,
+      "community_name": "post",
+      "file_type": "code",
+      "norm_label": "post",
+      "source_file": "",
+      "source_location": ""
+    },
+    {
       "id": "services_api_server_rationale_1358",
       "label": "Inst\u00e2ncia da Evolution deste usu\u00e1rio, ou None se ainda n\u00e3o existe.",
       "_origin": "ast",
       "community": 182,
-      "community_name": "instancia_do_usuario",
+      "community_name": "post",
       "file_type": "rationale",
       "norm_label": "instancia da evolution deste usuario, ou none se ainda nao existe.",
       "source_file": "services/api/server.py",
@@ -14776,73 +14797,40 @@
       "label": "`agm_{id}_{nome sanitizado}` \u2014 mesma regra que o cadastro usava. O id na frente\u2026",
       "_origin": "ast",
       "community": 182,
-      "community_name": "instancia_do_usuario",
+      "community_name": "post",
       "file_type": "rationale",
       "norm_label": "`agm_{id}_{nome sanitizado}` \u2014 mesma regra que o cadastro usava. o id na frente...",
       "source_file": "services/api/server.py",
       "source_location": "L1374"
     },
     {
-      "id": "services_api_server_rationale_1384",
-      "label": "Estado da inst\u00e2ncia na Evolution. Nunca levanta. O painel precisa responder\u2026",
-      "_origin": "ast",
-      "community": 182,
-      "community_name": "instancia_do_usuario",
-      "file_type": "rationale",
-      "norm_label": "estado da instancia na evolution. nunca levanta. o painel precisa responder...",
-      "source_file": "services/api/server.py",
-      "source_location": "L1384"
-    },
-    {
-      "id": "services_api_server_rationale_1403",
-      "label": "N\u00famero conectado, s\u00f3 d\u00edgitos, sem o sufixo `@s.whatsapp.net`. \u00c9 o que o painel\u2026",
-      "_origin": "ast",
-      "community": 182,
-      "community_name": "instancia_do_usuario",
-      "file_type": "rationale",
-      "norm_label": "numero conectado, so digitos, sem o sufixo `@s.whatsapp.net`. e o que o painel...",
-      "source_file": "services/api/server.py",
-      "source_location": "L1403"
-    },
-    {
-      "id": "services_api_server_rationale_1425",
-      "label": "Item `whatsapp` do checklist: s\u00f3 `open` conta, falha vira `false`.",
-      "_origin": "ast",
-      "community": 182,
-      "community_name": "instancia_do_usuario",
-      "file_type": "rationale",
-      "norm_label": "item `whatsapp` do checklist: so `open` conta, falha vira `false`.",
-      "source_file": "services/api/server.py",
-      "source_location": "L1425"
-    },
-    {
       "id": "services_api_server_rationale_1433",
       "label": "Inst\u00e2ncia existente na Evolution, com webhook registrado. Idempotente. Devolve\u2026",
       "_origin": "ast",
       "community": 182,
-      "community_name": "instancia_do_usuario",
+      "community_name": "post",
       "file_type": "rationale",
       "norm_label": "instancia existente na evolution, com webhook registrado. idempotente. devolve...",
       "source_file": "services/api/server.py",
       "source_location": "L1433"
     },
     {
-      "id": "services_api_server_rationale_1494",
-      "label": "Retorna o status da conex\u00e3o WhatsApp",
+      "id": "services_api_server_rationale_1478",
+      "label": "Prepara a inst\u00e2ncia do WhatsApp do usu\u00e1rio. Pode ser chamada de novo.",
       "_origin": "ast",
       "community": 182,
-      "community_name": "instancia_do_usuario",
+      "community_name": "post",
       "file_type": "rationale",
-      "norm_label": "retorna o status da conexao whatsapp",
+      "norm_label": "prepara a instancia do whatsapp do usuario. pode ser chamada de novo.",
       "source_file": "services/api/server.py",
-      "source_location": "L1494"
+      "source_location": "L1478"
     },
     {
       "id": "services_api_server_rationale_1517",
       "label": "Gera QR Code para conectar WhatsApp",
       "_origin": "ast",
       "community": 182,
-      "community_name": "instancia_do_usuario",
+      "community_name": "post",
       "file_type": "rationale",
       "norm_label": "gera qr code para conectar whatsapp",
       "source_file": "services/api/server.py",
@@ -14853,7 +14841,7 @@
       "label": "Reinicia a inst\u00e2ncia WhatsApp",
       "_origin": "ast",
       "community": 182,
-      "community_name": "instancia_do_usuario",
+      "community_name": "post",
       "file_type": "rationale",
       "norm_label": "reinicia a instancia whatsapp",
       "source_file": "services/api/server.py",
@@ -14864,7 +14852,7 @@
       "label": "Desconecta a inst\u00e2ncia WhatsApp",
       "_origin": "ast",
       "community": 182,
-      "community_name": "instancia_do_usuario",
+      "community_name": "post",
       "file_type": "rationale",
       "norm_label": "desconecta a instancia whatsapp",
       "source_file": "services/api/server.py",
@@ -14992,33 +14980,11 @@
       "source_location": ""
     },
     {
-      "id": "services_api_server_py_post",
-      "label": "post",
-      "_origin": "ast",
-      "community": 185,
-      "community_name": "post",
-      "file_type": "code",
-      "norm_label": "post",
-      "source_file": "",
-      "source_location": ""
-    },
-    {
-      "id": "services_api_server_rationale_1478",
-      "label": "Prepara a inst\u00e2ncia do WhatsApp do usu\u00e1rio. Pode ser chamada de novo.",
-      "_origin": "ast",
-      "community": 185,
-      "community_name": "post",
-      "file_type": "rationale",
-      "norm_label": "prepara a instancia do whatsapp do usuario. pode ser chamada de novo.",
-      "source_file": "services/api/server.py",
-      "source_location": "L1478"
-    },
-    {
       "id": "services_api_server_rationale_332",
       "label": "Servi\u00e7o da empresa, com o pre\u00e7o vigente para congelar na consulta.",
       "_origin": "ast",
       "community": 185,
-      "community_name": "post",
+      "community_name": "assert_owned_record",
       "file_type": "rationale",
       "norm_label": "servico da empresa, com o preco vigente para congelar na consulta.",
       "source_file": "services/api/server.py",
@@ -15727,61 +15693,6 @@
       "file_type": "code",
       "norm_label": "tailwindcss",
       "source_file": "tailwindcss"
-    },
-    {
-      "id": "services_api_tests_test_ai_api_rationale_1278",
-      "label": "Pelo menos um dos quatro campos permitidos \u00e9 obrigat\u00f3rio.",
-      "_origin": "ast",
-      "community": 202,
-      "community_name": "test_atualizacao_sem_nenhum_campo_e_recusada",
-      "file_type": "rationale",
-      "norm_label": "pelo menos um dos quatro campos permitidos e obrigatorio.",
-      "source_file": "services/api/tests/test_ai_api.py",
-      "source_location": "L1278"
-    },
-    {
-      "id": "services_api_tests_test_ai_api_rationale_1493",
-      "label": "Sem o tratador gen\u00e9rico, a automa\u00e7\u00e3o recebia 500 sem `ok` nem `error`.",
-      "_origin": "ast",
-      "community": 202,
-      "community_name": "test_atualizacao_sem_nenhum_campo_e_recusada",
-      "file_type": "rationale",
-      "norm_label": "sem o tratador generico, a automacao recebia 500 sem `ok` nem `error`.",
-      "source_file": "services/api/tests/test_ai_api.py",
-      "source_location": "L1493"
-    },
-    {
-      "id": "services_api_tests_test_ai_api_py_fixture",
-      "label": "fixture",
-      "_origin": "ast",
-      "community": 203,
-      "community_name": "cliente_http",
-      "file_type": "code",
-      "norm_label": "fixture",
-      "source_file": "",
-      "source_location": ""
-    },
-    {
-      "id": "services_api_tests_test_ai_api_rationale_1379",
-      "label": "Trava por empresa: o `active` do n8n \u00e9 um s\u00f3 para todos os clientes. A recusa\u2026",
-      "_origin": "ast",
-      "community": 204,
-      "community_name": "test_atendimento_desligado_recusa_antes_de_cadastrar_o_cliente",
-      "file_type": "rationale",
-      "norm_label": "trava por empresa: o `active` do n8n e um so para todos os clientes. a recusa...",
-      "source_file": "services/api/tests/test_ai_api.py",
-      "source_location": "L1379"
-    },
-    {
-      "id": "services_api_tests_test_ai_api_rationale_941",
-      "label": "Duas mensagens do mesmo contato: 23505 n\u00e3o pode virar FALHA_TEMPORARIA.",
-      "_origin": "ast",
-      "community": 205,
-      "community_name": "test_corrida_na_criacao_de_cliente_rele_o_cadastro_existente",
-      "file_type": "rationale",
-      "norm_label": "duas mensagens do mesmo contato: 23505 nao pode virar falha_temporaria.",
-      "source_file": "services/api/tests/test_ai_api.py",
-      "source_location": "L941"
     },
     {
       "id": "apps_dashboard_src_components_ui_alert_dialog",
@@ -18909,7 +18820,7 @@
       "label": "Existe profissional que a automa\u00e7\u00e3o consiga oferecer de verdade. Ativo, com\u2026",
       "_origin": "ast",
       "community": 41,
-      "community_name": "montar_implantacao",
+      "community_name": "get_whatsapp_status",
       "file_type": "rationale",
       "norm_label": "existe profissional que a automacao consiga oferecer de verdade. ativo, com...",
       "source_file": "services/api/server.py",
@@ -18920,7 +18831,7 @@
       "label": "Checklist de implanta\u00e7\u00e3o calculado no servidor. \u00danica fonte de verdade de `GET\u2026",
       "_origin": "ast",
       "community": 41,
-      "community_name": "montar_implantacao",
+      "community_name": "get_whatsapp_status",
       "file_type": "rationale",
       "norm_label": "checklist de implantacao calculado no servidor. unica fonte de verdade de `get...",
       "source_file": "services/api/server.py",
@@ -18931,11 +18842,55 @@
       "label": "Liga e desliga o atendimento autom\u00e1tico desta empresa. Desligar \u00e9 sempre aceito\u2026",
       "_origin": "ast",
       "community": 41,
-      "community_name": "montar_implantacao",
+      "community_name": "get_whatsapp_status",
       "file_type": "rationale",
       "norm_label": "liga e desliga o atendimento automatico desta empresa. desligar e sempre aceito...",
       "source_file": "services/api/server.py",
       "source_location": "L1183"
+    },
+    {
+      "id": "services_api_server_rationale_1384",
+      "label": "Estado da inst\u00e2ncia na Evolution. Nunca levanta. O painel precisa responder\u2026",
+      "_origin": "ast",
+      "community": 41,
+      "community_name": "get_whatsapp_status",
+      "file_type": "rationale",
+      "norm_label": "estado da instancia na evolution. nunca levanta. o painel precisa responder...",
+      "source_file": "services/api/server.py",
+      "source_location": "L1384"
+    },
+    {
+      "id": "services_api_server_rationale_1403",
+      "label": "N\u00famero conectado, s\u00f3 d\u00edgitos, sem o sufixo `@s.whatsapp.net`. \u00c9 o que o painel\u2026",
+      "_origin": "ast",
+      "community": 41,
+      "community_name": "get_whatsapp_status",
+      "file_type": "rationale",
+      "norm_label": "numero conectado, so digitos, sem o sufixo `@s.whatsapp.net`. e o que o painel...",
+      "source_file": "services/api/server.py",
+      "source_location": "L1403"
+    },
+    {
+      "id": "services_api_server_rationale_1425",
+      "label": "Item `whatsapp` do checklist: s\u00f3 `open` conta, falha vira `false`.",
+      "_origin": "ast",
+      "community": 41,
+      "community_name": "get_whatsapp_status",
+      "file_type": "rationale",
+      "norm_label": "item `whatsapp` do checklist: so `open` conta, falha vira `false`.",
+      "source_file": "services/api/server.py",
+      "source_location": "L1425"
+    },
+    {
+      "id": "services_api_server_rationale_1494",
+      "label": "Retorna o status da conex\u00e3o WhatsApp",
+      "_origin": "ast",
+      "community": 41,
+      "community_name": "get_whatsapp_status",
+      "file_type": "rationale",
+      "norm_label": "retorna o status da conexao whatsapp",
+      "source_file": "services/api/server.py",
+      "source_location": "L1494"
     },
     {
       "id": "docs_planning_correcoes_automacao_2026_09_7_1_o_defeito_mais_caro_a_automa\u00e7\u00e3o_calava_por_12_horas",
@@ -19043,7 +18998,7 @@
       "node_kind": "heading",
       "norm_label": "11. validacao executada",
       "source_file": "docs/planning/CORRECOES_AUTOMACAO_2026-09.md",
-      "source_location": "L1593"
+      "source_location": "L1525"
     },
     {
       "id": "docs_planning_correcoes_automacao_2026_09_3_o_que_n\u00e3o_foi_corrigido_e_continua_aberto",
@@ -19166,40 +19121,28 @@
       "source_location": "L1421"
     },
     {
-      "id": "docs_planning_correcoes_automacao_2026_09_10_7_a_auditoria_de_estado_o_agrupamento_estava_morto_e_a_fia\u00e7\u00e3o_n\u00e3o_tinha_rede",
-      "label": "10.7 A auditoria de estado: o agrupamento estava morto, e a fia\u00e7\u00e3o n\u00e3o tinha rede",
+      "id": "docs_planning_correcoes_automacao_2026_09_10_7_a_verifica\u00e7\u00e3o",
+      "label": "10.7 A verifica\u00e7\u00e3o",
       "_origin": "ast",
       "community": 44,
       "community_name": "10. O contexto da empresa: o que o dono escreve e a recep\u00e7\u00e3o responde",
       "file_type": "document",
       "node_kind": "heading",
-      "norm_label": "10.7 a auditoria de estado: o agrupamento estava morto, e a fiacao nao tinha rede",
+      "norm_label": "10.7 a verificacao",
       "source_file": "docs/planning/CORRECOES_AUTOMACAO_2026-09.md",
       "source_location": "L1477"
     },
     {
-      "id": "docs_planning_correcoes_automacao_2026_09_10_8_a_verifica\u00e7\u00e3o",
-      "label": "10.8 A verifica\u00e7\u00e3o",
+      "id": "docs_planning_correcoes_automacao_2026_09_10_8_o_que_continua_de_fora",
+      "label": "10.8 O que continua de fora",
       "_origin": "ast",
       "community": 44,
       "community_name": "10. O contexto da empresa: o que o dono escreve e a recep\u00e7\u00e3o responde",
       "file_type": "document",
       "node_kind": "heading",
-      "norm_label": "10.8 a verificacao",
+      "norm_label": "10.8 o que continua de fora",
       "source_file": "docs/planning/CORRECOES_AUTOMACAO_2026-09.md",
-      "source_location": "L1530"
-    },
-    {
-      "id": "docs_planning_correcoes_automacao_2026_09_10_9_o_que_continua_de_fora",
-      "label": "10.9 O que continua de fora",
-      "_origin": "ast",
-      "community": 44,
-      "community_name": "10. O contexto da empresa: o que o dono escreve e a recep\u00e7\u00e3o responde",
-      "file_type": "document",
-      "node_kind": "heading",
-      "norm_label": "10.9 o que continua de fora",
-      "source_file": "docs/planning/CORRECOES_AUTOMACAO_2026-09.md",
-      "source_location": "L1550"
+      "source_location": "L1495"
     },
     {
       "id": "docs_planning_correcoes_automacao_2026_09_10_o_contexto_da_empresa_o_que_o_dono_escreve_e_a_recep\u00e7\u00e3o_responde",
@@ -19274,6 +19217,17 @@
       "community_name": "ai_api.py",
       "file_type": "code",
       "norm_label": "date",
+      "source_file": "",
+      "source_location": ""
+    },
+    {
+      "id": "decimal",
+      "label": "Decimal",
+      "_origin": "ast",
+      "community": 46,
+      "community_name": "ai_api.py",
+      "file_type": "code",
+      "norm_label": "decimal",
       "source_file": "",
       "source_location": ""
     },
@@ -19694,6 +19648,17 @@
       "norm_label": "data de resposta sempre em -03:00. o postgrest devolve `timestamptz` no fuso da...",
       "source_file": "services/api/dominio.py",
       "source_location": "L70"
+    },
+    {
+      "id": "services_api_dominio_rationale_88",
+      "label": "Normaliza qualquer entrada monet\u00e1ria em `Decimal` com dois d\u00edgitos. `float`\u2026",
+      "_origin": "ast",
+      "community": 46,
+      "community_name": "ai_api.py",
+      "file_type": "rationale",
+      "norm_label": "normaliza qualquer entrada monetaria em `decimal` com dois digitos. `float`...",
+      "source_file": "services/api/dominio.py",
+      "source_location": "L88"
     },
     {
       "id": "services_api_settings_rationale_1",
@@ -25646,7 +25611,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "automation/n8n/validar_workflow.py",
-      "source_location": "L566",
+      "source_location": "L498",
       "weight": 1.0
     },
     {
@@ -25658,7 +25623,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "automation/n8n/validar_workflow.py",
-      "source_location": "L572",
+      "source_location": "L504",
       "weight": 1.0
     },
     {
@@ -29030,7 +28995,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "services/api/tests/test_ai_api.py",
-      "source_location": "L1385",
+      "source_location": "L1352",
       "weight": 1.0
     },
     {
@@ -29042,7 +29007,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "services/api/tests/test_ai_api.py",
-      "source_location": "L1387",
+      "source_location": "L1354",
       "weight": 1.0
     },
     {
@@ -29054,7 +29019,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "services/api/tests/test_ai_api.py",
-      "source_location": "L1402",
+      "source_location": "L1369",
       "weight": 1.0
     },
     {
@@ -29066,7 +29031,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "services/api/tests/test_ai_api.py",
-      "source_location": "L1404",
+      "source_location": "L1371",
       "weight": 1.0
     },
     {
@@ -29114,7 +29079,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "services/api/tests/test_ai_api.py",
-      "source_location": "L1479",
+      "source_location": "L1446",
       "weight": 1.0
     },
     {
@@ -29126,31 +29091,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "services/api/tests/test_ai_api.py",
-      "source_location": "L1479",
-      "weight": 1.0
-    },
-    {
-      "source": "services_api_tests_test_ai_api_test_busca_filtra_por_empresa_e_por_cliente",
-      "target": "services_api_tests_test_ai_api_banco_com",
-      "relation": "calls",
-      "_origin": "ast",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "context": "call",
-      "source_file": "services/api/tests/test_ai_api.py",
-      "source_location": "L1299",
-      "weight": 1.0
-    },
-    {
-      "source": "services_api_tests_test_ai_api_test_busca_filtra_por_empresa_e_por_cliente",
-      "target": "services_api_tests_test_ai_api_http_com",
-      "relation": "calls",
-      "_origin": "ast",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "context": "call",
-      "source_file": "services/api/tests/test_ai_api.py",
-      "source_location": "L1313",
+      "source_location": "L1446",
       "weight": 1.0
     },
     {
@@ -29462,7 +29403,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "services/api/tests/test_ai_api.py",
-      "source_location": "L1331",
+      "source_location": "L1298",
       "weight": 1.0
     },
     {
@@ -29474,7 +29415,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "services/api/tests/test_ai_api.py",
-      "source_location": "L1333",
+      "source_location": "L1300",
       "weight": 1.0
     },
     {
@@ -29486,7 +29427,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "services/api/tests/test_ai_api.py",
-      "source_location": "L1343",
+      "source_location": "L1310",
       "weight": 1.0
     },
     {
@@ -29498,7 +29439,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "services/api/tests/test_ai_api.py",
-      "source_location": "L1345",
+      "source_location": "L1312",
       "weight": 1.0
     },
     {
@@ -29510,7 +29451,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "services/api/tests/test_ai_api.py",
-      "source_location": "L1356",
+      "source_location": "L1323",
       "weight": 1.0
     },
     {
@@ -29522,7 +29463,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "services/api/tests/test_ai_api.py",
-      "source_location": "L1359",
+      "source_location": "L1326",
       "weight": 1.0
     },
     {
@@ -29942,7 +29883,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "services/api/tests/test_ai_api.py",
-      "source_location": "L1439",
+      "source_location": "L1406",
       "weight": 1.0
     },
     {
@@ -29954,7 +29895,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "services/api/tests/test_ai_api.py",
-      "source_location": "L1440",
+      "source_location": "L1407",
       "weight": 1.0
     },
     {
@@ -29966,7 +29907,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "services/api/tests/test_ai_api.py",
-      "source_location": "L1440",
+      "source_location": "L1407",
       "weight": 1.0
     },
     {
@@ -29978,7 +29919,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "services/api/tests/test_ai_api.py",
-      "source_location": "L1442",
+      "source_location": "L1409",
       "weight": 1.0
     },
     {
@@ -29990,7 +29931,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "services/api/tests/test_ai_api.py",
-      "source_location": "L1423",
+      "source_location": "L1390",
       "weight": 1.0
     },
     {
@@ -30002,7 +29943,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "services/api/tests/test_ai_api.py",
-      "source_location": "L1424",
+      "source_location": "L1391",
       "weight": 1.0
     },
     {
@@ -30014,7 +29955,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "services/api/tests/test_ai_api.py",
-      "source_location": "L1425",
+      "source_location": "L1392",
       "weight": 1.0
     },
     {
@@ -30026,7 +29967,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "services/api/tests/test_ai_api.py",
-      "source_location": "L1427",
+      "source_location": "L1394",
       "weight": 1.0
     },
     {
@@ -30074,7 +30015,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "services/api/tests/test_ai_api.py",
-      "source_location": "L1499",
+      "source_location": "L1466",
       "weight": 1.0
     },
     {
@@ -30086,7 +30027,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "services/api/tests/test_ai_api.py",
-      "source_location": "L1499",
+      "source_location": "L1466",
       "weight": 1.0
     },
     {
@@ -30146,7 +30087,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "services/api/tests/test_ai_api.py",
-      "source_location": "L1460",
+      "source_location": "L1427",
       "weight": 1.0
     },
     {
@@ -32798,7 +32739,7 @@
       "confidence_score": 1.0,
       "context": "decorator",
       "source_file": "services/api/tests/test_ai_api.py",
-      "source_location": "L1453",
+      "source_location": "L1420",
       "weight": 1.0
     },
     {
@@ -46758,7 +46699,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "automation/n8n/README.md",
-      "source_location": "L635",
+      "source_location": "L634",
       "weight": 1.0
     },
     {
@@ -46890,7 +46831,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "automation/n8n/TESTES_AUTOMACAO_V2.md",
-      "source_location": "L165",
+      "source_location": "L164",
       "weight": 1.0
     },
     {
@@ -46901,7 +46842,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "automation/n8n/TESTES_AUTOMACAO_V2.md",
-      "source_location": "L243",
+      "source_location": "L242",
       "weight": 1.0
     },
     {
@@ -46923,7 +46864,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "automation/n8n/TESTES_AUTOMACAO_V2.md",
-      "source_location": "L184",
+      "source_location": "L183",
       "weight": 1.0
     },
     {
@@ -46934,7 +46875,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "automation/n8n/TESTES_AUTOMACAO_V2.md",
-      "source_location": "L198",
+      "source_location": "L197",
       "weight": 1.0
     },
     {
@@ -46945,7 +46886,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "automation/n8n/TESTES_AUTOMACAO_V2.md",
-      "source_location": "L215",
+      "source_location": "L214",
       "weight": 1.0
     },
     {
@@ -46956,7 +46897,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "automation/n8n/TESTES_AUTOMACAO_V2.md",
-      "source_location": "L227",
+      "source_location": "L226",
       "weight": 1.0
     },
     {
@@ -47374,7 +47315,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "automation/n8n/validar_workflow.py",
-      "source_location": "L527",
+      "source_location": "L459",
       "weight": 1.0
     },
     {
@@ -47385,7 +47326,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "automation/n8n/validar_workflow.py",
-      "source_location": "L561",
+      "source_location": "L493",
       "weight": 1.0
     },
     {
@@ -50052,7 +49993,7 @@
     },
     {
       "source": "docs_planning_correcoes_automacao_2026_09_10_o_contexto_da_empresa_o_que_o_dono_escreve_e_a_recep\u00e7\u00e3o_responde",
-      "target": "docs_planning_correcoes_automacao_2026_09_10_7_a_auditoria_de_estado_o_agrupamento_estava_morto_e_a_fia\u00e7\u00e3o_n\u00e3o_tinha_rede",
+      "target": "docs_planning_correcoes_automacao_2026_09_10_7_a_verifica\u00e7\u00e3o",
       "relation": "contains",
       "_origin": "ast",
       "confidence": "EXTRACTED",
@@ -50063,24 +50004,13 @@
     },
     {
       "source": "docs_planning_correcoes_automacao_2026_09_10_o_contexto_da_empresa_o_que_o_dono_escreve_e_a_recep\u00e7\u00e3o_responde",
-      "target": "docs_planning_correcoes_automacao_2026_09_10_8_a_verifica\u00e7\u00e3o",
+      "target": "docs_planning_correcoes_automacao_2026_09_10_8_o_que_continua_de_fora",
       "relation": "contains",
       "_origin": "ast",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/planning/CORRECOES_AUTOMACAO_2026-09.md",
-      "source_location": "L1530",
-      "weight": 1.0
-    },
-    {
-      "source": "docs_planning_correcoes_automacao_2026_09_10_o_contexto_da_empresa_o_que_o_dono_escreve_e_a_recep\u00e7\u00e3o_responde",
-      "target": "docs_planning_correcoes_automacao_2026_09_10_9_o_que_continua_de_fora",
-      "relation": "contains",
-      "_origin": "ast",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "source_file": "docs/planning/CORRECOES_AUTOMACAO_2026-09.md",
-      "source_location": "L1550",
+      "source_location": "L1495",
       "weight": 1.0
     },
     {
@@ -50476,7 +50406,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/planning/CORRECOES_AUTOMACAO_2026-09.md",
-      "source_location": "L1593",
+      "source_location": "L1525",
       "weight": 1.0
     },
     {
@@ -54474,7 +54404,7 @@
     },
     {
       "source": "services_api_tests_test_ai_api",
-      "target": "services_api_tests_test_ai_api_test_busca_filtra_por_empresa_e_por_cliente",
+      "target": "services_api_tests_test_ai_api_test_contexto_entrega_o_texto_do_negocio",
       "relation": "contains",
       "_origin": "ast",
       "confidence": "EXTRACTED",
@@ -54485,24 +54415,13 @@
     },
     {
       "source": "services_api_tests_test_ai_api",
-      "target": "services_api_tests_test_ai_api_test_contexto_entrega_o_texto_do_negocio",
-      "relation": "contains",
-      "_origin": "ast",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "source_file": "services/api/tests/test_ai_api.py",
-      "source_location": "L1323",
-      "weight": 1.0
-    },
-    {
-      "source": "services_api_tests_test_ai_api",
       "target": "services_api_tests_test_ai_api_test_contexto_nao_sobrescreve_o_nome_de_quem_ja_e_cliente",
       "relation": "contains",
       "_origin": "ast",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "services/api/tests/test_ai_api.py",
-      "source_location": "L1341",
+      "source_location": "L1308",
       "weight": 1.0
     },
     {
@@ -54513,7 +54432,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "services/api/tests/test_ai_api.py",
-      "source_location": "L1355",
+      "source_location": "L1322",
       "weight": 1.0
     },
     {
@@ -54524,7 +54443,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "services/api/tests/test_ai_api.py",
-      "source_location": "L1368",
+      "source_location": "L1335",
       "weight": 1.0
     },
     {
@@ -54535,7 +54454,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "services/api/tests/test_ai_api.py",
-      "source_location": "L1378",
+      "source_location": "L1345",
       "weight": 1.0
     },
     {
@@ -54546,7 +54465,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "services/api/tests/test_ai_api.py",
-      "source_location": "L1401",
+      "source_location": "L1368",
       "weight": 1.0
     },
     {
@@ -54557,7 +54476,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "services/api/tests/test_ai_api.py",
-      "source_location": "L1412",
+      "source_location": "L1379",
       "weight": 1.0
     },
     {
@@ -54568,7 +54487,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "services/api/tests/test_ai_api.py",
-      "source_location": "L1422",
+      "source_location": "L1389",
       "weight": 1.0
     },
     {
@@ -54579,7 +54498,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "services/api/tests/test_ai_api.py",
-      "source_location": "L1438",
+      "source_location": "L1405",
       "weight": 1.0
     },
     {
@@ -54590,7 +54509,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "services/api/tests/test_ai_api.py",
-      "source_location": "L1457",
+      "source_location": "L1424",
       "weight": 1.0
     },
     {
@@ -54601,7 +54520,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "services/api/tests/test_ai_api.py",
-      "source_location": "L1470",
+      "source_location": "L1437",
       "weight": 1.0
     },
     {
@@ -54612,7 +54531,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "services/api/tests/test_ai_api.py",
-      "source_location": "L1478",
+      "source_location": "L1445",
       "weight": 1.0
     },
     {
@@ -54623,7 +54542,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "services/api/tests/test_ai_api.py",
-      "source_location": "L1492",
+      "source_location": "L1459",
       "weight": 1.0
     },
     {
@@ -54634,7 +54553,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "services/api/tests/test_ai_api.py",
-      "source_location": "L1512",
+      "source_location": "L1479",
       "weight": 1.0
     },
     {
@@ -57360,7 +57279,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "services/api/tests/test_ai_api.py",
-      "source_location": "L1471",
+      "source_location": "L1438",
       "weight": 1.0
     },
     {
@@ -57371,7 +57290,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "services/api/tests/test_ai_api.py",
-      "source_location": "L1474",
+      "source_location": "L1441",
       "weight": 1.0
     },
     {
@@ -57584,14 +57503,14 @@
       "weight": 1.0
     },
     {
-      "source": "automation_n8n_validar_workflow_rationale_528",
+      "source": "automation_n8n_validar_workflow_rationale_460",
       "target": "automation_n8n_validar_workflow_falhas_de_forma",
       "relation": "rationale_for",
       "_origin": "ast",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "automation/n8n/validar_workflow.py",
-      "source_location": "L528",
+      "source_location": "L460",
       "weight": 1.0
     },
     {
@@ -58432,7 +58351,7 @@
     },
     {
       "source": "services_api_tests_test_ai_api_rationale_1291",
-      "target": "services_api_tests_test_ai_api_test_busca_filtra_por_empresa_e_por_cliente",
+      "target": "services_api_tests_test_ai_api_test_contexto_entrega_o_texto_do_negocio",
       "relation": "rationale_for",
       "_origin": "ast",
       "confidence": "EXTRACTED",
@@ -58442,47 +58361,36 @@
       "weight": 1.0
     },
     {
-      "source": "services_api_tests_test_ai_api_rationale_1324",
-      "target": "services_api_tests_test_ai_api_test_contexto_entrega_o_texto_do_negocio",
-      "relation": "rationale_for",
-      "_origin": "ast",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "source_file": "services/api/tests/test_ai_api.py",
-      "source_location": "L1324",
-      "weight": 1.0
-    },
-    {
-      "source": "services_api_tests_test_ai_api_rationale_1342",
+      "source": "services_api_tests_test_ai_api_rationale_1309",
       "target": "services_api_tests_test_ai_api_test_contexto_nao_sobrescreve_o_nome_de_quem_ja_e_cliente",
       "relation": "rationale_for",
       "_origin": "ast",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "services/api/tests/test_ai_api.py",
-      "source_location": "L1342",
+      "source_location": "L1309",
       "weight": 1.0
     },
     {
-      "source": "services_api_tests_test_ai_api_rationale_1369",
+      "source": "services_api_tests_test_ai_api_rationale_1336",
       "target": "services_api_tests_test_ai_api_test_catalogo_marca_servico_sem_profissional_como_nao_agendavel",
       "relation": "rationale_for",
       "_origin": "ast",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "services/api/tests/test_ai_api.py",
-      "source_location": "L1369",
+      "source_location": "L1336",
       "weight": 1.0
     },
     {
-      "source": "services_api_tests_test_ai_api_rationale_1379",
+      "source": "services_api_tests_test_ai_api_rationale_1346",
       "target": "services_api_tests_test_ai_api_test_atendimento_desligado_recusa_antes_de_cadastrar_o_cliente",
       "relation": "rationale_for",
       "_origin": "ast",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "services/api/tests/test_ai_api.py",
-      "source_location": "L1379",
+      "source_location": "L1346",
       "weight": 1.0
     },
     {
@@ -58497,25 +58405,25 @@
       "weight": 1.0
     },
     {
-      "source": "services_api_tests_test_ai_api_rationale_1493",
+      "source": "services_api_tests_test_ai_api_rationale_1460",
       "target": "services_api_tests_test_ai_api_test_erro_inesperado_em_api_ai_vira_envelope_e_nao_texto_puro",
       "relation": "rationale_for",
       "_origin": "ast",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "services/api/tests/test_ai_api.py",
-      "source_location": "L1493",
+      "source_location": "L1460",
       "weight": 1.0
     },
     {
-      "source": "services_api_tests_test_ai_api_rationale_1513",
+      "source": "services_api_tests_test_ai_api_rationale_1480",
       "target": "services_api_tests_test_ai_api_test_erro_inesperado_fora_de_api_ai_mantem_o_500_do_framework",
       "relation": "rationale_for",
       "_origin": "ast",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "services/api/tests/test_ai_api.py",
-      "source_location": "L1513",
+      "source_location": "L1480",
       "weight": 1.0
     },
     {
