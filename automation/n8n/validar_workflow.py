@@ -558,18 +558,155 @@ def falhas_de_forma(caminho):
     return erros
 
 
+def falhas_do_historico(wf):
+    """O chat e historico: nao pode entrar no caminho de responder o cliente.
+
+    Se a grava\u00e7\u00e3o virar etapa em serie, um Supabase lento passa a atrasar (ou
+    impedir) a resposta ao cliente por causa de uma tela que ninguem esta
+    olhando naquele instante.
+    """
+    erros = []
+    nos = {n["name"]: n for n in wf["nodes"]}
+    ligacoes = wf.get("connections", {})
+
+    RECEBIDA = "registrar mensagem recebida"
+    ENVIADA = "registrar resposta enviada"
+    if RECEBIDA not in nos or ENVIADA not in nos:
+        return erros
+
+    def destinos(nome, indice=0):
+        saidas = (ligacoes.get(nome, {}).get("main") or [])
+        if len(saidas) <= indice or not saidas[indice]:
+            return []
+        return [d.get("node") for d in saidas[indice]]
+
+    # Os dois ramos precisam sair EM PARALELO com o caminho real, nunca no lugar
+    # dele.
+    if "contexto da empresa" not in destinos("conteudo do cliente"):
+        erros.append(
+            "o historico do chat virou etapa do caminho de resposta: "
+            "'conteudo do cliente' precisa continuar ligado em 'contexto da empresa'"
+        )
+    if "Redis - marcar envio pr\u00f3prio" not in destinos("evo enviar mensagem"):
+        erros.append(
+            "'evo enviar mensagem' precisa continuar ligado em "
+            "'Redis - marcar envio pr\u00f3prio': sem a marca de eco a IA se pausa sozinha"
+        )
+
+    for nome in (RECEBIDA, ENVIADA):
+        no = nos[nome]
+        if no.get("onError") != "continueRegularOutput":
+            erros.append(f"'{nome}' precisa seguir adiante em erro: historico nao derruba atendimento")
+        corpo = str(no.get("parameters", {}).get("jsonBody", ""))
+        if "conversas/registrar" not in str(no.get("parameters", {}).get("url", "")):
+            erros.append(f"'{nome}' deixou de apontar para a rota de registro")
+        if "do_negocio" not in corpo:
+            erros.append(f"'{nome}' precisa dizer de que lado veio a mensagem")
+
+    # A resposta do robo tem de entrar como 'ia', nunca como 'painel': e o autor
+    # que a tela usa para dizer quem falou.
+    if "'ia'" not in str(nos[ENVIADA]["parameters"].get("jsonBody", "")):
+        erros.append("a resposta da recep\u00e7\u00e3o precisa ser registrada como autor 'ia'")
+
+    return erros
+
+
+def falhas_do_lembrete(caminho):
+    """Invariantes do fluxo de lembrete que nenhum teste de texto alcanca.
+
+    A mais cara e a primeira: sem `am:enviada`, o proprio lembrete volta pelo
+    webhook como `fromMe`, a V2 o le como "o negocio respondeu" e pausa a IA por
+    30 minutos. O "confirmo" do cliente morre em silencio, e o unico sintoma e
+    um lembrete que nunca surte efeito.
+    """
+    with open(caminho, encoding="utf-8") as arquivo:
+        wf = json.load(arquivo)
+
+    erros = []
+    nos = {n["name"]: n for n in wf["nodes"]}
+    ligacoes = wf.get("connections", {})
+
+    def saida(nome, indice=0):
+        destinos = (ligacoes.get(nome, {}).get("main") or [])
+        if len(destinos) <= indice or not destinos[indice]:
+            return None
+        return destinos[indice][0].get("node")
+
+    envio = "evo enviar lembrete"
+    marca = "Redis - marcar envio proprio"
+    pendente = "Redis - salvar pendente do lembrete"
+
+    for nome in (envio, marca, pendente):
+        if nome not in nos:
+            erros.append(f"no ausente no fluxo de lembrete: {nome}")
+    if erros:
+        return erros
+
+    if saida(envio) != marca:
+        erros.append(
+            f"a saida de sucesso de '{envio}' precisa ir para '{marca}': sem a marca de "
+            "envio proprio, o lembrete pausa a IA e o 'confirmo' do cliente e engolido"
+        )
+    if saida(marca) != pendente:
+        erros.append(f"'{marca}' precisa ligar em '{pendente}'")
+
+    chave = str(nos[marca].get("parameters", {}).get("key", ""))
+    if "am:enviada:" not in chave or "key.id" not in chave:
+        erros.append(
+            "a chave de eco do lembrete saiu de forma: precisa ser am:enviada com o "
+            "id devolvido pela Evolution, ou a V2 nao reconhece o proprio envio"
+        )
+
+    if nos[envio].get("retryOnFail"):
+        erros.append("'%s' nao pode repetir: repeticao manda o lembrete duas vezes" % envio)
+
+    pend = str(nos[pendente].get("parameters", {}).get("value", ""))
+    if "pendente" not in pend:
+        erros.append("'%s' precisa gravar a pendencia montada pelo Code" % pendente)
+
+    # O telefone do cadastro e o que o WhatsApp entrega podem diferir no nono
+    # digito. A chave TEM de sair do endereco por onde a mensagem realmente saiu,
+    # senao o "sim" do cliente nao acha a pendencia e vira conversa comum.
+    chave_pend = str(nos[pendente].get("parameters", {}).get("key", ""))
+    if "remoteJid" not in chave_pend or "evo enviar lembrete" not in chave_pend:
+        erros.append(
+            "a chave de am:pendente do lembrete precisa usar o remoteJid devolvido "
+            "por 'evo enviar lembrete': montar o JID a partir do cadastro erra "
+            "quando o nono digito do telefone difere do que o WhatsApp entrega"
+        )
+
+    jscode = ""
+    for n in wf["nodes"]:
+        if n["name"] == "montar lembretes":
+            jscode = n.get("parameters", {}).get("jsCode", "")
+    if "origem: 'lembrete'" not in jscode:
+        erros.append(
+            "a pendencia do lembrete precisa carregar origem 'lembrete': sem ela "
+            "'resolver e decidir' a descarta como obsoleta no dia seguinte"
+        )
+
+    return erros
+
+
 def main():
     caminho = sys.argv[1] if len(sys.argv) > 1 else PADRAO
     if not os.path.exists(caminho):
         print(f"arquivo não encontrado: {caminho}")
         return 1
     erros = falhas_do_workflow(caminho)
+    with open(caminho, encoding="utf-8") as arquivo:
+        erros += falhas_do_historico(json.load(arquivo))
     # O fluxo de erro é um workflow do projeto como qualquer outro: as regras de
     # forma valem nele também.
     if caminho == PADRAO:
-        erro_wf = os.path.join(os.path.dirname(PADRAO), "AgendaMagnetica-erro.n8n.json")
+        pasta = os.path.dirname(PADRAO)
+        erro_wf = os.path.join(pasta, "AgendaMagnetica-erro.n8n.json")
         if os.path.exists(erro_wf):
             erros += [f"[erro] {e}" for e in falhas_de_forma(erro_wf)]
+        lembrete_wf = os.path.join(pasta, "AgendaMagnetica-lembrete.n8n.json")
+        if os.path.exists(lembrete_wf):
+            erros += [f"[lembrete] {e}" for e in falhas_de_forma(lembrete_wf)]
+            erros += [f"[lembrete] {e}" for e in falhas_do_lembrete(lembrete_wf)]
     if erros:
         print(f"FALHOU ({len(erros)}):")
         for erro in erros:

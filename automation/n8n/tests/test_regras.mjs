@@ -3884,6 +3884,351 @@ teste('T135 a resposta chega inteira, em no máximo três mensagens', () => {
     'o fallback promete uma transferência que este nó não faz');
 });
 
+teste('T136 quem marca sempre com a mesma pessoa nao e perguntado de novo', () => {
+  // A empresa exige escolher profissional: e exatamente aqui que a conversa
+  // parava para perguntar "com quem?" ate para quem nunca marcou com outra.
+  const comHabito = (habitual, extra = {}) => contexto(Object.assign({
+    empresa: Object.assign({}, contexto().empresa, { exige_profissional: true }),
+    cliente: Object.assign({}, contexto().cliente, { profissional_habitual: habitual }),
+  }, extra));
+
+  const pedido = interpretacao({
+    intent: 'preparar_agendamento',
+    next_action: 'check_availability',
+    entities: { service_query: 'limpeza', customer_updates: {} },
+  });
+
+  // 1. Com habito: vai direto buscar horario COM ele, sem perguntar.
+  const d = decidir(comHabito({ id: 6, nome: 'Rafael Nunes' }), pedido);
+  assert.equal(d.rota, 'disponibilidade', 'devia buscar horario, nao perguntar');
+  assert.equal(d.busca.id_profissional, 6, 'a busca tem de ir com o profissional de sempre');
+
+  // 2. Sem habito: continua perguntando. Nao ter habito nao e falha — e o
+  //    estado normal de quem alterna ou acabou de chegar.
+  const semHabito = decidir(comHabito(null), pedido);
+  assert.equal(semHabito.rota, 'responder');
+  assert.equal(semHabito.motivo, 'profissional_obrigatorio');
+
+  // 3. Quem pede outra pessoa manda mais que o habito. Memoria nao vira teimosia.
+  const pediuOutra = decidir(comHabito({ id: 6, nome: 'Rafael Nunes' }),
+    interpretacao({
+      intent: 'preparar_agendamento',
+      next_action: 'check_availability',
+      entities: { service_query: 'limpeza', professional_query: 'Paula', customer_updates: {} },
+    }));
+  assert.equal(pediuOutra.busca.id_profissional, 5,
+    'o nome dito na hora tem de ganhar do profissional de sempre');
+
+  // 4. Empresa que NAO exige escolher profissional nao herda o habito: fixar
+  //    alguem ali so estreitaria a agenda e faria a pessoa ouvir "sem horario"
+  //    por uma preferencia que ela nunca declarou.
+  const semExigencia = decidir(
+    contexto({ cliente: Object.assign({}, contexto().cliente,
+      { profissional_habitual: { id: 6, nome: 'Rafael Nunes' } }) }),
+    pedido);
+  assert.equal(semExigencia.rota, 'disponibilidade');
+  assert.equal(semExigencia.busca.id_profissional, null,
+    'sem exigencia da empresa, a busca continua aberta a qualquer profissional');
+});
+
+teste('T137 o profissional de sempre que saiu do catalogo nao e oferecido', () => {
+  // A deducao vem do historico e o catalogo muda depois dela. Se o nome
+  // passasse, a recepcao prometeria alguem que nao atende mais e o pedido de
+  // horario voltaria vazio — pior que ter perguntado.
+  const montar = (habitual) => executar('montar contexto', {
+    entrada: { pendente: null, estado: null },
+    refs: {
+      'normalizar entrada': { msg_id: 'MSG1', instance: INSTANCIA, remote_jid: JID },
+      'conteudo do cliente': { conteudo: 'oi', tipo: 'texto', entrada_incerta: false },
+      'contexto da empresa': ok({
+        empresa: {
+          nome: 'Studio Aurora', telefone: '', email: '', endereco: '', descricao: '',
+          assistente_nome: null, assistente_tom: null, exige_profissional: true,
+          fuso: 'America/Sao_Paulo', horarios: [],
+        },
+        cliente: {
+          nome: 'Ana Paula', telefone: TELEFONE, email: null, data_nascimento: null,
+          interesses: null, novo: false, profissional_habitual: habitual,
+        },
+        procedimentos: [{ id: 10, nome: 'Limpeza de pele', valor: 180, duracao_minutos: 60, agendavel: true }],
+        profissionais: [{ id: 5, nome: 'Paula Almeida', area: 'Estetica' }],
+      }),
+    },
+  })[0].json;
+
+  // Rafael nao esta mais no catalogo desta empresa.
+  assert.equal(montar({ id: 6, nome: 'Rafael Nunes' }).cliente.profissional_habitual, null,
+    'profissional fora do catalogo tem de ser descartado');
+
+  // Paula esta: passa, e com o nome que o catalogo diz hoje.
+  assert.deepEqual(montar({ id: 5, nome: 'Nome velho' }).cliente.profissional_habitual,
+    { id: 5, nome: 'Paula Almeida', area: 'Estetica' },
+    'o nome vale do catalogo vigente, nao o que veio junto do habito');
+
+  // Sem habito nenhum a chave existe e e null: forma fixa, como o resto do
+  // objeto — senao 'resolver e decidir' leria undefined.
+  assert.equal(montar(null).cliente.profissional_habitual, null);
+});
+
+teste('T138 o prompt diz que dia da semana e hoje', () => {
+  // O modelo recebia so um ISO e tinha de deduzir sozinho se amanha e sabado —
+  // e errava, oferecendo dia em que a empresa nao abre.
+  const ctx = executar('montar contexto', {
+    entrada: { pendente: null, estado: null },
+    refs: {
+      'normalizar entrada': { msg_id: 'MSG1', instance: INSTANCIA, remote_jid: JID },
+      'conteudo do cliente': { conteudo: 'oi', tipo: 'texto', entrada_incerta: false },
+      'contexto da empresa': ok({
+        empresa: {
+          nome: 'Studio Aurora', telefone: '', email: '', endereco: '', descricao: '',
+          assistente_nome: null, assistente_tom: null, exige_profissional: false,
+          fuso: 'America/Sao_Paulo', horarios: [],
+        },
+        cliente: { nome: 'Ana', telefone: TELEFONE, novo: false },
+        procedimentos: [], profissionais: [],
+      }),
+    },
+  })[0].json;
+
+  // 'montar contexto' le o relogio real (nao o AGORA da suite), entao o valor
+  // esperado sai do proprio agora_local que o no acabou de calcular: o que se
+  // prova aqui e a COERENCIA entre a data local e o nome do dia — que e onde
+  // moram os erros de fuso e de indice.
+  const DIAS = ['domingo', 'segunda-feira', 'terca-feira', 'quarta-feira',
+    'quinta-feira', 'sexta-feira', 'sabado'];
+  const esperado = DIAS[new Date(ctx.agora_local.replace('-03:00', 'Z')).getUTCDay()];
+  assert.equal(ctx.dia_semana_local, esperado,
+    `o nome do dia nao bate com agora_local (${ctx.agora_local})`);
+  assert.ok(DIAS.includes(ctx.dia_semana_local));
+});
+
+teste('T139 pendencia sem horario nao derruba o no da IA', () => {
+  // A expressao do prompt fazia new Date(undefined).toISOString(), que lanca
+  // RangeError. O no morre calado: o cliente nao ve erro, ve silencio — a pior
+  // falha possivel, porque nada no fluxo percebe que a conversa parou.
+  const prompt = NOS.get('IA interpretadora').parameters.options.systemMessage;
+  const m = prompt.match(/A\u00e7\u00e3o pendente de confirma\u00e7\u00e3o: \{\{([\s\S]*?)\}\}/);
+  assert.ok(m, 'a linha da acao pendente sumiu do prompt');
+  const render = (pendente) => new Function('$json', 'return (' + m[1] + ');')({ pendente });
+
+  // O caso que quebrava: pendencia existe, horario nao.
+  let texto;
+  assert.doesNotThrow(() => { texto = render({ tipo: 'confirmar' }); },
+    'pendencia sem horario voltou a derrubar o no');
+  assert.match(String(texto), /confirmar/);
+
+  // Com horario continua dizendo quando e, no fuso local (-3h do ISO).
+  texto = render({ tipo: 'agendar', inicio: '2026-08-21T17:00:00.000Z' });
+  assert.match(String(texto), /2026-08-21 14:00/, 'o horario local se perdeu');
+
+  // Sem pendencia nenhuma continua dizendo 'nenhuma'.
+  assert.equal(render(null), 'nenhuma');
+});
+
+teste('T140 o "confirmo" do lembrete vale no dia seguinte', () => {
+  // am:estado dura 6 h. Um lembrete de vespera respondido de manha acha
+  // pendente_falada = null, e pela regra da conversa a pendencia seria obsoleta
+  // — todo "confirmo" ouviria "nao tenho nada pendente aqui para confirmar" e o
+  // lembrete inteiro nao teria efeito.
+  const daquiAPouco = new Date(new Date(AGORA).getTime() + 3 * 3600 * 1000).toISOString();
+  const pendenteDeLembrete = {
+    tipo: 'confirmar', origem: 'lembrete', consulta_id: 77,
+    inicio: daquiAPouco, expira_em: daquiAPouco, acao_id: 'lembrete-77',
+  };
+  const confirmou = interpretacao({ intent: 'confirmar', next_action: 'confirm_pending' });
+
+  // estado vazio e o normal aqui: o turno de ontem ja expirou.
+  const d = decidir(contexto({
+    conteudo: 'confirmo',
+    pendente: pendenteDeLembrete,
+    estado: { historico: [], slots_oferecidos: [], consultas_candidatas: [],
+      reagendar_consulta_id: null, pendente_falada: null },
+  }), confirmou);
+  assert.equal(d.rota, 'executar_pendente', 'a confirmacao do lembrete foi descartada');
+  assert.equal(d.pendente.consulta_id, 77);
+
+  // A guarda continua valendo para pendencia DA CONVERSA: sem origem de
+  // lembrete e sem o turno ter falado dela, um "sim" nao pode fechar horario.
+  const daConversa = Object.assign({}, pendenteDeLembrete);
+  delete daConversa.origem;
+  const bloqueada = decidir(contexto({
+    conteudo: 'confirmo',
+    pendente: daConversa,
+    estado: { historico: [], slots_oferecidos: [], consultas_candidatas: [],
+      reagendar_consulta_id: null, pendente_falada: null },
+  }), confirmou);
+  assert.notEqual(bloqueada.rota, 'executar_pendente',
+    'a guarda da conversa foi afrouxada junto — um "sim" solto voltou a fechar horario');
+});
+
+teste('T146 quando o profissional de sempre esta cheio, ha para onde ir', () => {
+  // A busca so ficou estreita numa pessoa por decisao NOSSA, vinda do habito.
+  // "Nao achei horario livre" soaria como agenda cheia da casa inteira, e o
+  // cliente fiel sairia da conversa sem saida nenhuma.
+  const comHabito = contexto({
+    conteudo: 'quero marcar uma limpeza',
+    empresa: Object.assign({}, contexto().empresa, { exige_profissional: true }),
+    cliente: Object.assign({}, contexto().cliente, {
+      profissional_habitual: { id: 6, nome: 'Rafael Nunes' },
+    }),
+  });
+  const pedido = interpretacao({
+    intent: 'preparar_agendamento', next_action: 'check_availability',
+    entities: { service_query: 'limpeza', customer_updates: {} },
+  });
+
+  const d = decidir(comHabito, pedido);
+  assert.equal(d.busca.id_profissional, 6);
+
+  const [vazio] = executar('avaliar horários', {
+    entrada: { ok: true, data: { slots: [] }, error: null },
+    refs: { 'resolver e decidir': d },
+  });
+  assert.equal(vazio.json.tipo_resposta, 'sem_horarios');
+
+  const texto = responder(d, vazio.json).texto;
+  assert.match(texto, /Rafael Nunes/, 'o cliente precisa saber de QUEM e a agenda cheia');
+  assert.match(texto, /outro profissional/i, 'faltou a saida de trocar de pessoa');
+  assert.doesNotMatch(texto, /equipe/i, 'do outro lado pode haver uma pessoa sozinha');
+
+  // Controle: quando o CLIENTE escolheu a pessoa, a busca nao foi estreitada por
+  // nos, e oferecer outra pessoa seria passar por cima da escolha dele.
+  const escolheu = decidir(comHabito, interpretacao({
+    intent: 'preparar_agendamento', next_action: 'check_availability',
+    entities: { service_query: 'limpeza', professional_query: 'Paula', customer_updates: {} },
+  }));
+  const [vazio2] = executar('avaliar horários', {
+    entrada: { ok: true, data: { slots: [] }, error: null },
+    refs: { 'resolver e decidir': escolheu },
+  });
+  assert.doesNotMatch(responder(escolheu, vazio2.json).texto, /outro profissional/i,
+    'quem escolheu a pessoa nao pode ser empurrado para outra');
+});
+
+// ------------------------------------------- rodada 11: lembrete de vespera
+// O fluxo do lembrete e separado da V2 de proposito: o unico ponto de contato
+// sao duas chaves do Redis. Aqui roda o Code real dele, como no fluxo de erro.
+const FLUXO_LEMBRETE = JSON.parse(readFileSync(join(AQUI, '..', 'AgendaMagnetica-lembrete.n8n.json'), 'utf8'));
+const NOS_LEMBRETE = new Map(FLUXO_LEMBRETE.nodes.map((n) => [n.name, n]));
+
+function executarLembrete(lembretes) {
+  const no = NOS_LEMBRETE.get('montar lembretes');
+  assert.ok(no, 'no ausente no fluxo de lembrete');
+  const $ = (alvo) => {
+    assert.equal(alvo, 'buscar lembretes', `pediu no inesperado: ${alvo}`);
+    return { first: () => ({ json: { ok: true, data: { lembretes }, error: null } }) };
+  };
+  return new Function('$', no.parameters.jsCode)($);
+}
+
+teste('T141 o lembrete diz o que, quando, e o que responder', () => {
+  const base = {
+    id_consulta: 4242, instance_name: 'agm_1_studio', telefone: '5551999990000',
+    cliente_nome: 'marina souza', inicio: '2026-08-21T17:00:00.000Z',
+    servico: 'Limpeza de pele', profissional: 'Paula', mensagem: null,
+  };
+
+  const [item] = executarLembrete([base]);
+  // 17:00Z = 14h em Sao Paulo, sexta-feira 21/08.
+  assert.match(item.json.texto, /sexta-feira/);
+  assert.match(item.json.texto, /21\/08/);
+  assert.match(item.json.texto, /14h/);
+  assert.match(item.json.texto, /Limpeza de pele/);
+  assert.match(item.json.texto, /Paula/);
+  assert.match(item.json.texto, /Marina/, 'o primeiro nome entra na saudacao');
+  assert.match(item.json.texto, /sim/i, 'o cliente precisa saber o que responder');
+
+  // O destino e a chave do Redis tem de casar com o que a V2 usa quando a
+  // resposta chegar: <digitos>@s.whatsapp.net.
+  assert.equal(item.json.remote_jid, '5551999990000@s.whatsapp.net');
+  assert.equal(item.json.instance, 'agm_1_studio');
+
+  // A pendencia e o que o "sim" vai fechar.
+  assert.equal(item.json.pendente.tipo, 'confirmar');
+  assert.equal(item.json.pendente.origem, 'lembrete',
+    'sem origem de lembrete a pendencia e descartada como obsoleta no dia seguinte');
+  assert.equal(item.json.pendente.consulta_id, 4242);
+  assert.ok(item.json.ttl_pendente >= 60, 'a chave nao pode morrer antes da consulta');
+});
+
+teste('T142 lembrete sem para onde enviar nao vira mensagem', () => {
+  // A consulta ja foi marcada como enviada na API. Nao ha reenvio: cadastro sem
+  // telefone e empresa sem WhatsApp nao se resolvem entre uma passada e outra.
+  const bom = {
+    id_consulta: 1, instance_name: 'agm_1_studio', telefone: '5551999990000',
+    cliente_nome: 'Ana', inicio: '2026-08-21T17:00:00.000Z',
+    servico: 'Corte', profissional: 'Rafa', mensagem: null,
+  };
+  const itens = executarLembrete([
+    Object.assign({}, bom, { id_consulta: 2, telefone: null }),
+    Object.assign({}, bom, { id_consulta: 3, instance_name: '' }),
+    Object.assign({}, bom, { id_consulta: 4, inicio: 'nao e data' }),
+    bom,
+  ]);
+  assert.deepEqual(itens.map((i) => i.json.pendente.consulta_id), [1]);
+});
+
+teste('T143 o texto do dono abre o lembrete, mas nao substitui o horario', () => {
+  // O que o cliente confirma tem de vir do fluxo, nao do texto livre: senao um
+  // lembrete poderia prometer outra coisa do que esta na agenda.
+  const [item] = executarLembrete([{
+    id_consulta: 9, instance_name: 'agm_1_studio', telefone: '5551999990000',
+    cliente_nome: 'Ana', inicio: '2026-08-21T17:00:00.000Z',
+    servico: 'Corte', profissional: 'Rafa',
+    mensagem: 'Aqui e a Barbearia do Ze!',
+  }]);
+  assert.match(item.json.texto, /Aqui e a Barbearia do Ze!/);
+  assert.match(item.json.texto, /sexta-feira/, 'o horario real continua no texto');
+  assert.match(item.json.texto, /14h/);
+});
+
+teste('T145 as variaveis que o painel promete valem de verdade', () => {
+  // Configuracoes.jsx anuncia {nome}, {data}, {horario}, {profissional} e
+  // {procedimento}. Se o fluxo nao trocar, o cliente recebe as chaves literais.
+  const [item] = executarLembrete([{
+    id_consulta: 5, instance_name: 'agm_1_studio', telefone: '5551999990000',
+    cliente_nome: 'Marina Souza', inicio: '2026-08-21T17:00:00.000Z',
+    servico: 'Limpeza de pele', profissional: 'Paula',
+    mensagem: 'Oi {nome}! Seu {procedimento} com {profissional} e {data} as {horario}.',
+  }]);
+
+  assert.doesNotMatch(item.json.texto, /[{}]/, 'chave literal chegou ao cliente');
+  assert.match(item.json.texto, /Oi Marina!/);
+  assert.match(item.json.texto, /Limpeza de pele com Paula/);
+  assert.match(item.json.texto, /sexta-feira, dia 21\/08 as 14h/);
+  // A pergunta continua sendo nossa mesmo com o dono escrevendo tudo: e ela que
+  // diz ao cliente o que responder para fechar a pendencia.
+  assert.match(item.json.texto, /Responda \*sim\*/);
+});
+
+teste('T144 o "sim" do lembrete confirma presenca, e nao marca horario novo', () => {
+  const daquiAPouco = new Date(new Date(AGORA).getTime() + 3 * 3600 * 1000).toISOString();
+  const pendente = {
+    tipo: 'confirmar', origem: 'lembrete', consulta_id: 77,
+    inicio: daquiAPouco, expira_em: daquiAPouco, acao_id: 'lembrete-77',
+  };
+  const d = decidir(contexto({
+    conteudo: 'sim, confirmo',
+    pendente,
+    estado: { historico: [], slots_oferecidos: [], consultas_candidatas: [],
+      reagendar_consulta_id: null, pendente_falada: null },
+  }), interpretacao({ intent: 'confirmar', next_action: 'confirm_pending' }));
+
+  assert.equal(d.rota, 'executar_pendente');
+  assert.equal(d.escrita.caminho, '/api/ai/agendamentos/confirmar',
+    'a confirmacao nao pode cair na rota de criar agendamento');
+  assert.equal(d.escrita.corpo.id_consulta, 77);
+  assert.equal(d.escrita.corpo.inicio, undefined, 'confirmar presenca nao manda horario');
+
+  // E o texto nao pode dizer "esta marcado": o horario ja existia.
+  const v = verificar(d, { ok: true, data: { agendamento: { id: 77, inicio: daquiAPouco } }, error: null });
+  assert.equal(v.tipo_resposta, 'confirmado');
+  const texto = responder(d, v).texto;
+  assert.match(texto, /confirmada/i);
+  assert.doesNotMatch(texto, /est\u00e1 marcado/i,
+    'confirmar presenca nao e marcar horario novo');
+});
+
 // ---------------------------------------------------------------- execução
 let falhas = 0;
 for (const [nome, fn] of testes) {

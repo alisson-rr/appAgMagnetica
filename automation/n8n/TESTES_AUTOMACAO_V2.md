@@ -161,6 +161,17 @@ de cada teste diz o que o fluxo fazia antes.
 | T132 | Queixa junto da pergunta | "to com dor nas costas, o que levar na primeira sessão?" | cadastro de fisio | `livre` | responde pelo cadastro | "Traga roupa confortável e os exames." | pergunta sobre o corpo continua indo para uma pessoa |
 | T133 | Sem nada cadastrado | "tem estacionamento?" | campo vazio | `livre` | mantém a saída para uma pessoa | 'me diga "quero falar com uma pessoa"' | não troca o assunto por oferta de horário |
 | T134 | Rajada de balões | "oi" / "quero marcar" / "limpeza de pele" | — | `montar buffer` → `agrupar mensagens` | um turno só, com a frase inteira | "oi\nquero marcar\nlimpeza de pele" | atravessa os dois nós no formato que o fluxo grava; áudio seguido de texto mantém o id da mídia; buffer órfão não volta |
+| T136 | Profissional de sempre | "quero marcar uma limpeza" (empresa exige profissional) | — | `resolver e decidir` | busca já com o habitual, sem perguntar | rota `disponibilidade`, `id_profissional` do habitual | quem não tem hábito continua sendo perguntado; nome dito na hora ganha do hábito; empresa que não exige profissional não herda |
+| T137 | Hábito fora do catálogo | habitual que saiu da empresa | — | `montar contexto` | descartado | `profissional_habitual` = `null` | o nome vale do catálogo vigente, não o que veio junto do hábito |
+| T138 | Dia da semana | qualquer mensagem | — | `montar contexto` | o prompt diz que dia é hoje | `dia_semana_local` coerente com `agora_local` | pega erro de fuso e de índice; independe do relógio real |
+| T139 | Pendência sem horário | pendência de lembrete sem `inicio` | — | prompt da `IA interpretadora` | a expressão não lança | render sem `RangeError` | antes, o nó morria calado e a conversa ficava sem resposta |
+| T140 | Confirmar no dia seguinte | "confirmo" com `am:estado` expirado | pendência com `origem: lembrete` | `resolver e decidir` | executa a pendência | rota `executar_pendente` | pendência da conversa sem a marca continua sendo barrada |
+| T141 | Texto do lembrete | consulta amanhã 14h | — | `montar lembretes` | diz o quê, quando e o que responder | dia, data, hora, serviço, profissional | `remote_jid` e `am:pendente` casam com o que a V2 usa |
+| T142 | Lembrete sem destino | sem telefone ou sem instância | — | `montar lembretes` | não vira mensagem | só o válido sai | já marcado na API; não há reenvio |
+| T143 | Texto do dono | `mensagem_lembrete` sem variável | — | `montar lembretes` | vira abertura | o horário real continua no texto | o dono não consegue prometer outro horário |
+| T144 | "Sim" do lembrete | "sim, confirmo" | pendência `confirmar` | fluxo inteiro | confirma presença | `/agendamentos/confirmar` | não cai na rota de criar; texto não diz "está marcado" |
+| T145 | Variáveis do painel | `{nome} {procedimento} {data}` | — | `montar lembretes` | trocadas de verdade | sem chave literal no texto | a pergunta de confirmação continua sendo do fluxo |
+| T146 | Habitual sem horário | pedido sem horário livre | habitual definido | `avaliar horários` → `montar resposta` | diz de quem é a agenda cheia e oferece saída | nome + "outro profissional" | quem escolheu a pessoa não é empurrado para outra |
 
 ## Testes de estrutura
 

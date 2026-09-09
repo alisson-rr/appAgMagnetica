@@ -8,7 +8,7 @@ from decimal import Decimal
 from pathlib import Path
 from pydantic import BaseModel, Field, EmailStr, field_validator
 from typing import List, Literal, Optional
-from datetime import datetime, date, time, timedelta
+from datetime import datetime, date, time, timedelta, timezone
 import jwt
 from passlib.context import CryptContext
 import re as regex_module
@@ -194,6 +194,10 @@ class InfoClinicaUpdate(BaseModel):
     endereco: Optional[str] = None
     onboarding_completo: Optional[bool] = None
     mensagem_lembrete: Optional[str] = None
+    # Horas de antecedencia do lembrete. `None` desliga — e o mesmo CHECK do
+    # banco (1 a 168) vale aqui, para a recusa vir com mensagem de formulario e
+    # nao como erro de banco.
+    lembrete_horas: Optional[int] = Field(default=None, ge=1, le=168)
     assistente_nome: Optional[str] = None
     assistente_tom: Optional[Literal[TONS_ASSISTENTE]] = None
     exige_profissional: Optional[bool] = None
@@ -488,6 +492,304 @@ async def register(request: UsuarioCreate):
     except Exception as e:
         logging.error(f"Erro no registro: {str(e)}")
         raise HTTPException(status_code=500, detail="Erro interno")
+
+# ===== CONTAS A PAGAR E A RECEBER =====
+# O dinheiro dos atendimentos sai de `consulta`. Isto aqui e o resto: aluguel,
+# material, fornecedor, a parcela que alguem ficou de pagar.
+LIMITE_LANCAMENTOS = 300
+
+
+class LancamentoCreate(BaseModel):
+    tipo: Literal['pagar', 'receber']
+    descricao: str = Field(min_length=1, max_length=200)
+    valor: Decimal = Field(gt=0)
+    vencimento: date
+    observacoes: Optional[str] = Field(default=None, max_length=500)
+
+
+@api_router.get("/lancamentos")
+async def listar_lancamentos(current_user: dict = Depends(verify_token)):
+    """Contas da empresa, o que vence primeiro no topo."""
+    try:
+        clinica_id = get_user_clinica_id(current_user)
+        resultado = (
+            supabase.table('lancamento')
+            .select('id, tipo, descricao, valor, vencimento, quitado_em, observacoes')
+            .eq('id_info_clinica', clinica_id)
+            .order('vencimento')
+            .limit(LIMITE_LANCAMENTOS)
+            .execute()
+        )
+        return resultado.data or []
+    except HTTPException:
+        raise
+    except Exception:
+        logging.exception("Erro ao listar lançamentos")
+        raise HTTPException(status_code=500, detail="Erro interno")
+
+
+@api_router.post("/lancamentos")
+async def criar_lancamento(dados: LancamentoCreate, current_user: dict = Depends(verify_token)):
+    try:
+        clinica_id = get_user_clinica_id(current_user)
+        linha = {
+            'id_info_clinica': clinica_id,
+            'tipo': dados.tipo,
+            'descricao': dados.descricao.strip(),
+            # O banco guarda numeric; o JSON nao tem Decimal.
+            'valor': str(dinheiro_para_banco(dados.valor)),
+            'vencimento': dados.vencimento.isoformat(),
+            'observacoes': dados.observacoes,
+        }
+        resultado = supabase.table('lancamento').insert(linha).execute()
+        if not resultado.data:
+            raise HTTPException(status_code=500, detail="Erro interno")
+        return resultado.data[0]
+    except HTTPException:
+        raise
+    except Exception:
+        logging.exception("Erro ao criar lançamento")
+        raise HTTPException(status_code=500, detail="Erro interno")
+
+
+@api_router.post("/lancamentos/{lancamento_id}/quitar")
+async def quitar_lancamento(lancamento_id: int, current_user: dict = Depends(verify_token)):
+    """Marca como pago/recebido hoje. Clicar de novo desfaz."""
+    try:
+        clinica_id = get_user_clinica_id(current_user)
+        atual = (
+            supabase.table('lancamento')
+            .select('id, quitado_em')
+            .eq('id', lancamento_id)
+            .eq('id_info_clinica', clinica_id)
+            .limit(1)
+            .execute()
+        )
+        linha = (atual.data or [None])[0]
+        if not linha:
+            raise HTTPException(status_code=404, detail="Lançamento não encontrado")
+
+        quitado = None if linha.get('quitado_em') else date.today().isoformat()
+        atualizada = (
+            supabase.table('lancamento')
+            .update({'quitado_em': quitado})
+            .eq('id', lancamento_id)
+            .eq('id_info_clinica', clinica_id)
+            .execute()
+        )
+        return (atualizada.data or [{}])[0]
+    except HTTPException:
+        raise
+    except Exception:
+        logging.exception("Erro ao quitar lançamento")
+        raise HTTPException(status_code=500, detail="Erro interno")
+
+
+@api_router.delete("/lancamentos/{lancamento_id}")
+async def apagar_lancamento(lancamento_id: int, current_user: dict = Depends(verify_token)):
+    try:
+        clinica_id = get_user_clinica_id(current_user)
+        assert_owned_record('lancamento', lancamento_id, clinica_id, 'Lançamento')
+        (
+            supabase.table('lancamento')
+            .delete()
+            .eq('id', lancamento_id)
+            .eq('id_info_clinica', clinica_id)
+            .execute()
+        )
+        return {"ok": True}
+    except HTTPException:
+        raise
+    except Exception:
+        logging.exception("Erro ao apagar lançamento")
+        raise HTTPException(status_code=500, detail="Erro interno")
+
+
+# ===== CHAT DE ATENDIMENTO =====
+# O historico de conversa e gravado pelo fluxo n8n (`/api/ai/conversas/registrar`).
+# Aqui o painel so LE e ENVIA. Toda consulta filtra `id_info_clinica`.
+LIMITE_CONVERSAS = 50
+LIMITE_MENSAGENS = 40
+LIMITE_TEXTO_ENVIO = 4000
+
+
+class EnvioDoPainel(BaseModel):
+    texto: str = Field(min_length=1, max_length=LIMITE_TEXTO_ENVIO)
+
+
+@api_router.get("/conversas")
+async def listar_conversas(current_user: dict = Depends(verify_token)):
+    """Conversas da empresa, mais recentes primeiro."""
+    try:
+        clinica_id = get_user_clinica_id(current_user)
+        resultado = (
+            supabase.table('conversa')
+            .select('id, remote_jid, contato_nome, ultima_mensagem, ultima_em, nao_lidas')
+            .eq('id_info_clinica', clinica_id)
+            .order('ultima_em', desc=True)
+            .limit(LIMITE_CONVERSAS)
+            .execute()
+        )
+        return resultado.data or []
+    except HTTPException:
+        raise
+    except Exception as e:
+        logging.exception("Erro ao listar conversas")
+        raise HTTPException(status_code=500, detail="Erro interno")
+
+
+@api_router.get("/conversas/{conversa_id}/mensagens")
+async def listar_mensagens(conversa_id: int, current_user: dict = Depends(verify_token)):
+    """Mensagens de uma conversa, da mais antiga para a mais nova.
+
+    A busca no banco vem invertida (indice por mais recente) e a lista e virada
+    aqui: a tela le de cima para baixo, mas quem pagina quer o fim.
+    """
+    try:
+        clinica_id = get_user_clinica_id(current_user)
+        assert_owned_record('conversa', conversa_id, clinica_id, 'Conversa')
+        resultado = (
+            supabase.table('mensagem')
+            .select('id, do_negocio, autor, tipo, conteudo, created_at')
+            .eq('id_conversa', conversa_id)
+            # `id_conversa` ja limita, mas a empresa entra de novo: uma unica
+            # consulta sem esta linha basta para vazar conversa de outro
+            # assinante se o id vazar.
+            .eq('id_info_clinica', clinica_id)
+            .order('created_at', desc=True)
+            .limit(LIMITE_MENSAGENS)
+            .execute()
+        )
+        return list(reversed(resultado.data or []))
+    except HTTPException:
+        raise
+    except Exception as e:
+        logging.exception("Erro ao listar mensagens")
+        raise HTTPException(status_code=500, detail="Erro interno")
+
+
+@api_router.post("/conversas/{conversa_id}/lida")
+async def marcar_conversa_lida(conversa_id: int, current_user: dict = Depends(verify_token)):
+    try:
+        clinica_id = get_user_clinica_id(current_user)
+        assert_owned_record('conversa', conversa_id, clinica_id, 'Conversa')
+        (
+            supabase.table('conversa')
+            .update({'nao_lidas': 0})
+            .eq('id', conversa_id)
+            .eq('id_info_clinica', clinica_id)
+            .execute()
+        )
+        return {"ok": True}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logging.exception("Erro ao marcar conversa como lida")
+        raise HTTPException(status_code=500, detail="Erro interno")
+
+
+@api_router.post("/conversas/{conversa_id}/devolver-ia")
+async def devolver_para_ia(conversa_id: int, current_user: dict = Depends(verify_token)):
+    """Devolve a conversa para a recepção automática antes dos 30 minutos.
+
+    Não apaga a pausa no Redis — o backend não alcança aquele Redis, que fica
+    na rede interna da VPS. Grava o instante da devolução, e é o fluxo que
+    compara: pausa começada ANTES desta devolução não vale mais.
+    """
+    try:
+        clinica_id = get_user_clinica_id(current_user)
+        atualizada = (
+            supabase.table('conversa')
+            .update({'ia_liberada_em': datetime.now(timezone.utc).isoformat()})
+            .eq('id', conversa_id)
+            .eq('id_info_clinica', clinica_id)
+            .execute()
+        )
+        if not atualizada.data:
+            raise HTTPException(status_code=404, detail="Conversa não encontrada")
+        return {"ok": True, "devolvida": True}
+    except HTTPException:
+        raise
+    except Exception:
+        logging.exception("Erro ao devolver conversa para a IA")
+        raise HTTPException(status_code=500, detail="Erro interno")
+
+
+@api_router.post("/conversas/{conversa_id}/enviar")
+async def enviar_pelo_painel(
+    conversa_id: int,
+    envio: EnvioDoPainel,
+    current_user: dict = Depends(verify_token),
+):
+    """Manda uma mensagem escrita por uma pessoa, pela instancia da empresa.
+
+    A recepcao automatica se cala sozinha depois disto: o eco desta mensagem
+    volta pelo webhook como `fromMe` e, por NAO existir a chave `am:enviada`
+    dela, o fluxo a le como "o negocio respondeu" e pausa a IA por 30 minutos.
+    E o comportamento desejado, e e por isso que este envio nao passa pelo n8n.
+
+    A gravacao no historico usa o id devolvido pela Evolution: e ele que impede
+    a mensagem de aparecer duas vezes quando o eco chegar.
+    """
+    # Import local, como nas outras rotas que falam com a Evolution.
+    import evolution_api
+
+    try:
+        clinica_id = get_user_clinica_id(current_user)
+
+        atual = (
+            supabase.table('conversa')
+            .select('id, instance_name, remote_jid, id_cliente, contato_nome')
+            .eq('id', conversa_id)
+            .eq('id_info_clinica', clinica_id)
+            .limit(1)
+            .execute()
+        )
+        conversa = (atual.data or [None])[0]
+        if not conversa:
+            raise HTTPException(status_code=404, detail="Conversa não encontrada")
+
+        texto = envio.texto.strip()
+        if not texto:
+            raise HTTPException(status_code=422, detail="A mensagem não pode ser vazia")
+
+        try:
+            resposta = await evolution_api.send_text(
+                conversa['instance_name'], conversa['remote_jid'], texto
+            )
+        except Exception:
+            logging.exception("Evolution recusou o envio do painel")
+            raise HTTPException(
+                status_code=502,
+                detail="Não foi possível enviar agora. A mensagem não foi entregue.",
+            )
+
+        # Sem id do provedor a mensagem entra assim mesmo: ela FOI enviada, e
+        # esconder do historico seria pior. O custo e poder duplicar quando o
+        # eco chegar — a chave unica nao pega nulo.
+        chave = ((resposta or {}).get('key') or {}).get('id')
+
+        supabase.rpc('fn_registrar_mensagem', {
+            'p_id_info_clinica': clinica_id,
+            'p_instance_name': conversa['instance_name'],
+            'p_remote_jid': conversa['remote_jid'],
+            'p_id_cliente': conversa.get('id_cliente'),
+            'p_contato_nome': conversa.get('contato_nome'),
+            'p_do_negocio': True,
+            'p_autor': 'painel',
+            'p_tipo': 'texto',
+            'p_conteudo': texto,
+            'p_provider_message_id': chave,
+            'p_provider_em': None,
+        }).execute()
+
+        return {"ok": True, "enviada": True}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logging.exception("Erro ao enviar pelo painel")
+        raise HTTPException(status_code=500, detail="Erro interno")
+
 
 # ===== DASHBOARD =====
 @api_router.get("/dashboard/stats")
@@ -1275,7 +1577,9 @@ async def update_info_clinica(info_id: int, info: InfoClinicaUpdate, current_use
         # querer TIRAR DO AR: sem a linha, apagar no painel não apagava nada e o
         # texto continuava sendo respondido no WhatsApp — uma chave PIX antiga
         # inclusive.
-        for campo in ('assistente_nome', 'assistente_tom', 'descricao'):
+        # `lembrete_horas` entra pela mesma razao: nula E o valor que DESLIGA o
+        # lembrete. Sem esta linha o dono liga uma vez e nunca mais desliga.
+        for campo in ('assistente_nome', 'assistente_tom', 'descricao', 'lembrete_horas'):
             if campo in info.model_fields_set:
                 data[campo] = getattr(info, campo)
         # `automacao_ativa` não entra aqui de propósito: ligar o atendimento

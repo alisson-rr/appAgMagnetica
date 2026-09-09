@@ -624,9 +624,9 @@
     "semantic_hash": ""
   },
   "automation/n8n/validar_workflow.py": {
-    "mtime": 1788981883.0199468,
-    "seen": 1788981956.4176152,
-    "ast_hash": "5299d59270988c4f23ac09a385f277a8",
+    "mtime": 1788973223.9925833,
+    "seen": 1788973448.907176,
+    "ast_hash": "140871cfea4d339255f61981052f6189",
     "semantic_hash": ""
   },
   ".claude/CLAUDE.md": {
@@ -822,9 +822,9 @@
     "semantic_hash": ""
   },
   "automation/n8n/README.md": {
-    "mtime": 1788981900.5456824,
-    "seen": 1788981956.4176152,
-    "ast_hash": "bf3ef37ae361b90235432f09bcb826a3",
+    "mtime": 1788977253.6086147,
+    "seen": 1788977304.1551561,
+    "ast_hash": "755f610d5e6ad2f303715cedda87f735",
     "semantic_hash": ""
   },
   "automation/n8n/TESTES_AUTOMACAO_V2.md": {
@@ -1302,9 +1302,9 @@
     "semantic_hash": ""
   },
   "automation/n8n/AgendaMagnetica-lembrete.n8n.json": {
-    "mtime": 1788981883.4052434,
-    "seen": 1788981956.4176152,
-    "ast_hash": "06931c80363a7c0bc1733a09d9719cf7",
+    "mtime": 1788971281.4805245,
+    "seen": 1788971787.741886,
+    "ast_hash": "18851335267efa7e76dcb30289506552",
     "semantic_hash": ""
   },
   "scripts/lembrete_confirmacao.sql": {

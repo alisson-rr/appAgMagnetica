@@ -16,6 +16,16 @@ import ConexaoWhatsApp from '../components/ConexaoWhatsApp';
 import { agruparHorarios, idsRemovidos, negocioSchema, turnosPreenchidos, validarHorarios } from '../lib/onboarding';
 import { formatPhone, unformatPhone } from '../utils/formatters';
 
+// Desligado e o padrao: um lembrete que o dono nao pediu chega como mensagem
+// nao solicitada para o cliente dele.
+const ANTECEDENCIAS = [
+  { valor: '', rotulo: 'Nao enviar lembrete' },
+  { valor: '12', rotulo: '12 horas antes' },
+  { valor: '24', rotulo: '1 dia antes' },
+  { valor: '48', rotulo: '2 dias antes' },
+  { valor: '72', rotulo: '3 dias antes' },
+];
+
 const MENSAGEM_LEMBRETE_PADRAO =
   'Olá {nome}! Lembramos que você tem uma consulta agendada para {data} às {horario}. Confirme sua presença respondendo esta mensagem.';
 
@@ -33,6 +43,7 @@ const Configuracoes = () => {
 
   const [clinica, setClinica] = useState(null);
   const [mensagemLembrete, setMensagemLembrete] = useState(MENSAGEM_LEMBRETE_PADRAO);
+  const [lembreteHoras, setLembreteHoras] = useState('');
   const [dias, setDias] = useState(() => agruparHorarios([]));
   const [horariosOriginais, setHorariosOriginais] = useState([]);
   const [errosHorarios, setErrosHorarios] = useState({});
@@ -72,6 +83,7 @@ const Configuracoes = () => {
         const dados = clinicaRes.data || {};
         setClinica(dados);
         setMensagemLembrete(dados.mensagem_lembrete || MENSAGEM_LEMBRETE_PADRAO);
+        setLembreteHoras(dados.lembrete_horas ? String(dados.lembrete_horas) : '');
         reset({
           nome: dados.nome || '',
           telefone: formatPhone(dados.telefone || ''),
@@ -119,9 +131,11 @@ const Configuracoes = () => {
     try {
       const { data } = await api.put(`/config/info-clinica/${clinica.id}`, {
         mensagem_lembrete: mensagemLembrete,
+        // Vazio vira `null`, que e o valor que desliga o lembrete no banco.
+        lembrete_horas: lembreteHoras ? Number(lembreteHoras) : null,
       });
       setClinica(data);
-      toast.success('Mensagem salva.');
+      toast.success(lembreteHoras ? 'Lembrete salvo.' : 'Lembrete desligado.');
     } catch (error) {
       toast.error(error.response?.data?.detail || 'Erro ao salvar a mensagem');
     } finally {
@@ -305,6 +319,25 @@ const Configuracoes = () => {
             <Card className="p-6 sm:p-8">
               <h2 className="mb-6 font-display text-lg font-bold text-ink">Mensagens modelo</h2>
 
+              <div className="mb-6">
+                <Label htmlFor="config-antecedencia">Quando enviar o lembrete</Label>
+                <select
+                  id="config-antecedencia"
+                  className="mt-2 h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+                  value={lembreteHoras}
+                  onChange={(evento) => setLembreteHoras(evento.target.value)}
+                  aria-describedby="config-antecedencia-ajuda"
+                >
+                  {ANTECEDENCIAS.map((opcao) => (
+                    <option key={opcao.valor} value={opcao.valor}>{opcao.rotulo}</option>
+                  ))}
+                </select>
+                <p id="config-antecedencia-ajuda" className="field-hint">
+                  A recepcao manda a mensagem e entende a resposta: quem responde
+                  &quot;sim&quot; tem a presenca confirmada na agenda.
+                </p>
+              </div>
+
               <div>
                 <Label htmlFor="config-lembrete">Lembrete de consulta</Label>
                 <Textarea
@@ -324,7 +357,7 @@ const Configuracoes = () => {
               <div className="mt-6 flex justify-end">
                 <Button onClick={salvarMensagem} disabled={salvando} className="flex items-center gap-2">
                   <Save size={18} />
-                  {salvando ? 'Salvando...' : 'Salvar mensagem'}
+                  {salvando ? 'Salvando...' : 'Salvar lembrete'}
                 </Button>
               </div>
             </Card>

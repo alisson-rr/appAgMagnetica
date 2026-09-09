@@ -635,3 +635,261 @@ def test_status_com_evolution_fora_do_ar_nao_derruba_a_rota(monkeypatch, evoluti
 
     assert resposta.status_code == 200
     assert resposta.json()["state"] == "disconnected"
+
+# ===== CHAT DE ATENDIMENTO =====
+# O historico e gravado pelo fluxo n8n; o painel so le e envia. O que estes
+# testes protegem e o isolamento entre empresas e a regra de que mensagem do
+# painel e intervencao HUMANA — nao pode se disfarcar de envio do robo.
+OUTRA_EMPRESA = 999
+
+
+def conversa(**extras):
+    linha = {
+        "id": 70, "id_info_clinica": EMPRESA, "instance_name": "agm_1_studio",
+        "remote_jid": "5551999990000@s.whatsapp.net", "id_cliente": 900,
+        "contato_nome": "Marina", "ultima_mensagem": "oi", "ultima_em": "2026-09-09T12:00:00Z",
+        "nao_lidas": 2,
+    }
+    linha.update(extras)
+    return linha
+
+
+def test_conversas_so_mostram_as_da_propria_empresa(monkeypatch):
+    banco = banco_com(conversa=[
+        conversa(),
+        conversa(id=71, id_info_clinica=OUTRA_EMPRESA, contato_nome="De outro assinante"),
+    ])
+    cliente = http_com(monkeypatch, banco)
+
+    resposta = cliente.get("/api/conversas")
+
+    assert resposta.status_code == 200
+    nomes = [c["contato_nome"] for c in resposta.json()]
+    assert nomes == ["Marina"], f"vazou conversa de outra empresa: {nomes}"
+
+
+def test_mensagens_de_conversa_de_outra_empresa_dao_404(monkeypatch):
+    banco = banco_com(
+        conversa=[conversa(id=71, id_info_clinica=OUTRA_EMPRESA)],
+        mensagem=[{"id": 1, "id_conversa": 71, "id_info_clinica": OUTRA_EMPRESA,
+                   "do_negocio": False, "autor": "cliente", "tipo": "texto",
+                   "conteudo": "segredo", "created_at": "2026-09-09T12:00:00Z"}],
+    )
+    cliente = http_com(monkeypatch, banco)
+
+    resposta = cliente.get("/api/conversas/71/mensagens")
+
+    assert resposta.status_code == 404, resposta.status_code
+    assert "segredo" not in resposta.text
+
+
+def test_envio_do_painel_vai_pela_instancia_da_empresa(monkeypatch):
+    """E fica gravado como pessoa, com o id que a Evolution devolveu.
+
+    O id importa: e ele que impede a mensagem de aparecer duas vezes quando o
+    eco voltar pelo webhook.
+    """
+    banco = banco_com(conversa=[conversa()])
+    cliente = http_com(monkeypatch, banco)
+
+    enviadas = []
+
+    async def enviar(instancia, jid, texto):
+        enviadas.append((instancia, jid, texto))
+        return {"key": {"id": "EVO123"}}
+
+    monkeypatch.setattr(evolution_api, "send_text", enviar)
+
+    gravadas = []
+    original = banco.rpc
+
+    def espiar(nome, parametros):
+        if nome == "fn_registrar_mensagem":
+            gravadas.append(parametros)
+        return original(nome, parametros)
+
+    banco.rpc = espiar
+
+    resposta = cliente.post("/api/conversas/70/enviar", json={"texto": "aqui e a Ana"})
+
+    assert resposta.status_code == 200, resposta.text
+    assert enviadas == [("agm_1_studio", "5551999990000@s.whatsapp.net", "aqui e a Ana")]
+    assert len(gravadas) == 1
+    assert gravadas[0]["p_autor"] == "painel", "mensagem de pessoa nao pode virar 'ia'"
+    assert gravadas[0]["p_do_negocio"] is True
+    assert gravadas[0]["p_provider_message_id"] == "EVO123"
+    assert gravadas[0]["p_id_info_clinica"] == EMPRESA
+
+
+def test_envio_recusado_pela_evolution_nao_entra_no_historico(monkeypatch):
+    """Mensagem que nao saiu nao pode aparecer como enviada na tela."""
+    banco = banco_com(conversa=[conversa()])
+    cliente = http_com(monkeypatch, banco)
+
+    async def recusar(*_a, **_k):
+        raise RuntimeError("evolution fora do ar")
+
+    monkeypatch.setattr(evolution_api, "send_text", recusar)
+
+    gravadas = []
+    original = banco.rpc
+    banco.rpc = lambda nome, p: (gravadas.append(p) if nome == "fn_registrar_mensagem" else None) or original(nome, p)
+
+    resposta = cliente.post("/api/conversas/70/enviar", json={"texto": "oi"})
+
+    assert resposta.status_code == 502, resposta.status_code
+    assert gravadas == [], "gravou no historico uma mensagem que nunca saiu"
+
+
+def test_envio_para_conversa_de_outra_empresa_e_recusado(monkeypatch):
+    banco = banco_com(conversa=[conversa(id=71, id_info_clinica=OUTRA_EMPRESA)])
+    cliente = http_com(monkeypatch, banco)
+
+    enviadas = []
+
+    async def enviar(*args):
+        enviadas.append(args)
+        return {"key": {"id": "X"}}
+
+    monkeypatch.setattr(evolution_api, "send_text", enviar)
+
+    resposta = cliente.post("/api/conversas/71/enviar", json={"texto": "oi"})
+
+    assert resposta.status_code == 404
+    assert enviadas == [], "mandou mensagem pela instancia de outro assinante"
+
+
+def test_marcar_lida_zera_o_contador(monkeypatch):
+    banco = banco_com(conversa=[conversa()])
+    cliente = http_com(monkeypatch, banco)
+
+    resposta = cliente.post("/api/conversas/70/lida")
+
+    assert resposta.status_code == 200
+    assert banco.tabelas["conversa"][0]["nao_lidas"] == 0
+
+
+def test_envio_vazio_nao_chega_na_evolution(monkeypatch):
+    banco = banco_com(conversa=[conversa()])
+    cliente = http_com(monkeypatch, banco)
+
+    enviadas = []
+
+    async def enviar(*args):
+        enviadas.append(args)
+        return {"key": {"id": "X"}}
+
+    monkeypatch.setattr(evolution_api, "send_text", enviar)
+
+    resposta = cliente.post("/api/conversas/70/enviar", json={"texto": "   "})
+
+    assert resposta.status_code == 422
+    assert enviadas == []
+
+
+def test_devolver_para_ia_grava_o_instante(monkeypatch):
+    """O painel nao apaga a pausa no Redis — grava quando o dono devolveu.
+
+    O backend na Vercel nao alcanca o Redis da VPS, que fica em rede interna.
+    Quem compara os dois instantes e o fluxo, pela rota de maquina.
+    """
+    banco = banco_com(conversa=[conversa(ia_liberada_em=None)])
+    cliente = http_com(monkeypatch, banco)
+
+    resposta = cliente.post("/api/conversas/70/devolver-ia")
+
+    assert resposta.status_code == 200, resposta.text
+    assert banco.tabelas["conversa"][0]["ia_liberada_em"], "nao gravou o instante da devolucao"
+
+
+def test_devolver_conversa_de_outra_empresa_e_recusado(monkeypatch):
+    banco = banco_com(conversa=[conversa(id=71, id_info_clinica=OUTRA_EMPRESA,
+                                         ia_liberada_em=None)])
+    cliente = http_com(monkeypatch, banco)
+
+    resposta = cliente.post("/api/conversas/71/devolver-ia")
+
+    assert resposta.status_code == 404
+    assert banco.tabelas["conversa"][0]["ia_liberada_em"] is None
+
+
+# ===== CONTAS A PAGAR E A RECEBER =====
+def lancamento(**extras):
+    linha = {
+        "id": 40, "id_info_clinica": EMPRESA, "tipo": "pagar",
+        "descricao": "Aluguel", "valor": "1200.00", "vencimento": "2026-09-20",
+        "quitado_em": None, "observacoes": None,
+    }
+    linha.update(extras)
+    return linha
+
+
+def test_lancamentos_so_mostram_os_da_propria_empresa(monkeypatch):
+    banco = banco_com(lancamento=[
+        lancamento(),
+        lancamento(id=41, id_info_clinica=OUTRA_EMPRESA, descricao="Conta de outro assinante"),
+    ])
+    cliente = http_com(monkeypatch, banco)
+
+    resposta = cliente.get("/api/lancamentos")
+
+    assert resposta.status_code == 200
+    assert [l["descricao"] for l in resposta.json()] == ["Aluguel"]
+
+
+def test_criar_lancamento_grava_na_empresa_da_sessao(monkeypatch):
+    """A empresa vem do token, nunca do corpo da requisição."""
+    banco = banco_com(lancamento=[])
+    cliente = http_com(monkeypatch, banco)
+
+    resposta = cliente.post("/api/lancamentos", json={
+        "tipo": "receber", "descricao": "Parcela do curso",
+        "valor": "350.50", "vencimento": "2026-10-01",
+        "id_info_clinica": OUTRA_EMPRESA,
+    })
+
+    assert resposta.status_code == 200, resposta.text
+    gravado = banco.tabelas["lancamento"][0]
+    assert gravado["id_info_clinica"] == EMPRESA, "aceitou a empresa vinda do corpo"
+    assert gravado["tipo"] == "receber"
+
+
+def test_lancamento_com_valor_zero_ou_negativo_e_recusado(monkeypatch):
+    """Negativo inverteria o tipo pela porta dos fundos."""
+    cliente = http_com(monkeypatch, banco_com(lancamento=[]))
+
+    for valor in ("0", "-10.00"):
+        resposta = cliente.post("/api/lancamentos", json={
+            "tipo": "pagar", "descricao": "x", "valor": valor, "vencimento": "2026-10-01"})
+        assert resposta.status_code == 422, (valor, resposta.status_code)
+
+
+def test_quitar_marca_e_desmarca(monkeypatch):
+    banco = banco_com(lancamento=[lancamento()])
+    cliente = http_com(monkeypatch, banco)
+
+    cliente.post("/api/lancamentos/40/quitar")
+    assert banco.tabelas["lancamento"][0]["quitado_em"], "nao marcou como quitado"
+
+    cliente.post("/api/lancamentos/40/quitar")
+    assert banco.tabelas["lancamento"][0]["quitado_em"] is None, "clicar de novo devia desfazer"
+
+
+def test_quitar_lancamento_de_outra_empresa_e_recusado(monkeypatch):
+    banco = banco_com(lancamento=[lancamento(id=41, id_info_clinica=OUTRA_EMPRESA)])
+    cliente = http_com(monkeypatch, banco)
+
+    resposta = cliente.post("/api/lancamentos/41/quitar")
+
+    assert resposta.status_code == 404
+    assert banco.tabelas["lancamento"][0]["quitado_em"] is None
+
+
+def test_apagar_lancamento_de_outra_empresa_e_recusado(monkeypatch):
+    banco = banco_com(lancamento=[lancamento(id=41, id_info_clinica=OUTRA_EMPRESA)])
+    cliente = http_com(monkeypatch, banco)
+
+    resposta = cliente.delete("/api/lancamentos/41")
+
+    assert resposta.status_code == 404
+    assert len(banco.tabelas["lancamento"]) == 1, "apagou conta de outro assinante"

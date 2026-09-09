@@ -22,7 +22,15 @@ schema pretendido. Cada coluna existe porque um consumidor real a lê ou escreve
 | 6 | `scripts/integridade_tenant.sql` | I1–I4: integridade entre empresas no próprio banco |
 | 7 | `scripts/ajustes_onboarding.sql` | O1–O2: `automacao_ativa` e vocabulário de `assistente_tom` |
 | 8 | `scripts/v_clinica_detalhes.sql` **de novo** | a view só expõe `automacao_ativa` depois que a coluna existe |
+| 9 | `scripts/v_cliente_preferencias.sql` | view do profissional habitual por cliente |
+| 10 | `scripts/lembrete_confirmacao.sql` | colunas do lembrete e `fn_claim_lembretes` |
+| 11 | `scripts/chat_atendimento.sql` | `conversa`, `mensagem` e `fn_registrar_mensagem` |
+| 12 | `scripts/chat_devolver_ia.sql` | `conversa.ia_liberada_em` — devolver a conversa para a IA |
+| 13 | `scripts/contas_a_pagar_receber.sql` | tabela `lancamento` |
 | — | `scripts/teste_transacional.sql` | prova as garantias e termina em `ROLLBACK` |
+| — | `scripts/teste_v_cliente_preferencias.sql` | prova as 7 regras da view acima, também em `ROLLBACK` |
+| — | `scripts/teste_lembrete_confirmacao.sql` | prova o claim do lembrete (inclusive o não-duplicado), em `ROLLBACK` |
+| — | `scripts/teste_chat_atendimento.sql` | prova a idempotência do histórico de conversa, em `ROLLBACK` |
 
 Todos são reexecutáveis: rodar duas vezes produz o mesmo estado e nenhum erro —
 verificado. Nenhum deles insere dado de **tenant**; o único dado inserido é o
@@ -38,6 +46,40 @@ duas vezes na sequência completa. `create or replace view` só aceita coluna
 `cliente.whats_normalizado` indexa a mesma expressão. Rodar a sequência inteira
 sempre termina no mesmo estado; rodar só o passo 2 deixa um índice redundante,
 sem consequência funcional.
+
+Os passos 9 e 10 são independentes dos outros e podem rodar com a automação no
+ar. O 9 é `create or replace view`; o 10 acrescenta duas colunas nuláveis e uma
+função, sem tocar em dado existente.
+
+O passo 11 cria o histórico do chat. **Duas chaves únicas fazem todo o trabalho:**
+`(instance_name, remote_jid)` define a conversa e `(id_conversa,
+provider_message_id)` define a mensagem. A reentrega do mesmo webhook é recusada
+pelo banco, e `fn_registrar_mensagem` devolve `inserida` — todo efeito colateral
+(contador de não lidas, resumo da conversa) depende desse booleano. Checar antes
+de inserir perderia a corrida entre duas entregas; a constraint não perde.
+
+O passo 12 resolve um problema de rede, não de modelo: a pausa da IA vive no
+Redis da VPS, em rede interna, e o backend na Vercel não alcança aquele Redis.
+**Não são duas fontes de verdade:** o Redis responde "uma pausa começou em T" e
+`ia_liberada_em` responde "o dono devolveu em R". A decisão que combina os dois
+é uma só, e mora em `/api/ai/handoff/valido`:
+
+    ainda pausado  ⇔  não existe R posterior a T
+
+O passo 13 é independente de tudo: uma tabela só para "a pagar" e "a receber",
+porque os dois têm os mesmos campos e o mesmo ciclo. **Não se liga a `consulta`**
+— o dinheiro dos atendimentos já sai da agenda, e ligar as duas coisas faria a
+mesma receita aparecer duas vezes no total.
+
+`mensagem.provider_message_id` e a chave `am:enviada` do Redis parecem a mesma
+coisa e não são: a primeira responde "esta mensagem já está na tela", a segunda
+responde "quem enviou foi o robô". Mensagem escrita no painel entra na primeira
+e **não** na segunda — é assim que a recepção percebe que uma pessoa assumiu.
+
+**`fn_claim_lembretes` é a única leitura do projeto que atravessa empresas, e é
+de propósito.** Um relógio não tem conversa de onde derivar a empresa. Cada
+linha devolvida carrega o próprio `instance_name`, e todas as chamadas seguintes
+voltam a derivar a empresa dele. Só a `service_role` alcança a função.
 
 **Aposentados, não executar:** `create_usuarios_table.sql` (produz `usuarios`
 incompleta), `add_telefone_cliente.sql` (não reexecutável), `enable_rls.sql`
@@ -61,6 +103,7 @@ Convenção: 🔑 chave primária, 🔗 chave estrangeira, **N** `NOT NULL`.
 | `descricao` | text | | **texto livre do assinante sobre o negócio**; entra no prompt da recepção pela view, teto de 2000 na API |
 | `endereco` | text | | |
 | `mensagem_lembrete` | text | | modelo de lembrete |
+| `lembrete_horas` | int4 | | horas de antecedência do lembrete; **nula desliga** |
 | `onboarding_completo` | bool | **N** | default `false`; `true` ao fim do onboarding |
 | `assistente_nome` | text | | identidade da assistente; nulo usa o padrão do fluxo |
 | `assistente_tom` | text | | idem; `CHECK` fecha em `acolhedor`, `objetivo`, `descontraido` (nulo permitido) |
@@ -244,6 +287,7 @@ Sem coluna de empresa: o tenant chega por `profissional`.
 | `id_cliente` | int8 | 🔗 **N** | FK **composta** com `id_info_clinica` (I2) |
 | `id_procedimento` | int8 | 🔗 **N** | FK **composta** com `id_info_clinica` (I2) |
 | `confirmado_em` | timestamptz | | instante, não dia (A1) |
+| `lembrete_enviado_em` | timestamptz | | quando o lembrete saiu; nula = ainda não enviado |
 | `cancelado_em` | timestamptz | | instante, não dia (A2) |
 | `motivo_cancelamento` | text | | |
 | `valor_cobrado` | numeric(10,2) | | preço congelado no ato (A3); CHECK `>= 0` ou nulo |

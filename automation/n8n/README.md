@@ -5,15 +5,16 @@
 > [`docs/INFRA-VPS.md`](../../docs/INFRA-VPS.md) — em especial que a credencial
 > Redis precisa apontar para o **banco 1** (o banco 0 é a fila interna do n8n).
 
-Três arquivos convivem nesta pasta:
+Quatro arquivos convivem nesta pasta:
 
 | Arquivo | Papel |
 | --- | --- |
-| `AgendaMagnetica-v2.n8n.json` | **versão canônica** (Atendimento V2, 89 nós). Importe esta. |
+| `AgendaMagnetica-v2.n8n.json` | **versão canônica** (Atendimento V2, 95 nós). Importe esta. |
 | `AgendaMagnetica-erro.n8n.json` | workflow de erro (Error Trigger → alerta ao operador). Importe junto e cole o id dele em `settings.errorWorkflow` da V2. |
+| `AgendaMagnetica-lembrete.n8n.json` | lembrete de confirmação na véspera (Schedule Trigger, 9 nós). Importe só quando for usar o lembrete. |
 | `AgendaMagnetica.n8n.json` | **histórico**. Não é rollback e não roda: usa `$env` (bloqueado na VPS) e credencial Supabase. Não reimporte. |
 
-Os três estão **inativos** (`active: false`) e continuam assim até a homologação
+Os quatro estão **inativos** (`active: false`) e continuam assim até a homologação
 terminar. Nenhum deles deve ser ativado sem autorização explícita. Para desligar
 o atendimento depois de ativo, veja "Rollback" mais abaixo — não é o JSON antigo.
 
@@ -165,6 +166,114 @@ ausente na Vercel) some do histórico e o sintoma é "o bot não respondeu".
 Falha de rede ou URL inválida também não é engolida: `contexto da empresa` é o
 único nó de agenda **sem** `onError` — `neverError` já entrega o envelope de
 4xx/5xx, que é o caso legítimo.
+
+## O profissional de sempre
+
+`/api/ai/contexto` devolve, junto do cliente, `profissional_habitual` — o
+profissional que aquela pessoa costuma escolher. Sai da view
+`v_cliente_preferencias`, que deduz do histórico: consultas não canceladas dos
+últimos 12 meses, mínimo de 2 e ao menos 60% com a mesma pessoa. **Não é
+preferência declarada** — ninguém cadastra isso; é observação, e some sozinha
+quando o hábito muda.
+
+`montar contexto` confere o habitual contra o catálogo vigente antes de pôr no
+prompt: profissional que saiu entre a dedução e a conversa viraria nome de gente
+que não atende mais, e o pedido de horário voltaria vazio depois de a recepção
+já ter prometido a pessoa.
+
+`resolver e decidir` usa o habitual **em um ponto só**: onde a conversa pararia
+para perguntar "com quem?". Fora dali o hábito não se aplica — numa empresa que
+não exige escolher profissional, fixar alguém estreitaria a agenda e faria a
+pessoa ouvir "sem horário" por uma preferência que ela nunca declarou. Quem diz
+um nome na hora, e quem está remarcando, continuam mandando.
+
+O prompt também recebe `dia_semana_local`. Antes ia só um ISO e o modelo tinha
+de deduzir sozinho se amanhã era sábado.
+
+## O chat no painel
+
+Duas chaves do Redis já faziam a recepção se calar quando o dono respondia pelo
+celular. O chat usa **o mesmo mecanismo**, sem inventar outro: a mensagem
+escrita no painel sai pela Evolution, volta pelo webhook como `fromMe` e, por
+**não** existir `am:enviada` para ela, o fluxo a lê como "o negócio respondeu" e
+pausa a IA por 30 minutos. Isso é o comportamento desejado, e é a razão de o
+envio do painel sair pelo backend e não pelo n8n.
+
+**A armadilha, escrita aqui para não se repetir:** quem for evitar a mensagem
+duplicada na tela vai querer reusar `am:enviada`. Se gravar, a IA para de se
+calar e passa a responder por cima do dono, sem erro e sem aviso. O dedupe de
+tela é a chave única `(conversa, id do provedor)` na tabela `mensagem` — nunca a
+chave do Redis.
+
+Dois nós novos gravam o histórico, **em paralelo** ao caminho de responder: um
+depois de `conteudo do cliente` (onde o áudio já está transcrito e a rajada já
+foi juntada, ou seja, exatamente o que a recepção leu) e outro na saída de
+sucesso de `evo enviar mensagem`. Os dois seguem adiante em erro: histórico não
+derruba atendimento. O validador guarda as duas coisas — que os ramos são
+paralelos e que a resposta da recepção entra como autor `ia`, nunca `painel`.
+
+### Devolver a conversa para a recepção
+
+O botão existe, e resolve um problema de rede: o backend na Vercel **não
+alcança** o Redis da VPS, que fica em rede interna. Então ele não apaga a chave
+`am:handoff` — grava `conversa.ia_liberada_em` no banco.
+
+Quem decide é o fluxo, em dois nós novos no ramo da pausa: quando `am:handoff`
+existe, `a pausa ainda vale?` chama `/api/ai/handoff/valido` levando o instante
+em que a pausa começou, e a API responde comparando com a devolução. A regra é
+uma só e mora lá:
+
+    ainda pausado  ⇔  não existe devolução posterior ao início da pausa
+
+Uma devolução antiga **não** libera uma pausa nova: sem comparar os instantes,
+um clique valeria para sempre e a IA passaria por cima do dono em toda pausa
+seguinte. Se a API não responder, a conversa continua com a pessoa — no máximo
+a pausa expira sozinha em 30 minutos.
+
+**O que o chat não faz:** não mostra conversa anterior à ativação (o histórico do
+WhatsApp nunca esteve no nosso banco) e não envia áudio nem imagem.
+
+## O lembrete de véspera
+
+Fluxo **separado** (`AgendaMagnetica-lembrete.n8n.json`): um Schedule Trigger a
+cada 15 minutos, nove nós, e nenhum toque nos 89 da V2. Os únicos pontos de
+contato são duas chaves do Redis.
+
+O dono liga em Configurações escolhendo a antecedência (12 h, 1, 2 ou 3 dias).
+"Não enviar" é o padrão — lembrete que ninguém pediu chega como mensagem não
+solicitada para o cliente dele. O valor mora em `info_clinica.lembrete_horas`;
+nulo desliga.
+
+`POST /api/ai/lembretes/pendentes` **pega e marca no mesmo comando**. Entre
+listar e marcar cabe outra passada do relógio, e o resultado seria o mesmo
+cliente recebendo o lembrete duas vezes — por isso a marca está dentro de
+`fn_claim_lembretes`, com `for update skip locked`, e não em duas chamadas.
+
+**A regra que não pode ser esquecida:** o lembrete grava `am:enviada` com o id
+que a Evolution devolve. Sem ela, o próprio lembrete volta pelo webhook como
+`fromMe`, `normalizar entrada` o lê como "o negócio respondeu", grava
+`am:handoff` e **pausa a IA por 30 minutos** — o "confirmo" do cliente morre em
+`fim - pessoa está atendendo`, sem sintoma nenhum. O validador guarda essa
+ligação; quatro mutações de fiação foram usadas para prová-la, e três delas
+deixavam a suíte de conversa verde.
+
+A pendência gravada carrega `origem: 'lembrete'`. `resolver e decidir` isenta
+essa pendência da guarda de "o último turno falou dela": quem anunciou foi a
+mensagem da véspera, e a resposta chega no dia seguinte, quando `am:estado`
+(6 h) já expirou.
+
+**Credenciais do fluxo de lembrete:** a mesma do token da automação (`buscar
+lembretes`), a da Evolution (`evo enviar lembrete`) e a do Redis **db1** (os
+dois nós Redis). Cole também o id do fluxo de erro em
+`settings.errorWorkflow` dele.
+
+**O nono dígito, resolvido:** o telefone do cadastro e o que o WhatsApp entrega
+podem diferir no nono dígito, e montar a chave `am:pendente` a partir do cadastro
+faria o "sim" do cliente não achar a pendência. A chave sai do `key.remoteJid`
+que a Evolution devolve no envio — o endereço por onde a mensagem realmente saiu
+é o mesmo por onde a resposta volta. O JID montado do cadastro fica só como
+reserva, para o caso de a Evolution não devolver a chave. O validador guarda
+isso.
 
 ## Confirmação antes de qualquer escrita
 
@@ -453,7 +562,14 @@ casos de `TESTES_AUTOMACAO_V2.md`. Mudou o workflow, o teste acusa.
 
 ## Antes de ativar
 
-**Pré-requisito de banco:** rode `scripts/v_clinica_detalhes.sql` (v3). É
+**Pré-requisito de banco:** rode `scripts/v_cliente_preferencias.sql` (profissional
+de sempre) e, se for usar o lembrete, `scripts/lembrete_confirmacao.sql`. Os dois
+são reexecutáveis e podem rodar com a automação no ar.
+
+Se for usar o chat do painel, rode também `scripts/chat_atendimento.sql` e
+`scripts/chat_devolver_ia.sql`.
+
+Rode também `scripts/v_clinica_detalhes.sql` (v3). É
 `create or replace view`, sem migração de tabela, e pode rodar com a automação
 no ar. Sem ele, `/api/ai/contexto` devolve `descricao: null` e a recepção volta
 a responder "não consegui confirmar" para forma de pagamento, convênio,

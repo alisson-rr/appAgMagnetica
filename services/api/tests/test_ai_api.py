@@ -50,6 +50,10 @@ class ConsultaFake:
         self.escrita = ("update", dados)
         return self
 
+    def delete(self):
+        self.escrita = ("delete", None)
+        return self
+
     def order(self, *_args, **_kwargs):
         return self
 
@@ -71,6 +75,8 @@ class ConsultaFake:
         linhas = self._filtradas()
         if self.escrita and self.escrita[0] == "update":
             return self.banco.atualizar(self.tabela, linhas, self.escrita[1])
+        if self.escrita and self.escrita[0] == "delete":
+            return self.banco.apagar(self.tabela, linhas)
         return RespostaFake(linhas[: self.limite] if self.limite else linhas)
 
     def _filtradas(self):
@@ -93,7 +99,7 @@ class ErroDeBanco(Exception):
 
 
 class BancoFake:
-    def __init__(self, tabelas=None, slots=None, corridas=None):
+    def __init__(self, tabelas=None, slots=None, corridas=None, rpcs=None):
         """`corridas`: fila por tabela de `(sqlstate, linha_concorrente)`.
 
         Cada escrita consome a primeira entrada da fila da sua tabela: a linha,
@@ -105,11 +111,16 @@ class BancoFake:
         self.tabelas = tabelas or {}
         self.slots = slots or []
         self.corridas = corridas or {}
+        # `slots` continua atendendo fn_buscar_slots, que e a RPC de quase
+        # todo teste. `rpcs` e para as outras, por nome.
+        self.rpcs = rpcs or {}
 
     def table(self, nome):
         return ConsultaFake(self, nome)
 
-    def rpc(self, _nome, _parametros):
+    def rpc(self, nome, _parametros):
+        if nome in self.rpcs:
+            return RespostaFake(self.rpcs[nome])
         return RespostaFake(self.slots)
 
     def inserir(self, tabela, dados):
@@ -123,6 +134,11 @@ class BancoFake:
             self._embutir_relacionados(novo)
         linhas.append(novo)
         return RespostaFake([novo])
+
+    def apagar(self, tabela, linhas):
+        restantes = [l for l in self.tabelas.get(tabela, []) if l not in linhas]
+        self.tabelas[tabela] = restantes
+        return RespostaFake(linhas)
 
     def atualizar(self, tabela, linhas, dados):
         self._disputar(tabela)
@@ -211,11 +227,11 @@ CLIENTE_A = {
 }
 
 
-def banco_com(slots=None, corridas=None, **tabelas):
+def banco_com(slots=None, corridas=None, rpcs=None, **tabelas):
     """`BANCO_PADRAO` com tabelas substituídas, sempre em cópia própria."""
     base = {chave: [dict(linha) for linha in linhas] for chave, linhas in BANCO_PADRAO.items()}
     base.update(tabelas)
-    return BancoFake(base, slots=slots, corridas=corridas)
+    return BancoFake(base, slots=slots, corridas=corridas, rpcs=rpcs)
 
 
 def http_com(monkeypatch, banco, erros_do_servidor=True):
@@ -1318,6 +1334,302 @@ def test_busca_filtra_por_empresa_e_por_cliente(monkeypatch):
     assert corpo["ok"] is True
     ids = [a["id"] for a in corpo["data"]["agendamentos"]]
     assert ids == [1], f"a busca vazou agenda de outro cliente ou de outra empresa: {ids}"
+
+
+LINHA_DE_LEMBRETE = {
+    "id_consulta": 4242,
+    "instance_name": "agm_1_studio",
+    "telefone": TELEFONE,
+    "cliente_nome": "Marina",
+    "inicio": "2026-08-21T14:00:00-03:00",
+    "servico_nome": "Limpeza de pele",
+    "profissional_nome": "Ana",
+    "mensagem_lembrete": "Oi! Confirma seu horario de amanha?",
+}
+
+
+def _handoff(monkeypatch, liberada_em, pausada_em):
+    banco = banco_com(conversa=[{
+        "id": 70, "id_info_clinica": EMPRESA_A, "instance_name": "agm_1_studio",
+        "remote_jid": "5551999990000@s.whatsapp.net", "ia_liberada_em": liberada_em,
+    }])
+    with http_com(monkeypatch, banco) as http:
+        return http.post("/api/ai/handoff/valido", headers=CABECALHO, json={
+            "instance_name": "agm_1_studio",
+            "remote_jid": "5551999990000@s.whatsapp.net",
+            "pausada_em": pausada_em,
+        }).json()["data"]
+
+
+def test_devolucao_depois_da_pausa_devolve_a_conversa(monkeypatch):
+    """O dono respondeu, depois clicou em devolver: a IA volta a responder."""
+    dados = _handoff(monkeypatch,
+                     liberada_em="2026-09-09T12:10:00+00:00",
+                     pausada_em="2026-09-09T12:00:00+00:00")
+    assert dados["pausado"] is False
+
+
+def test_devolucao_antiga_nao_libera_pausa_nova(monkeypatch):
+    """Devolveu de manha, respondeu de novo a tarde: continua com a pessoa.
+
+    Sem a comparacao de instantes, um clique em "devolver" valeria para sempre
+    e a IA passaria por cima do dono em toda pausa seguinte.
+    """
+    dados = _handoff(monkeypatch,
+                     liberada_em="2026-09-09T09:00:00+00:00",
+                     pausada_em="2026-09-09T12:00:00+00:00")
+    assert dados["pausado"] is True
+
+
+def test_conversa_nunca_devolvida_continua_pausada(monkeypatch):
+    dados = _handoff(monkeypatch, liberada_em=None, pausada_em="2026-09-09T12:00:00+00:00")
+    assert dados["pausado"] is True
+
+
+def test_sem_inicio_da_pausa_o_seguro_e_continuar_calado(monkeypatch):
+    """Nao da para saber se a devolucao veio antes ou depois.
+
+    Continuar calado no maximo atrasa a IA ate a pausa expirar sozinha; o
+    contrario faria a recepcao responder por cima de uma pessoa atendendo.
+    """
+    dados = _handoff(monkeypatch, liberada_em="2026-09-09T12:10:00+00:00", pausada_em=None)
+    assert dados["pausado"] is True
+
+
+def test_devolucao_de_outra_empresa_nao_libera_esta(monkeypatch):
+    """O mesmo telefone em duas empresas tem duas conversas.
+
+    Sem o filtro de empresa, o dono de um assinante clicando em "devolver"
+    faria a IA do OUTRO assinante voltar a responder por cima de quem estava
+    atendendo.
+    """
+    banco = banco_com(conversa=[{
+        "id": 71, "id_info_clinica": EMPRESA_B, "instance_name": "agm_2_barbearia",
+        "remote_jid": "5551999990000@s.whatsapp.net",
+        "ia_liberada_em": "2026-09-09T12:10:00+00:00",
+    }])
+
+    with http_com(monkeypatch, banco) as http:
+        dados = http.post("/api/ai/handoff/valido", headers=CABECALHO, json={
+            "instance_name": "agm_1_studio",
+            "remote_jid": "5551999990000@s.whatsapp.net",
+            "pausada_em": "2026-09-09T12:00:00+00:00",
+        }).json()["data"]
+
+    assert dados["pausado"] is True, "a devolucao de outra empresa liberou esta conversa"
+
+
+def test_lembretes_entrega_o_que_a_funcao_ja_marcou(monkeypatch):
+    """A rota nao decide quem recebe: quem decide e marca e a funcao do banco.
+
+    O corpo nao tem `instance_name` — quem chama e um relogio, e cada linha sai
+    com a instancia da propria empresa.
+    """
+    banco = banco_com(rpcs={"fn_claim_lembretes": [dict(LINHA_DE_LEMBRETE)]})
+
+    with http_com(monkeypatch, banco) as http:
+        resposta = http.post("/api/ai/lembretes/pendentes", headers=CABECALHO, json={})
+
+    corpo = resposta.json()
+    assert corpo["ok"] is True
+    assert corpo["data"]["quantidade"] == 1
+    lembrete = corpo["data"]["lembretes"][0]
+    assert lembrete["id_consulta"] == 4242
+    assert lembrete["instance_name"] == "agm_1_studio"
+    assert lembrete["mensagem"] == "Oi! Confirma seu horario de amanha?"
+
+
+def test_lembrete_sem_telefone_ou_instancia_nao_e_entregue(monkeypatch):
+    """Sem telefone ou sem instancia nao ha para onde enviar.
+
+    A consulta ja foi marcada pela funcao do banco e assim fica: reenviar em
+    outra rodada seria pior que nao enviar, porque o motivo (cadastro sem
+    telefone, empresa sem WhatsApp) nao se resolve sozinho entre uma passada e
+    outra do relogio.
+    """
+    sem_telefone = dict(LINHA_DE_LEMBRETE, id_consulta=1, telefone=None)
+    sem_instancia = dict(LINHA_DE_LEMBRETE, id_consulta=2, instance_name=None)
+    banco = banco_com(rpcs={"fn_claim_lembretes": [sem_telefone, sem_instancia,
+                                                   dict(LINHA_DE_LEMBRETE)]})
+
+    with http_com(monkeypatch, banco) as http:
+        resposta = http.post("/api/ai/lembretes/pendentes", headers=CABECALHO, json={})
+
+    entregues = [l["id_consulta"] for l in resposta.json()["data"]["lembretes"]]
+    assert entregues == [4242], f"entregou lembrete sem para onde enviar: {entregues}"
+
+
+def test_lembretes_exige_o_token_da_automacao(monkeypatch):
+    """A rota atravessa empresas: sem o token ela nao pode nem ser alcancada."""
+    banco = banco_com(rpcs={"fn_claim_lembretes": [dict(LINHA_DE_LEMBRETE)]})
+
+    with http_com(monkeypatch, banco) as http:
+        resposta = http.post("/api/ai/lembretes/pendentes", json={})
+
+    assert resposta.status_code in (401, 403), resposta.status_code
+
+
+def test_confirmar_presenca_e_idempotente(monkeypatch):
+    """Responder "confirmo" duas vezes ao lembrete nao pode dar erro."""
+    consulta = consulta_em(amanha_as(14), status="agendado")
+    banco = banco_com(cliente=[dict(CLIENTE_A)], consulta=[consulta])
+
+    with http_com(monkeypatch, banco) as http:
+        primeira = http.post("/api/ai/agendamentos/confirmar", headers=CABECALHO, json={
+            "instance_name": "agm_1_studio", "telefone": TELEFONE,
+            "id_consulta": consulta["id"]})
+        segunda = http.post("/api/ai/agendamentos/confirmar", headers=CABECALHO, json={
+            "instance_name": "agm_1_studio", "telefone": TELEFONE,
+            "id_consulta": consulta["id"]})
+
+    assert primeira.json()["data"]["repetida"] is False
+    assert primeira.json()["data"]["agendamento"]["status"] == "confirmado"
+    assert segunda.json()["data"]["repetida"] is True
+
+
+def test_confirmar_nao_anuncia_sem_o_banco_ter_gravado(monkeypatch):
+    """Requisicao aceita nao e prova de gravacao.
+
+    Injeta a falha real: o banco aceita o UPDATE e a linha continua como estava.
+    Sem a releitura, a recepcao diria "confirmado" para um horario que continua
+    sem confirmacao — e o dono acharia que a pessoa vem.
+    """
+    consulta = consulta_em(amanha_as(14), status="agendado")
+    banco = banco_com(cliente=[dict(CLIENTE_A)], consulta=[consulta])
+
+    with http_com(monkeypatch, banco, erros_do_servidor=False) as http:
+        # A releitura devolve a linha ANTES da escrita: e o que se ve quando o
+        # UPDATE nao casou nenhuma linha.
+        monkeypatch.setattr(ai_api, "reler_consulta",
+                            lambda *_a, **_k: dict(consulta, status="agendado", confirmado_em=None))
+        resposta = http.post("/api/ai/agendamentos/confirmar", headers=CABECALHO, json={
+            "instance_name": "agm_1_studio", "telefone": TELEFONE,
+            "id_consulta": consulta["id"]})
+
+    assert resposta.status_code == 503, resposta.status_code
+    assert resposta.json()["error"]["code"] == "FALHA_TEMPORARIA"
+
+
+def test_confirmar_recusa_consulta_cancelada(monkeypatch):
+    """Dizer "confirmado" para quem nao tem mais horario e pior que recusar."""
+    consulta = consulta_em(amanha_as(14), status="cancelado")
+    banco = banco_com(cliente=[dict(CLIENTE_A)], consulta=[consulta])
+
+    with http_com(monkeypatch, banco) as http:
+        resposta = http.post("/api/ai/agendamentos/confirmar", headers=CABECALHO, json={
+            "instance_name": "agm_1_studio", "telefone": TELEFONE,
+            "id_consulta": consulta["id"]})
+
+    assert resposta.status_code == 409
+    assert resposta.json()["error"]["code"] == "CONSULTA_NAO_CONFIRMAVEL"
+
+
+def test_confirmar_nao_atravessa_empresa(monkeypatch):
+    """Consulta de outra empresa nao pode ser confirmada por esta instancia."""
+    # `consulta_em` nao tem parametro `empresa`: a chave da linha e
+    # `id_info_clinica`, e e ela que a rota filtra.
+    consulta = consulta_em(amanha_as(14), status="agendado", id_info_clinica=EMPRESA_B)
+    banco = banco_com(cliente=[dict(CLIENTE_A)], consulta=[consulta])
+
+    with http_com(monkeypatch, banco) as http:
+        resposta = http.post("/api/ai/agendamentos/confirmar", headers=CABECALHO, json={
+            "instance_name": "agm_1_studio", "telefone": TELEFONE,
+            "id_consulta": consulta["id"]})
+
+    assert resposta.status_code >= 400, "confirmou consulta de outra empresa"
+
+
+def test_contexto_entrega_o_profissional_de_sempre(monkeypatch):
+    """Quem marca sempre com a mesma pessoa e reconhecido.
+
+    A view ja aplicou os cortes (2 consultas, 60%, 12 meses, profissional
+    ativo); a rota so precisa entregar. Sem isso a recepcao pergunta "com quem
+    voce quer marcar?" para quem nunca marcou com outra pessoa.
+    """
+    banco = banco_com(
+        cliente=[dict(CLIENTE_A)],
+        v_cliente_preferencias=[{
+            "id_info_clinica": EMPRESA_A,
+            "id_cliente": CLIENTE_A["id"],
+            "profissional_habitual_id": 100,
+            "profissional_habitual_nome": "Ana",
+        }],
+    )
+
+    with http_com(monkeypatch, banco) as http:
+        resposta = http.post("/api/ai/contexto", headers=CABECALHO, json={
+            "instance_name": "agm_1_studio", "telefone": TELEFONE})
+
+    habitual = resposta.json()["data"]["cliente"]["profissional_habitual"]
+    assert habitual == {"id": 100, "nome": "Ana"}
+
+
+def test_contexto_sem_habito_nao_inventa_profissional(monkeypatch):
+    """Cliente que alterna nao tem "de sempre" — e perguntar e o certo.
+
+    A view simplesmente nao devolve linha; a rota tem de mandar None, nao um
+    palpite. Se mandasse o ultimo profissional, a recepcao empurraria alguem
+    que a pessoa escolheu uma vez so.
+    """
+    banco = banco_com(cliente=[dict(CLIENTE_A)], v_cliente_preferencias=[])
+
+    with http_com(monkeypatch, banco) as http:
+        resposta = http.post("/api/ai/contexto", headers=CABECALHO, json={
+            "instance_name": "agm_1_studio", "telefone": TELEFONE})
+
+    assert resposta.json()["data"]["cliente"]["profissional_habitual"] is None
+
+
+def test_habito_nao_atravessa_cliente(monkeypatch):
+    """Dentro da MESMA empresa, o habito de um cliente nao vale para outro.
+
+    Este caso existe porque o teste da empresa nao alcanca: com a view vazia,
+    tirar o filtro de cliente continua devolvendo nada e a reversao passa
+    despercebida. Com o habito de OUTRA pessoa na mesma empresa, a falta do
+    filtro faz a recepcao oferecer a profissional de sempre de um terceiro —
+    e junto com ela o nome de quem o cliente nunca escolheu.
+    """
+    banco = banco_com(
+        cliente=[dict(CLIENTE_A)],
+        v_cliente_preferencias=[{
+            "id_info_clinica": EMPRESA_A,
+            "id_cliente": CLIENTE_A["id"] + 1,
+            "profissional_habitual_id": 101,
+            "profissional_habitual_nome": "Outra pessoa",
+        }],
+    )
+
+    with http_com(monkeypatch, banco) as http:
+        resposta = http.post("/api/ai/contexto", headers=CABECALHO, json={
+            "instance_name": "agm_1_studio", "telefone": TELEFONE})
+
+    habitual = resposta.json()["data"]["cliente"]["profissional_habitual"]
+    assert habitual is None, f"vazou o habito de outro cliente: {habitual}"
+
+
+def test_habito_nao_atravessa_empresa(monkeypatch):
+    """O mesmo telefone em duas empresas nao carrega o profissional da outra.
+
+    A view expoe todas as empresas: quem isola e o filtro da rota. Sem ele, a
+    barbearia ofereceria o profissional do studio — nome de gente que o cliente
+    nunca viu ali, e vazamento entre assinantes.
+    """
+    banco = banco_com(
+        cliente=[dict(CLIENTE_A)],
+        v_cliente_preferencias=[{
+            "id_info_clinica": EMPRESA_B,
+            "id_cliente": CLIENTE_A["id"],
+            "profissional_habitual_id": 200,
+            "profissional_habitual_nome": "Bruno",
+        }],
+    )
+
+    with http_com(monkeypatch, banco) as http:
+        resposta = http.post("/api/ai/contexto", headers=CABECALHO, json={
+            "instance_name": "agm_1_studio", "telefone": TELEFONE})
+
+    habitual = resposta.json()["data"]["cliente"]["profissional_habitual"]
+    assert habitual is None, f"vazou o profissional de outra empresa: {habitual}"
 
 
 def test_contexto_entrega_o_texto_do_negocio(monkeypatch):

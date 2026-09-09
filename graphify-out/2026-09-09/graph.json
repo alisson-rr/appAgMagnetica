@@ -1377,7 +1377,7 @@
       "file_type": "code",
       "norm_label": "main()",
       "source_file": "automation/n8n/validar_workflow.py",
-      "source_location": "L691"
+      "source_location": "L680"
     },
     {
       "id": "services_api_tests_test_onboarding_banco_com",
@@ -8556,7 +8556,7 @@
       "node_kind": "heading",
       "norm_label": "1. por empresa \u2014 o botao do painel",
       "source_file": "automation/n8n/README.md",
-      "source_location": "L619"
+      "source_location": "L616"
     },
     {
       "id": "automation_n8n_readme_2_por_workflow_desativar_no_n8n",
@@ -8568,7 +8568,7 @@
       "node_kind": "heading",
       "norm_label": "2. por workflow \u2014 desativar no n8n",
       "source_file": "automation/n8n/README.md",
-      "source_location": "L635"
+      "source_location": "L632"
     },
     {
       "id": "automation_n8n_readme_3_por_token_rotacionar_a_credencial",
@@ -8580,7 +8580,7 @@
       "node_kind": "heading",
       "norm_label": "3. por token \u2014 rotacionar a credencial",
       "source_file": "automation/n8n/README.md",
-      "source_location": "L649"
+      "source_location": "L646"
     },
     {
       "id": "automation_n8n_readme_a_automa\u00e7\u00e3o_n\u00e3o_fala_com_o_banco",
@@ -8604,7 +8604,7 @@
       "node_kind": "heading",
       "norm_label": "ajustes rapidos",
       "source_file": "automation/n8n/README.md",
-      "source_location": "L483"
+      "source_location": "L480"
     },
     {
       "id": "automation_n8n_readme_antes_de_ativar",
@@ -8616,7 +8616,7 @@
       "node_kind": "heading",
       "norm_label": "antes de ativar",
       "source_file": "automation/n8n/README.md",
-      "source_location": "L563"
+      "source_location": "L560"
     },
     {
       "id": "automation_n8n_readme_automa\u00e7\u00e3o_de_atendimento_homologa\u00e7\u00e3o",
@@ -8640,7 +8640,7 @@
       "node_kind": "heading",
       "norm_label": "chaves do redis",
       "source_file": "automation/n8n/README.md",
-      "source_location": "L333"
+      "source_location": "L330"
     },
     {
       "id": "automation_n8n_readme_configura\u00e7\u00e3o",
@@ -8652,7 +8652,7 @@
       "node_kind": "heading",
       "norm_label": "configuracao",
       "source_file": "automation/n8n/README.md",
-      "source_location": "L400"
+      "source_location": "L397"
     },
     {
       "id": "automation_n8n_readme_confirma\u00e7\u00e3o_antes_de_qualquer_escrita",
@@ -8664,7 +8664,7 @@
       "node_kind": "heading",
       "norm_label": "confirmacao antes de qualquer escrita",
       "source_file": "automation/n8n/README.md",
-      "source_location": "L278"
+      "source_location": "L275"
     },
     {
       "id": "automation_n8n_readme_contexto_da_empresa_\u00e9_o_\u00fanico_que_pode_encerrar_calado_e_s\u00f3_\u00e0s_vezes",
@@ -8688,7 +8688,7 @@
       "node_kind": "heading",
       "norm_label": "credenciais a religar apos importar",
       "source_file": "automation/n8n/README.md",
-      "source_location": "L431"
+      "source_location": "L428"
     },
     {
       "id": "automation_n8n_readme_devolver_a_conversa_para_a_recep\u00e7\u00e3o",
@@ -8712,7 +8712,7 @@
       "node_kind": "heading",
       "norm_label": "limitacoes conhecidas",
       "source_file": "automation/n8n/README.md",
-      "source_location": "L671"
+      "source_location": "L668"
     },
     {
       "id": "automation_n8n_readme_o_chat_no_painel",
@@ -8736,7 +8736,7 @@
       "node_kind": "heading",
       "norm_label": "o fluxo nao le variavel de ambiente",
       "source_file": "automation/n8n/README.md",
-      "source_location": "L402"
+      "source_location": "L399"
     },
     {
       "id": "automation_n8n_readme_o_json_da_v1_n\u00e3o_\u00e9_rollback",
@@ -8748,7 +8748,7 @@
       "node_kind": "heading",
       "norm_label": "o json da v1 nao e rollback",
       "source_file": "automation/n8n/README.md",
-      "source_location": "L663"
+      "source_location": "L660"
     },
     {
       "id": "automation_n8n_readme_o_lembrete_de_v\u00e9spera",
@@ -8796,7 +8796,7 @@
       "node_kind": "heading",
       "norm_label": "o que mudou da v1 para a v2",
       "source_file": "automation/n8n/README.md",
-      "source_location": "L751"
+      "source_location": "L748"
     },
     {
       "id": "automation_n8n_readme_rollback",
@@ -8808,7 +8808,7 @@
       "node_kind": "heading",
       "norm_label": "rollback",
       "source_file": "automation/n8n/README.md",
-      "source_location": "L614"
+      "source_location": "L611"
     },
     {
       "id": "automation_n8n_readme_settings_errorworkflow_precisa_do_id",
@@ -8820,7 +8820,7 @@
       "node_kind": "heading",
       "norm_label": "`settings.errorworkflow` precisa do id",
       "source_file": "automation/n8n/README.md",
-      "source_location": "L453"
+      "source_location": "L450"
     },
     {
       "id": "automation_n8n_readme_transfer\u00eancia_para_uma_pessoa_o_que_acontece_de_verdade",
@@ -8832,7 +8832,7 @@
       "node_kind": "heading",
       "norm_label": "transferencia para uma pessoa: o que acontece de verdade",
       "source_file": "automation/n8n/README.md",
-      "source_location": "L355"
+      "source_location": "L352"
     },
     {
       "id": "automation_n8n_readme_valida\u00e7\u00e3o",
@@ -8844,7 +8844,7 @@
       "node_kind": "heading",
       "norm_label": "validacao",
       "source_file": "automation/n8n/README.md",
-      "source_location": "L526"
+      "source_location": "L523"
     },
     {
       "id": "automation_n8n_readme_webhook",
@@ -8856,7 +8856,7 @@
       "node_kind": "heading",
       "norm_label": "webhook",
       "source_file": "automation/n8n/README.md",
-      "source_location": "L478"
+      "source_location": "L475"
     },
     {
       "id": "docs_infra_vps",
@@ -27311,7 +27311,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "automation/n8n/validar_workflow.py",
-      "source_location": "L696",
+      "source_location": "L685",
       "weight": 1.0
     },
     {
@@ -27323,7 +27323,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "automation/n8n/validar_workflow.py",
-      "source_location": "L698",
+      "source_location": "L687",
       "weight": 1.0
     },
     {
@@ -27335,7 +27335,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "automation/n8n/validar_workflow.py",
-      "source_location": "L705",
+      "source_location": "L694",
       "weight": 1.0
     },
     {
@@ -27347,7 +27347,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "automation/n8n/validar_workflow.py",
-      "source_location": "L709",
+      "source_location": "L698",
       "weight": 1.0
     },
     {
@@ -50353,7 +50353,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "automation/n8n/README.md",
-      "source_location": "L278",
+      "source_location": "L275",
       "weight": 1.0
     },
     {
@@ -50364,7 +50364,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "automation/n8n/README.md",
-      "source_location": "L333",
+      "source_location": "L330",
       "weight": 1.0
     },
     {
@@ -50375,7 +50375,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "automation/n8n/README.md",
-      "source_location": "L355",
+      "source_location": "L352",
       "weight": 1.0
     },
     {
@@ -50386,7 +50386,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "automation/n8n/README.md",
-      "source_location": "L400",
+      "source_location": "L397",
       "weight": 1.0
     },
     {
@@ -50397,7 +50397,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "automation/n8n/README.md",
-      "source_location": "L483",
+      "source_location": "L480",
       "weight": 1.0
     },
     {
@@ -50408,7 +50408,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "automation/n8n/README.md",
-      "source_location": "L526",
+      "source_location": "L523",
       "weight": 1.0
     },
     {
@@ -50419,7 +50419,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "automation/n8n/README.md",
-      "source_location": "L563",
+      "source_location": "L560",
       "weight": 1.0
     },
     {
@@ -50430,7 +50430,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "automation/n8n/README.md",
-      "source_location": "L614",
+      "source_location": "L611",
       "weight": 1.0
     },
     {
@@ -50441,7 +50441,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "automation/n8n/README.md",
-      "source_location": "L671",
+      "source_location": "L668",
       "weight": 1.0
     },
     {
@@ -50452,7 +50452,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "automation/n8n/README.md",
-      "source_location": "L751",
+      "source_location": "L748",
       "weight": 1.0
     },
     {
@@ -50463,7 +50463,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "automation/n8n/README.md",
-      "source_location": "L402",
+      "source_location": "L399",
       "weight": 1.0
     },
     {
@@ -50474,7 +50474,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "automation/n8n/README.md",
-      "source_location": "L431",
+      "source_location": "L428",
       "weight": 1.0
     },
     {
@@ -50485,7 +50485,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "automation/n8n/README.md",
-      "source_location": "L453",
+      "source_location": "L450",
       "weight": 1.0
     },
     {
@@ -50496,7 +50496,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "automation/n8n/README.md",
-      "source_location": "L478",
+      "source_location": "L475",
       "weight": 1.0
     },
     {
@@ -50518,7 +50518,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "automation/n8n/README.md",
-      "source_location": "L619",
+      "source_location": "L616",
       "weight": 1.0
     },
     {
@@ -50529,7 +50529,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "automation/n8n/README.md",
-      "source_location": "L635",
+      "source_location": "L632",
       "weight": 1.0
     },
     {
@@ -50540,7 +50540,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "automation/n8n/README.md",
-      "source_location": "L649",
+      "source_location": "L646",
       "weight": 1.0
     },
     {
@@ -50551,7 +50551,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "automation/n8n/README.md",
-      "source_location": "L663",
+      "source_location": "L660",
       "weight": 1.0
     },
     {
@@ -51145,7 +51145,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "automation/n8n/validar_workflow.py",
-      "source_location": "L691",
+      "source_location": "L680",
       "weight": 1.0
     },
     {

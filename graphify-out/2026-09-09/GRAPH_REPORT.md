@@ -1,7 +1,7 @@
 # Graph Report - appAgMagnetica  (2026-09-09)
 
 ## Corpus Check
-- 197 files · ~353,901 words
+- 197 files · ~353,742 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary

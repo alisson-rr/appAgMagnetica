@@ -9,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { format, parseISO, startOfMonth, endOfMonth } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { Loading, PageHeader } from '../components/PageChrome';
+import ContasAPagarReceber from '../components/ContasAPagarReceber';
 import { escaparHtml } from '../utils/formatters';
 
 const ITEMS_PER_PAGE = 10;
@@ -382,6 +383,8 @@ const Pagamentos = () => {
           </>
         )}
       </Card>
+
+      <ContasAPagarReceber />
     </div>
   );
 };

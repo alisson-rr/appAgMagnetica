@@ -45,6 +45,24 @@ async def create_instance(instance_name: str) -> dict:
     return data
 
 
+async def send_text(instance_name: str, remote_jid: str, texto: str) -> dict:
+    """Manda uma mensagem de texto pela instancia da empresa.
+
+    Ate agora toda mensagem saia de dentro do n8n; esta funcao existe para o
+    chat do painel, onde quem escreve e uma pessoa.
+
+    NAO grava `am:enviada`: mensagem do painel E intervencao humana, e o eco
+    dela voltando pelo webhook e justamente o que faz a recepcao automatica se
+    calar por 30 minutos. Quem evita a duplicata na tela e a chave unica de
+    `mensagem`, pelo id que a Evolution devolve aqui.
+    """
+    return await _request(
+        "POST",
+        f"/message/sendText/{instance_name}",
+        json={"number": remote_jid, "text": texto},
+    )
+
+
 DEFAULT_WEBHOOK_HEADER_NAME = "x-agenda-magnetica-token"
 
 

@@ -10,10 +10,10 @@ const Login = lazy(() => import('./pages/Login'));
 const Dashboard = lazy(() => import('./pages/Dashboard'));
 const Agenda = lazy(() => import('./pages/AgendaNew'));
 const Clientes = lazy(() => import('./pages/Clientes'));
+const Conversas = lazy(() => import('./pages/Conversas'));
 const Profissionais = lazy(() => import('./pages/Profissionais'));
 const Servicos = lazy(() => import('./pages/Servicos'));
 const Pagamentos = lazy(() => import('./pages/Pagamentos'));
-const Comissoes = lazy(() => import('./pages/Comissoes'));
 const Configuracoes = lazy(() => import('./pages/Configuracoes'));
 const Cadastro = lazy(() => import('./pages/Cadastro'));
 const EscolherPlano = lazy(() => import('./pages/EscolherPlano'));
@@ -81,10 +81,10 @@ function AppContent() {
           <Route path="/dashboard" element={<PrivateRoute><Layout><Dashboard /></Layout></PrivateRoute>} />
           <Route path="/agenda" element={<PrivateRoute><Layout><Agenda /></Layout></PrivateRoute>} />
           <Route path="/clientes" element={<PrivateRoute><Layout><Clientes /></Layout></PrivateRoute>} />
+          <Route path="/conversas" element={<PrivateRoute><Layout><Conversas /></Layout></PrivateRoute>} />
           <Route path="/profissionais" element={<PrivateRoute><Layout><Profissionais /></Layout></PrivateRoute>} />
           <Route path="/servicos" element={<PrivateRoute><Layout><Servicos /></Layout></PrivateRoute>} />
           <Route path="/pagamentos" element={<PrivateRoute><Layout><Pagamentos /></Layout></PrivateRoute>} />
-          <Route path="/comissoes" element={<PrivateRoute><Layout><Comissoes /></Layout></PrivateRoute>} />
           <Route path="/configuracoes" element={<PrivateRoute><Layout><Configuracoes /></Layout></PrivateRoute>} />
         </Routes>
       </Suspense>

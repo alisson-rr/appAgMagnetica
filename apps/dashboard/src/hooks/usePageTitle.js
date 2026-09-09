@@ -8,7 +8,6 @@ const pageTitles = {
   '/profissionais': 'Profissionais',
   '/servicos': 'Procedimento',
   '/pagamentos': 'Pagamentos',
-  '/comissoes': 'Comissões',
   '/configuracoes': 'Configurações',
   '/login': 'Login',
   '/cadastro': 'Cadastro',

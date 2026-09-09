@@ -49,6 +49,10 @@ CABECALHO_TOKEN = "X-Automation-Token"
 STATUS_VIVOS = ("pendente", "agendado", "confirmado")
 STATUS_CONHECIDOS = ("pendente", "agendado", "confirmado", "cancelado", "concluido")
 STATUS_CANCELADO = "cancelado"
+STATUS_CONFIRMADO = "confirmado"
+# Quem ja passou por aqui nao e lembrado de novo, e quem cancelou nao e
+# lembrado de nada. Sao os dois unicos status que aceitam confirmacao.
+STATUS_CONFIRMAVEIS = ("pendente", "agendado")
 
 JANELA_MAXIMA_DIAS = 30
 
@@ -374,6 +378,31 @@ def serializar_cliente(linha: dict) -> dict:
     }
 
 
+def buscar_profissional_habitual(clinica_id: int, cliente_id: int) -> Optional[dict]:
+    """O profissional que este cliente costuma escolher, ou None.
+
+    A view ja aplica os cortes (2 consultas, 60%, 12 meses, profissional
+    ativo). Aqui so se filtra o tenant nas duas pontas: a view expoe todas as
+    empresas, entao e esta consulta que garante o isolamento.
+    """
+    resultado = executar(
+        "v_cliente_preferencias",
+        lambda: supabase.table("v_cliente_preferencias")
+        .select("profissional_habitual_id, profissional_habitual_nome")
+        .eq("id_info_clinica", clinica_id)
+        .eq("id_cliente", cliente_id)
+        .limit(1)
+        .execute(),
+    )
+    linha = _primeira(resultado)
+    if not linha:
+        return None
+    return {
+        "id": linha.get("profissional_habitual_id"),
+        "nome": linha.get("profissional_habitual_nome"),
+    }
+
+
 def serializar_consulta(linha: dict) -> dict:
     faixa = ler_intervalo(linha.get("intervalo") or "")
     if not faixa:
@@ -572,6 +601,48 @@ class CancelarRequest(BaseAutomacao):
     motivo: Literal["cliente_solicitou", "remarcacao", "ausencia", "outro"] = "cliente_solicitou"
 
 
+class ConfirmarRequest(BaseAutomacao):
+    telefone: str = Field(min_length=8, max_length=40)
+    id_consulta: int = Field(gt=0)
+
+
+class RegistrarMensagemRequest(BaseAutomacao):
+    """Uma mensagem da conversa, para o chat do painel.
+
+    O fluxo chama isto duas vezes por turno: quando a mensagem do cliente
+    chega e quando a resposta sai. Nao decide nada — so registra.
+    """
+
+    remote_jid: str = Field(min_length=5, max_length=80)
+    telefone: Optional[str] = Field(default=None, max_length=40)
+    contato_nome: Optional[str] = Field(default=None, max_length=120)
+    do_negocio: bool
+    autor: Literal["cliente", "ia", "painel"] = "cliente"
+    tipo: Literal["texto", "audio", "imagem", "documento", "video", "outro"] = "texto"
+    # Teto generoso: transcricao de audio longo cabe, payload absurdo nao.
+    conteudo: Optional[str] = Field(default=None, max_length=8000)
+    provider_message_id: Optional[str] = Field(default=None, max_length=200)
+    provider_em: Optional[str] = Field(default=None, max_length=40)
+
+
+class HandoffValidoRequest(BaseAutomacao):
+    """A pausa comecou em `pausada_em`. Ela ainda vale?"""
+
+    remote_jid: str = Field(min_length=5, max_length=80)
+    pausada_em: Optional[str] = Field(default=None, max_length=40)
+
+
+class LembretesRequest(BaseModel):
+    """A unica requisicao de `/api/ai/*` sem `instance_name`.
+
+    Quem chama e um relogio, nao uma conversa: nao existe instancia de onde
+    derivar a empresa. Cada consulta devolvida carrega o proprio
+    `instance_name`, e e ele que a automacao usa dali em diante.
+    """
+
+    limite: int = Field(default=50, ge=1, le=200)
+
+
 class AtualizarClienteRequest(BaseAutomacao):
     telefone: str = Field(min_length=8, max_length=40)
     nome: Optional[str] = Field(default=None, min_length=1, max_length=120)
@@ -676,6 +747,15 @@ async def contexto(requisicao: ContextoRequest):
         if item.get("id")
     ]
 
+    cliente_json = serializar_cliente(cliente)
+    # Cliente recem-criado nao tem historico: pular a consulta economiza uma
+    # ida ao banco em toda primeira conversa.
+    cliente_json["profissional_habitual"] = (
+        None
+        if cliente.get("novo")
+        else buscar_profissional_habitual(clinica_id, cliente["id"])
+    )
+
     return sucesso(
         {
             # `id_info_clinica` fica de fora de propósito: nenhuma rota aceita
@@ -697,7 +777,7 @@ async def contexto(requisicao: ContextoRequest):
                 "fuso": FUSO_NEGOCIO,
                 "horarios": detalhes.get("horarios") or [],
             },
-            "cliente": serializar_cliente(cliente),
+            "cliente": cliente_json,
             "procedimentos": procedimentos,
             "profissionais": profissionais,
         }
@@ -1038,6 +1118,183 @@ async def cancelar_agendamento(requisicao: CancelarRequest):
         and bool(registro.get("cancelado_em")),
     )
     return sucesso({"agendamento": serializar_consulta(linha), "repetida": False})
+
+
+@router.post("/agendamentos/confirmar", dependencies=PROTEGIDO)
+async def confirmar_agendamento(requisicao: ConfirmarRequest):
+    """Marca presenca confirmada pelo proprio cliente.
+
+    Idempotente por estado: confirmar algo ja confirmado devolve sucesso, sem
+    segunda escrita. E o que acontece quando o cliente responde "confirmo" duas
+    vezes ao lembrete.
+    """
+    clinica_id = resolver_empresa(requisicao.instance_name)
+    cliente = exigir_cliente(clinica_id, requisicao.telefone)
+    consulta = consulta_do_cliente(clinica_id, cliente["id"], requisicao.id_consulta)
+
+    if consulta.get("status") == STATUS_CONFIRMADO:
+        return sucesso({"agendamento": serializar_consulta(consulta), "repetida": True})
+    if consulta.get("status") not in STATUS_CONFIRMAVEIS:
+        # Cancelada ou concluida: confirmar presenca nao faz sentido e mascarar
+        # isso com sucesso faria a recepcao dizer "confirmado" para quem nao tem
+        # mais horario nenhum.
+        raise AiError(
+            "CONSULTA_NAO_CONFIRMAVEL",
+            "Esse agendamento nao pode mais ser confirmado.",
+            status=409,
+        )
+
+    executar(
+        "confirmar_agendamento",
+        lambda: supabase.table("consulta")
+        .update({"status": STATUS_CONFIRMADO, "confirmado_em": agora().isoformat()})
+        .eq("id", requisicao.id_consulta)
+        .eq("id_info_clinica", clinica_id)
+        .eq("id_cliente", cliente["id"])
+        .execute(),
+    )
+
+    linha = confirmar_efeito(
+        clinica_id,
+        requisicao.id_consulta,
+        lambda registro: registro.get("status") == STATUS_CONFIRMADO
+        and bool(registro.get("confirmado_em")),
+    )
+    return sucesso({"agendamento": serializar_consulta(linha), "repetida": False})
+
+
+@router.post("/handoff/valido", dependencies=PROTEGIDO)
+async def handoff_valido(requisicao: HandoffValidoRequest):
+    """Diz se a conversa continua com uma pessoa, ou se ja voltou para a IA.
+
+    O Redis responde "uma pausa comecou em T"; o banco responde "o dono
+    devolveu em R". Esta rota e o UNICO lugar que combina os dois:
+
+        ainda pausado  <=>  nao existe R posterior a T
+
+    Sem `pausada_em` a resposta e "pausado": nao da para saber se a devolucao
+    veio antes ou depois, e continuar calado e o lado seguro — no maximo a
+    pausa expira sozinha em 30 minutos.
+    """
+    clinica_id = resolver_empresa(requisicao.instance_name)
+
+    if not requisicao.pausada_em:
+        return sucesso({"pausado": True, "motivo": "sem_inicio_da_pausa"})
+
+    resultado = executar(
+        "handoff_valido",
+        lambda: supabase.table("conversa")
+        .select("ia_liberada_em")
+        .eq("id_info_clinica", clinica_id)
+        .eq("remote_jid", requisicao.remote_jid)
+        .limit(1)
+        .execute(),
+    )
+    linha = _primeira(resultado)
+    liberada = (linha or {}).get("ia_liberada_em")
+    if not liberada:
+        return sucesso({"pausado": True, "motivo": "nunca_devolvida"})
+
+    try:
+        devolvida = datetime.fromisoformat(str(liberada).replace("Z", "+00:00"))
+        comecou = datetime.fromisoformat(str(requisicao.pausada_em).replace("Z", "+00:00"))
+    except ValueError:
+        logger.error("Data ilegivel ao comparar devolucao com pausa")
+        return sucesso({"pausado": True, "motivo": "data_ilegivel"})
+
+    voltou = devolvida > comecou
+    return sucesso({"pausado": not voltou,
+                    "motivo": "devolvida_pelo_painel" if voltou else "pausa_mais_nova"})
+
+
+@router.post("/conversas/registrar", dependencies=PROTEGIDO)
+async def registrar_mensagem(requisicao: RegistrarMensagemRequest):
+    """Grava a mensagem no historico do chat, de forma idempotente.
+
+    Quem garante a idempotencia e a chave unica (conversa, id do provedor), nao
+    uma checagem aqui: entre checar e inserir cabe a reentrega do mesmo webhook.
+    A funcao devolve `inserida`, e e so isso que diz se a mensagem e nova.
+
+    Falha aqui NAO pode derrubar o atendimento: o chat e historico, e o fluxo
+    segue respondendo o cliente mesmo sem ele. Por isso o erro e registrado e a
+    resposta continua sendo sucesso, com `inserida: false`.
+    """
+    clinica_id = resolver_empresa(requisicao.instance_name)
+
+    cliente_id = None
+    if requisicao.telefone:
+        try:
+            cliente = buscar_cliente(clinica_id, requisicao.telefone)
+            cliente_id = (cliente or {}).get("id")
+        except AiError:
+            # Telefone que nao vira cadastro (grupo, jid estranho) nao impede o
+            # historico: a conversa existe pelo remote_jid de qualquer forma.
+            cliente_id = None
+
+    parametros = {
+        "p_id_info_clinica": clinica_id,
+        "p_instance_name": requisicao.instance_name,
+        "p_remote_jid": requisicao.remote_jid,
+        "p_id_cliente": cliente_id,
+        "p_contato_nome": texto_seguro(requisicao.contato_nome, 120),
+        "p_do_negocio": requisicao.do_negocio,
+        "p_autor": requisicao.autor,
+        "p_tipo": requisicao.tipo,
+        "p_conteudo": requisicao.conteudo,
+        "p_provider_message_id": requisicao.provider_message_id,
+        "p_provider_em": requisicao.provider_em,
+    }
+    try:
+        resultado = supabase.rpc("fn_registrar_mensagem", parametros).execute()
+    except Exception as erro:  # noqa: BLE001
+        logger.error("Falha ao registrar mensagem no chat (%s)", type(erro).__name__)
+        return sucesso({"inserida": False, "registrado": False})
+
+    linha = _primeira(resultado) or {}
+    return sucesso({
+        "inserida": bool(linha.get("inserida")),
+        "registrado": True,
+        "id_conversa": linha.get("conversa_id"),
+        "nao_lidas": linha.get("nao_lidas_total"),
+    })
+
+
+@router.post("/lembretes/pendentes", dependencies=PROTEGIDO)
+async def lembretes_pendentes(requisicao: LembretesRequest):
+    """Pega e MARCA, no mesmo comando, os lembretes que vencem agora.
+
+    A funcao do banco faz as duas coisas juntas de proposito: entre listar e
+    marcar cabe outra execucao do agendador, e o resultado seria o mesmo cliente
+    recebendo o lembrete duas vezes.
+
+    Esta e a unica leitura do projeto que atravessa empresas, e a razao esta em
+    `scripts/lembrete_confirmacao.sql`: um relogio nao tem conversa de onde
+    derivar o tenant. Cada linha sai com o proprio `instance_name`, e todas as
+    chamadas seguintes voltam a derivar a empresa dele.
+    """
+    resultado = executar(
+        "fn_claim_lembretes",
+        lambda: supabase.rpc("fn_claim_lembretes", {"p_limite": requisicao.limite}).execute(),
+    )
+    linhas = getattr(resultado, "data", None) or []
+
+    lembretes = [
+        {
+            "id_consulta": linha.get("id_consulta"),
+            "instance_name": linha.get("instance_name"),
+            "telefone": linha.get("telefone"),
+            "cliente_nome": linha.get("cliente_nome"),
+            "inicio": linha.get("inicio"),
+            "servico": linha.get("servico_nome"),
+            "profissional": linha.get("profissional_nome"),
+            "mensagem": linha.get("mensagem_lembrete"),
+        }
+        for linha in linhas
+        # Sem telefone nao ha para onde enviar. A consulta ja ficou marcada, e
+        # isso e o certo: reenviar depois seria pior que nao enviar.
+        if linha.get("telefone") and linha.get("instance_name")
+    ]
+    return sucesso({"lembretes": lembretes, "quantidade": len(lembretes)})
 
 
 @router.post("/cliente", dependencies=PROTEGIDO)

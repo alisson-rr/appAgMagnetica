@@ -5,11 +5,11 @@ import usePageTitle from '../hooks/usePageTitle';
 import {
   Calendar,
   LayoutDashboard,
+  MessageSquare,
   Users,
   UserCog,
   Scissors,
   DollarSign,
-  Percent,
   Settings,
   LogOut,
   MoreHorizontal,
@@ -21,13 +21,13 @@ import {
 const menuItems = [
   { path: '/dashboard', icon: LayoutDashboard, label: 'Central do Dia', testId: 'menu-central do dia', primary: true },
   { path: '/agenda', icon: Calendar, label: 'Agenda', testId: 'menu-agenda', primary: true },
+  { path: '/conversas', icon: MessageSquare, label: 'Conversas', testId: 'menu-conversas', primary: true },
   { path: '/clientes', icon: Users, label: 'Clientes', testId: 'menu-clientes', primary: true },
   { path: '/profissionais', icon: UserCog, label: 'Profissionais', testId: 'menu-profissionais' },
   { path: '/servicos', icon: Scissors, label: 'Serviços', testId: 'menu-serviços' },
   // "Financeiro" = dinheiro recebido pelos atendimentos. A assinatura da
   // Agenda Magnética é outro assunto e vive na faixa de plano, acima.
   { path: '/pagamentos', icon: DollarSign, label: 'Financeiro', testId: 'menu-pagamentos', primary: true },
-  { path: '/comissoes', icon: Percent, label: 'Comissões', testId: 'menu-comissões' },
   { path: '/configuracoes', icon: Settings, label: 'Configurações', testId: 'menu-configurações' },
 ];
 
