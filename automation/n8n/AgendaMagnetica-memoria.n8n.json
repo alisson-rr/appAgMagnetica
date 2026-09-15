@@ -1,0 +1,137 @@
+{
+  "name": "Agenda Magnética - Memória do atendimento",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "minutes",
+              "minutesInterval": 5
+            }
+          ]
+        }
+      },
+      "id": "f9cde4fa-cc21-4ecd-84b4-edc9eece9b6d",
+      "name": "a cada 5 minutos",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -460,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Endereço do backend, sem credenciais.\nconst API_BASE = 'https://agenda-magnetica-painel.vercel.app';\nreturn [{ json: { api_base: API_BASE.replace(/\\/$/, '') } }];\n"
+      },
+      "id": "6ad79560-d1e0-4226-aa29-3fc6c159bbff",
+      "name": "bases",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -240,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $('bases').first().json.api_base + '/api/ai/memoria/processar' }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ limite: 3 }) }}",
+        "options": {
+          "timeout": 30000,
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
+        },
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth"
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        0,
+        300
+      ],
+      "id": "c8dd3ff3-fe0a-4165-89b9-da5eea384434",
+      "name": "consolidar memórias",
+      "retryOnFail": false,
+      "alwaysOutputData": true,
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "ThDetmjOr3Z7Tdhj",
+          "name": "Agenda Magnetica - token da automacao"
+        }
+      }
+    },
+    {
+      "name": "verificar processamento",
+      "id": "d3d6b516-303a-4f71-bf80-f2621add1682",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        220,
+        300
+      ],
+      "parameters": {
+        "jsCode": "const r = $input.first().json;\nif (r.ok !== true || r.data?.motivo || r.data?.adiadas > 0) throw new Error('Memória não consolidada; verificar migração e configuração do modelo.');\nreturn [{json: r.data}];\n"
+      }
+    }
+  ],
+  "connections": {
+    "a cada 5 minutos": {
+      "main": [
+        [
+          {
+            "node": "bases",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "bases": {
+      "main": [
+        [
+          {
+            "node": "consolidar memórias",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "consolidar memórias": {
+      "main": [
+        [
+          {
+            "node": "verificar processamento",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1",
+    "saveDataSuccessExecution": "none",
+    "errorWorkflow": "RcPiPwpM0sNMKkhcERRO"
+  }
+}

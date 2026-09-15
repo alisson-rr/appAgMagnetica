@@ -29,7 +29,43 @@ As respostas de ferramenta usam o envelope de `/api/ai/*`:
 { "ok": false, "data": null, "error": { "code": "...", "message": "...", "retryable": false } }
 ```
 
+## Redação e memória entre visitas (14/09/2026)
+
+- T149: última visita sugere Gustavo; “sim” escolhe profissional, sem reservar.
+- T150/T151: preferência por serviço, troca atual, recusa e busca com qualquer profissional.
+- T152/T153: falha da redação preserva o resultado; histórico contém o texto
+  final, mantém parágrafos e só é salvo após envio.
+- T154/T155: dia/período preferidos cedem à escolha atual; worker usa relógio,
+  token de automação e não envia mensagens a clientes.
+- `services/api/tests/test_ai_language_memory.py`: redação/revisão simuladas,
+  origem literal das preferências, titular, catálogo, fusos, concorrência,
+  protocolo Responses, recusa de saída inválida e ausência de chave.
+- `scripts/teste_memoria_atendimento.sql`: executado em PostgreSQL 18 local
+  descartável, com migração reaplicada. Confere fila atômica, deduplicação,
+  prioridade, lease, revisão concorrente, isolamento, limpeza e permissões.
+
+Comandos da API, sem integração com o banco configurado no projeto:
+
+```powershell
+$env:PERMITIR_TESTES_DE_BANCO='0'
+& services/api/.venv/Scripts/python.exe -m pytest services/api/tests --ignore=services/api/tests/test_schema_compatibilidade.py -p no:cacheprovider -q
+```
+
+Resultado local: 224 aprovados, 25 de integração ignorados. Ainda não houve
+avaliação com modelo real, importação no n8n instalado nem envio no WhatsApp.
+
 ## Casos obrigatórios
+
+Regressões acrescentadas em 14/09/2026:
+
+| Caso | O que verifica |
+| --- | --- |
+| T147 | GET de pendência seguido de GET de estado, com as saídas separadas que o Redis realmente devolve; as quatro ações chegam à escrita e pendência ausente ou corrompida não autoriza operação. |
+| T148 | Cada ação confirmada chega ao nó HTTP correto, com URL e corpo avaliados, e segue para repetição/verificação; inclui confirmação de presença pelo lembrete. |
+
+Antes da correção, os dois falharam, embora os outros 168 testes passassem.
+Depois da correção inicial: 170/170. Com redação e memória: 177/177. Isso não substitui o teste no n8n instalado,
+com gravação e releitura reais e conferência no painel.
 
 | ID | Cenário | Mensagem do cliente | Estado anterior | Rota esperada | Ação do sistema | Resposta esperada | Critério de aprovação |
 | --- | --- | --- | --- | --- | --- | --- | --- |
@@ -181,7 +217,7 @@ de cada teste diz o que o fluxo fazia antes.
 | E02 | Validação fecha o enum, limita `confidence` e recalcula `next_action` pelo sistema |
 | E03 | Confiança abaixo de `LIMIAR_DESTRUTIVO` em cancelar/remarcar pede esclarecimento |
 | E04 | Contexto vem de `/api/ai/contexto`; sem envelope válido não há contexto e o fluxo transfere; nenhum id de empresa ou de cliente existe no fluxo |
-| E05 | Um único agente de IA e nenhuma memória de agente no workflow |
+| E05 | Um interpretador no n8n; redação e memória ficam no backend |
 | E06 | Workflow inativo, `pinData` vazio, execuções de sucesso não guardam dados |
 | E07 | Zero literais de banco (`SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `rest/v1`, `id_info_clinica`, `senha_hash`, `cancelada`, `status=neq`, `$fromAI`) e zero nós Supabase; **zero `$env.`** em qualquer lugar do JSON; cada nó de agenda monta a URL a partir da constante `api_base` de `normalizar entrada`, autentica por **credencial Header Auth** (nunca header literal `X-Automation-Token`, nunca token na URL), tem timeout e lê o corpo em erro HTTP (`neverError`); `revalidar horário` e `conferir revalidação` não existem mais |
 | E08 | `contexto da empresa` separa recusa de negócio de falha de integração: `AUTOMACAO_DESATIVADA` e afins encerram calados, o resto faz `fim - contexto indisponível` lançar |

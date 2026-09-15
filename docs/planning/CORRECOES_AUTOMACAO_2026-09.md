@@ -502,7 +502,7 @@ nenhuma leitura de código resolve.
    Se `base64` for ligado, os nós de busca continuam corretos (a chave
    `message.base64` é lida antes) e podem ficar como estão.
 2. **O id do workflow de erro.** A V2 sai do repositório com
-   `"errorWorkflow": "CONFIGURAR_NO_N8N_ERRO"`, que é um marcador e não um id.
+   `"errorWorkflow": "RcPiPwpM0sNMKkhcERRO"`, que é um marcador e não um id.
    Importe `AgendaMagnetica-erro.n8n.json`, copie o id que o n8n atribuir (está
    na URL do editor) e cole em *Settings → Error workflow* da V2. Com o marcador
    no lugar, **o alerta simplesmente não dispara e o n8n não reclama**.

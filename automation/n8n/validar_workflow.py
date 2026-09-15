@@ -37,9 +37,12 @@ NOS_OBRIGATORIOS = [
     "criar consulta",
     "reagendar consulta",
     "cancelar consulta",
+    "confirmar consulta",
     "repetir escrita",
     "verificar resultado",
     "montar resposta",
+    "redigir resposta",
+    "aplicar redação",
     "evo enviar mensagem",
     "registrar decisão",
 ]
@@ -71,7 +74,9 @@ NOS_API = {
     "criar consulta": "/api/ai/agendamentos",
     "reagendar consulta": "/api/ai/agendamentos/reagendar",
     "cancelar consulta": "/api/ai/agendamentos/cancelar",
+    "confirmar consulta": "/api/ai/agendamentos/confirmar",
     "atualizar cadastro": "/api/ai/cliente",
+    "redigir resposta": "/api/ai/redigir",
     # A repetição reusa o caminho e o corpo já montados: mesma chave de
     # idempotência, então repetir não cria um segundo agendamento.
     "repetir escrita": None,
@@ -443,6 +448,22 @@ def falhas_do_workflow(caminho):
             mascara = trecho[:6] + "..." + trecho[-4:] if len(trecho) > 12 else "..."
             erros.append(f"{descricao}: {mascara}")
 
+    # O texto final deve passar pela redação, e o histórico só guarda o enviado.
+    for origem, destino in (
+        ('montar resposta', 'redigir resposta'),
+        ('redigir resposta', 'aplicar redação'),
+        ('aplicar redação', 'tem ação pendente nova?'),
+        ('enviar em ordem', 'Redis - salvar estado'),
+        ('Redis - salvar estado', 'registrar decisão'),
+        ('registrar mensagem recebida', 'Redis - ler ação pendente'),
+    ):
+        saidas = conexoes.get(origem, {}).get('main', [])
+        alvos = [c.get('node') for c in (saidas[0] if saidas else [])]
+        if alvos != [destino]:
+            erros.append(f"'{origem}' precisa seguir para '{destino}', recebeu {alvos}")
+    if por_nome.get('redigir resposta', {}).get('retryOnFail'):
+        erros.append('Redação não pode repetir a chamada em falha')
+
     # ===== Fiação do caminho do dinheiro =====
     # Trocar duas saídas do switch manda o corpo de agendar para /cancelar. A
     # API recusa com 422, `verificar resultado` classifica falha_ferramenta e o
@@ -452,11 +473,16 @@ def falhas_do_workflow(caminho):
         "cancelar": "cancelar consulta",
         "agendar": "criar consulta",
         "reagendar": "reagendar consulta",
+        "confirmar": "confirmar consulta",
     }
     switch = por_nome.get("tipo da ação")
     if switch:
         regras = switch.get("parameters", {}).get("rules", {}).get("values", [])
         saidas = conexoes.get("tipo da ação", {}).get("main", [])
+        presentes = {regra.get("outputKey") for regra in regras}
+        for acao in ACAO_PARA_NO:
+            if acao not in presentes:
+                erros.append(f"'tipo da ação' não tem saída para {acao!r}")
         for indice, regra in enumerate(regras):
             chave = regra.get("outputKey")
             esperado = ACAO_PARA_NO.get(chave)
@@ -511,9 +537,11 @@ def falhas_do_workflow(caminho):
         if not (str(escrita).startswith("=" + prefixo) and str(leitura).startswith("=" + prefixo)):
             erros.append("as chaves de eco deixaram de concordar no prefixo por instância")
 
+    # A redação e a memória usam modelos separados no backend. O único agente
+    # com saída de intenção no n8n continua sendo a interpretação.
     agentes = [n for n in nos if n.get("type") == "@n8n/n8n-nodes-langchain.agent"]
     if len(agentes) > 1:
-        erros.append(f"o fluxo deve ter uma única chamada de IA de conversa (encontrei {len(agentes)})")
+        erros.append(f"o fluxo deve ter um único agente interpretador no n8n (encontrei {len(agentes)})")
     for agente in agentes:
         if not agente.get("parameters", {}).get("hasOutputParser"):
             erros.append(f"'{agente['name']}' sem saída estruturada")
@@ -707,6 +735,11 @@ def main():
         if os.path.exists(lembrete_wf):
             erros += [f"[lembrete] {e}" for e in falhas_de_forma(lembrete_wf)]
             erros += [f"[lembrete] {e}" for e in falhas_do_lembrete(lembrete_wf)]
+        memoria_wf = os.path.join(pasta, "AgendaMagnetica-memoria.n8n.json")
+        if os.path.exists(memoria_wf):
+            erros += [f"[memoria] {e}" for e in falhas_de_forma(memoria_wf)]
+        else:
+            erros.append('Workflow de consolidação de memória ausente')
     if erros:
         print(f"FALHOU ({len(erros)}):")
         for erro in erros:

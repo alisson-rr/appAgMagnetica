@@ -37,6 +37,8 @@ from dominio import (
 )
 from settings import AUTOMATION_API_TOKEN, AUTOMATION_API_TOKEN_MIN_LEN
 from supabase_client import supabase
+import ai_language
+import ai_memory
 
 logger = logging.getLogger(__name__)
 
@@ -562,6 +564,25 @@ class ContextoRequest(BaseAutomacao):
     nome: Optional[str] = Field(default=None, max_length=120)
 
 
+class MensagemContexto(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    r: Literal["cliente", "assistente"]
+    t: str = Field(max_length=1200)
+
+
+class RedigirRequest(BaseAutomacao):
+    telefone: str = Field(min_length=8, max_length=40)
+    resposta_base: str = Field(min_length=1, max_length=2700)
+    tipo_resposta: str = Field(min_length=1, max_length=80)
+    consulta_id: Optional[int] = Field(default=None, gt=0)
+    historico: List[MensagemContexto] = Field(default_factory=list, max_length=12)
+
+
+class ProcessarMemoriaRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    limite: int = Field(default=3, ge=1, le=5)
+
+
 class DisponibilidadeRequest(BaseAutomacao):
     id_procedimento: int = Field(gt=0)
     id_profissional: Optional[int] = Field(default=None, gt=0)
@@ -623,6 +644,7 @@ class RegistrarMensagemRequest(BaseAutomacao):
     conteudo: Optional[str] = Field(default=None, max_length=8000)
     provider_message_id: Optional[str] = Field(default=None, max_length=200)
     provider_em: Optional[str] = Field(default=None, max_length=40)
+    encerrar_assunto: bool = False
 
 
 class HandoffValidoRequest(BaseAutomacao):
@@ -633,7 +655,7 @@ class HandoffValidoRequest(BaseAutomacao):
 
 
 class LembretesRequest(BaseModel):
-    """A unica requisicao de `/api/ai/*` sem `instance_name`.
+    """Requisição de manutenção sem `instance_name`, como a fila de memória.
 
     Quem chama e um relogio, nao uma conversa: nao existe instancia de onde
     derivar a empresa. Cada consulta devolvida carrega o proprio
@@ -755,6 +777,7 @@ async def contexto(requisicao: ContextoRequest):
         if cliente.get("novo")
         else buscar_profissional_habitual(clinica_id, cliente["id"])
     )
+    cliente_json["memoria"] = ai_memory.contexto(supabase, clinica_id, cliente["id"])
 
     return sucesso(
         {
@@ -1251,12 +1274,68 @@ async def registrar_mensagem(requisicao: RegistrarMensagemRequest):
         return sucesso({"inserida": False, "registrado": False})
 
     linha = _primeira(resultado) or {}
+    if linha.get("inserida") and cliente_id and (
+        requisicao.encerrar_assunto or ai_memory.preferencia_explicita(requisicao.conteudo)
+    ):
+        try:
+            supabase.rpc("fn_priorizar_memoria", {"p_empresa": clinica_id, "p_cliente": cliente_id}).execute()
+        except Exception as erro:
+            logger.warning("Priorizacao da memoria indisponivel (%s)", type(erro).__name__)
     return sucesso({
         "inserida": bool(linha.get("inserida")),
         "registrado": True,
         "id_conversa": linha.get("conversa_id"),
         "nao_lidas": linha.get("nao_lidas_total"),
     })
+
+
+@router.post("/redigir", dependencies=PROTEGIDO)
+async def redigir_resposta(requisicao: RedigirRequest):
+    clinica_id = resolver_empresa(requisicao.instance_name)
+    cliente = exigir_cliente(clinica_id, requisicao.telefone)
+    detalhes = _primeira(executar("contexto_redacao", lambda: supabase.table("v_clinica_detalhes")
+                        .select("*").eq("id_info_clinica", clinica_id).limit(1).execute())) or {}
+    if not detalhes.get("automacao_ativa"):
+        raise AiError("AUTOMACAO_DESATIVADA", "Atendimento automático desligado.", status=409)
+    operacionais = {"agendado", "reagendado", "cancelado", "confirmado"}
+    consulta = None
+    if requisicao.tipo_resposta in operacionais:
+        if not requisicao.consulta_id:
+            raise AiError("RESULTADO_SEM_ID", "Não foi possível verificar o resultado.", status=409)
+        consulta = consulta_do_cliente(clinica_id, cliente["id"], requisicao.consulta_id)
+        esperado = ({STATUS_CANCELADO} if requisicao.tipo_resposta == "cancelado" else
+                    {STATUS_CONFIRMADO} if requisicao.tipo_resposta == "confirmado" else set(STATUS_VIVOS))
+        if consulta.get("status") not in esperado:
+            return sucesso({"texto": "O estado desse horário mudou. Posso consultar seus agendamentos novamente?",
+                            "redacao": "reserva", "motivo": "estado_alterado"})
+    resultado = await ai_language.redigir({
+        "resposta_base": requisicao.resposta_base, "tipo_resposta": requisicao.tipo_resposta,
+        "operacao_verificada": consulta is not None,
+        "fatos_operacao": serializar_consulta(consulta) if consulta else None,
+        "empresa": {"nome": detalhes.get("clinica_nome"), "tom": detalhes.get("assistente_tom"),
+                    "descricao": detalhes.get("clinica_descricao"), "servicos": detalhes.get("procedimentos"),
+                    "profissionais": detalhes.get("profissionais")},
+        "cliente": {"nome": cliente.get("nome")},
+        "memoria": ai_memory.contexto(supabase, clinica_id, cliente["id"]),
+        "conversa": [m.model_dump() for m in requisicao.historico],
+    })
+    return sucesso(resultado)
+
+
+@router.post("/memoria/processar", dependencies=PROTEGIDO)
+async def processar_memoria(requisicao: ProcessarMemoriaRequest):
+    # Relógio de manutenção, como /lembretes/pendentes. Identidades ficam no backend.
+    return sucesso(await ai_memory.processar(supabase, requisicao.limite))
+
+
+@router.post("/memoria/apagar", dependencies=PROTEGIDO)
+async def apagar_memoria(requisicao: ContextoRequest):
+    clinica_id = resolver_empresa(requisicao.instance_name)
+    cliente = exigir_cliente(clinica_id, requisicao.telefone)
+    executar("limpar_memoria", lambda: supabase.rpc("fn_limpar_memoria", {
+        "p_empresa": clinica_id, "p_cliente": cliente["id"],
+    }).execute())
+    return sucesso({"memoria_apagada": True})
 
 
 @router.post("/lembretes/pendentes", dependencies=PROTEGIDO)
@@ -1267,7 +1346,7 @@ async def lembretes_pendentes(requisicao: LembretesRequest):
     marcar cabe outra execucao do agendador, e o resultado seria o mesmo cliente
     recebendo o lembrete duas vezes.
 
-    Esta e a unica leitura do projeto que atravessa empresas, e a razao esta em
+    Esta leitura de manutenção atravessa empresas, como a fila de memória; a razão está em
     `scripts/lembrete_confirmacao.sql`: um relogio nao tem conversa de onde
     derivar o tenant. Cada linha sai com o proprio `instance_name`, e todas as
     chamadas seguintes voltam a derivar a empresa dele.

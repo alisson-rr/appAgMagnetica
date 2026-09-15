@@ -1,5 +1,14 @@
 # Agenda Magnética — direção de produto 2026
 
+## Prioridade de atendimento registrada em 14/09/2026
+
+A prioridade atual é corrigir os agendamentos do n8n e melhorar a conversa:
+modelo econômico para interpretar, modelo de boa redação para escrever mensagens
+acolhedoras, claras e sem travessões, com memória das preferências entre visitas.
+Histórico, preferência declarada e escolha atual devem ser tratados separadamente.
+Requisitos, diagnóstico e critérios de entrega estão na
+[revisão do atendimento com IA](../planning/REVISAO_ATENDIMENTO_IA_2026-09-14.md).
+
 ## Resumo executivo
 
 A Agenda Magnética não deve disputar o mercado como “mais um sistema de agenda”.

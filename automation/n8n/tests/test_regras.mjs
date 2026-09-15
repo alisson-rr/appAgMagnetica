@@ -783,8 +783,9 @@ teste('E03 confiança baixa em ação destrutiva pede esclarecimento', () => {
 
 teste('E04 contexto vem de uma chamada a /api/ai/contexto, sem id de empresa', () => {
   const [ctx] = executar('montar contexto', {
-    entrada: { pendente: null, estado: null },
+    entrada: { estado: null },
     refs: {
+      'Redis - ler ação pendente': { pendente: null },
       'normalizar entrada': { msg_id: 'MSG1', instance: INSTANCIA, remote_jid: JID, push_name: 'Studio das Unhas LTDA' },
       'conteudo do cliente': { conteudo: 'oi', tipo: 'texto', entrada_incerta: false },
       'contexto da empresa': ok({
@@ -820,8 +821,9 @@ teste('E04 contexto vem de uma chamada a /api/ai/contexto, sem id de empresa', (
 
   // Envelope de erro não produz contexto, e sem contexto o fluxo transfere.
   const [semContexto] = executar('montar contexto', {
-    entrada: { pendente: null, estado: null },
+    entrada: { estado: null },
     refs: {
+      'Redis - ler ação pendente': { pendente: null },
       'normalizar entrada': { msg_id: 'MSG1', instance: INSTANCIA, remote_jid: JID, push_name: '' },
       'conteudo do cliente': { conteudo: 'oi', tipo: 'texto', entrada_incerta: false },
       'contexto da empresa': falha('INSTANCIA_DESCONHECIDA'),
@@ -836,7 +838,7 @@ teste('E04 contexto vem de uma chamada a /api/ai/contexto, sem id de empresa', (
   assert.equal(decisao.json.rota, 'humano');
 });
 
-teste('E05 o fluxo normal usa uma única chamada de IA de conversa', () => {
+teste('E05 interpretação fica no n8n; redação e memória ficam no backend', () => {
   const agentes = WORKFLOW.nodes.filter((n) => n.type === '@n8n/n8n-nodes-langchain.agent');
   assert.equal(agentes.length, 1);
   const memorias = WORKFLOW.nodes.filter((n) => n.type.includes('memory'));
@@ -1576,8 +1578,9 @@ teste('T71 pendência sem acao_id utilizável é descartada em montar contexto',
   // Sem acao_id a chave_idempotencia sai vazia, a API recusa com 422 e a
   // conversa é transferida por um defeito nosso.
   const montar = (pendente) => executar('montar contexto', {
-    entrada: { pendente: JSON.stringify(pendente), estado: null },
+    entrada: { estado: null },
     refs: {
+      'Redis - ler ação pendente': { pendente: JSON.stringify(pendente) },
       'normalizar entrada': { msg_id: 'MSG1', instance: INSTANCIA, remote_jid: JID, push_name: '' },
       'conteudo do cliente': { conteudo: 'sim', tipo: 'texto', entrada_incerta: false },
       'contexto da empresa': ok({
@@ -1647,7 +1650,7 @@ teste('E11 a decisão é persistida para auditoria, sem telefone nem texto do cl
   const d = decidir(contexto({ conteudo: segredo }),
     interpretacao({ intent: 'faq', next_action: 'answer', confidence: 0.9, reply: 'Não trabalho com isso por aqui.' }));
   const [registro] = executar('registrar decisão', {
-    entrada: {}, refs: { 'resolver e decidir': d, 'montar resposta': responder(d) },
+    entrada: {}, refs: { 'resolver e decidir': d, 'aplicar redação': responder(d) },
   });
   const bruto = JSON.stringify(registro.json);
   assert.equal(bruto.includes(TELEFONE), false, 'telefone completo no registro de auditoria');
@@ -2304,8 +2307,9 @@ teste('T123 o dia e a hora do turno ambíguo sobrevivem ao turno seguinte', () =
 
   // A volta pelo Redis: forma fixa, chave que não está lá é descartada.
   const [ctxVolta] = executar('montar contexto', {
-    entrada: { pendente: null, estado: JSON.stringify(estado) },
+    entrada: { estado: JSON.stringify(estado) },
     refs: {
+      'Redis - ler ação pendente': { pendente: null },
       'normalizar entrada': { msg_id: 'M2', instance: INSTANCIA, remote_jid: JID, push_name: '' },
       'conteudo do cliente': { conteudo: 'corte', tipo: 'texto', entrada_incerta: false },
       'contexto da empresa': ok({
@@ -2783,8 +2787,9 @@ teste('T100 o serviço citado sobrevive ao turno seguinte', () => {
   // A volta pelo Redis: 'montar contexto' tem forma fixa, e chave que não está
   // lá é descartada — a memória morreria entre um turno e outro.
   const [ctxVolta] = executar('montar contexto', {
-    entrada: { pendente: null, estado: JSON.stringify(estado) },
+    entrada: { estado: JSON.stringify(estado) },
     refs: {
+      'Redis - ler ação pendente': { pendente: null },
       'normalizar entrada': { msg_id: 'MSG1', instance: INSTANCIA, remote_jid: JID, push_name: '' },
       'conteudo do cliente': { conteudo: 'então quero marcar amanhã de manhã', tipo: 'texto', entrada_incerta: false },
       'contexto da empresa': ok({
@@ -3338,8 +3343,9 @@ teste('E20 o prompt manda o modelo escalar crise e calar o texto dele', () => {
 // à mão provaria só que o objeto do teste tem a chave.
 function contextoDaApi(descricao) {
   const [ctx] = executar('montar contexto', {
-    entrada: { pendente: null, estado: null },
+    entrada: { estado: null },
     refs: {
+      'Redis - ler ação pendente': { pendente: null },
       'normalizar entrada': { msg_id: 'MSG1', instance: INSTANCIA, remote_jid: JID, push_name: 'Ana' },
       'conteudo do cliente': { conteudo: 'oi', tipo: 'texto', entrada_incerta: false },
       'contexto da empresa': ok({
@@ -3360,8 +3366,9 @@ function contextoDaApi(descricao) {
 // Os outros campos da empresa entram no MESMO prompt que o bloco <negocio>.
 function contextoDaApiCompleto(empresa) {
   const [ctx] = executar('montar contexto', {
-    entrada: { pendente: null, estado: null },
+    entrada: { estado: null },
     refs: {
+      'Redis - ler ação pendente': { pendente: null },
       'normalizar entrada': { msg_id: 'MSG1', instance: INSTANCIA, remote_jid: JID },
       'conteudo do cliente': { conteudo: 'oi', tipo: 'texto', entrada_incerta: false },
       'contexto da empresa': ok({
@@ -3936,8 +3943,9 @@ teste('T137 o profissional de sempre que saiu do catalogo nao e oferecido', () =
   // passasse, a recepcao prometeria alguem que nao atende mais e o pedido de
   // horario voltaria vazio — pior que ter perguntado.
   const montar = (habitual) => executar('montar contexto', {
-    entrada: { pendente: null, estado: null },
+    entrada: { estado: null },
     refs: {
+      'Redis - ler ação pendente': { pendente: null },
       'normalizar entrada': { msg_id: 'MSG1', instance: INSTANCIA, remote_jid: JID },
       'conteudo do cliente': { conteudo: 'oi', tipo: 'texto', entrada_incerta: false },
       'contexto da empresa': ok({
@@ -3974,8 +3982,9 @@ teste('T138 o prompt diz que dia da semana e hoje', () => {
   // O modelo recebia so um ISO e tinha de deduzir sozinho se amanha e sabado —
   // e errava, oferecendo dia em que a empresa nao abre.
   const ctx = executar('montar contexto', {
-    entrada: { pendente: null, estado: null },
+    entrada: { estado: null },
     refs: {
+      'Redis - ler ação pendente': { pendente: null },
       'normalizar entrada': { msg_id: 'MSG1', instance: INSTANCIA, remote_jid: JID },
       'conteudo do cliente': { conteudo: 'oi', tipo: 'texto', entrada_incerta: false },
       'contexto da empresa': ok({
@@ -4227,6 +4236,196 @@ teste('T144 o "sim" do lembrete confirma presenca, e nao marca horario novo', ()
   assert.match(texto, /confirmada/i);
   assert.doesNotMatch(texto, /est\u00e1 marcado/i,
     'confirmar presenca nao e marcar horario novo');
+});
+
+teste('T147 a ação pendente atravessa duas leituras Redis e chega à escrita', () => {
+  // Redis GET emite apenas { [propertyName]: valor }, sem os campos da entrada.
+  // O segundo GET entrega { estado }; a pendência precisa vir do primeiro nó.
+  assert.equal(WORKFLOW.connections['Redis - ler ação pendente'].main[0][0].node, 'Redis - ler estado');
+  assert.equal(WORKFLOW.connections['Redis - ler estado'].main[0][0].node, 'montar contexto');
+  for (const tipo of ['agendar', 'reagendar', 'cancelar', 'confirmar']) {
+    const pendente = pendenteAgendar({ tipo, consulta_id: 4321 });
+    const estado = { historico: [], slots_oferecidos: [], consultas_candidatas: [],
+      reagendar_consulta_id: null, pendente_falada: pendente.inicio };
+    const lidoPendente = { pendente: JSON.stringify(pendente) };
+    const lidoEstado = { estado: JSON.stringify(estado) };
+    const montar = (valorPendente) => executar('montar contexto', {
+      entrada: lidoEstado,
+      refs: {
+        'Redis - ler ação pendente': { pendente: valorPendente },
+        'Redis - ler estado': lidoEstado,
+        'normalizar entrada': { msg_id: 'MSG-CONFIRMACAO', instance: INSTANCIA, remote_jid: JID },
+        'conteudo do cliente': { conteudo: 'sim', tipo: 'texto' },
+        'contexto da empresa': ok({
+          empresa: contexto().empresa, cliente: contexto().cliente,
+          procedimentos: SERVICOS, profissionais: PROFISSIONAIS,
+        }),
+      },
+    })[0].json;
+    const ctx = montar(lidoPendente.pendente);
+    assert.deepEqual(ctx.pendente, pendente, `${tipo}: o segundo GET apagou a pendência`);
+    assert.equal(ctx.estado.pendente_falada, pendente.inicio);
+    // O contexto usa o relógio real; o teste da validade usa a data da fixture.
+    const d = decidir({ ...ctx, agora_iso: AGORA }, interpretacao({
+      intent: 'confirmar_acao', next_action: 'confirm_pending',
+    }));
+    assert.equal(d.rota, 'executar_pendente', tipo);
+    assert.ok(d.escrita.corpo, `${tipo}: confirmação não produziu pedido à API`);
+    if (tipo === 'agendar') assert.equal(d.escrita.corpo.chave_idempotencia, pendente.acao_id);
+    else assert.equal(d.escrita.corpo.id_consulta, 4321);
+    for (const ausente of [null, '{json inválido']) {
+      const semPendente = montar(ausente);
+      assert.equal(semPendente.pendente, null);
+      const recusada = decidir({ ...semPendente, agora_iso: AGORA }, interpretacao({
+        intent: 'confirmar_acao', next_action: 'confirm_pending',
+      }));
+      assert.notEqual(recusada.rota, 'executar_pendente');
+    }
+  }
+});
+
+teste('T148 todas as ações confirmadas têm rota HTTP antes da verificação', () => {
+  const rotas = { agendar: '/api/ai/agendamentos', reagendar: '/api/ai/agendamentos/reagendar',
+    cancelar: '/api/ai/agendamentos/cancelar', confirmar: '/api/ai/agendamentos/confirmar' };
+  const regras = NOS.get('tipo da ação').parameters.rules.values;
+  for (const [tipo, caminho] of Object.entries(rotas)) {
+    const indice = regras.findIndex((r) => r.conditions.conditions[0].rightValue === tipo);
+    assert.ok(indice >= 0, `${tipo}: cai na saída padrão sem executar a operação`);
+    const destino = WORKFLOW.connections['tipo da ação'].main[indice][0].node;
+    const http = NOS.get(destino);
+    assert.equal(http.type, 'n8n-nodes-base.httpRequest');
+    const d = decidir(contexto({ conteudo: 'sim', pendente: pendenteAgendar({ tipo, consulta_id: 4321 }) }),
+      interpretacao({ intent: 'confirmar_acao', next_action: 'confirm_pending' }));
+    const refs = (nome) => ({ first: () => ({ json: nome === 'resolver e decidir' ? d : { api_base: 'https://api.exemplo.test' } }) });
+    const avaliar = (expr) => new Function('$', `return (${expr.slice(3, -2).trim()});`)(refs);
+    assert.equal(avaliar(http.parameters.url), `https://api.exemplo.test${caminho}`);
+    assert.deepEqual(JSON.parse(avaliar(http.parameters.jsonBody)), d.escrita.corpo);
+    assert.equal(WORKFLOW.connections[destino].main[0][0].node, 'repetir escrita?');
+  }
+});
+
+function salao(extra = {}) {
+  return contexto({
+    empresa: { ...contexto().empresa, exige_profissional: true },
+    cliente: { ...contexto().cliente, nome: 'Alisson', primeiro_nome: 'Alisson', memoria: {
+      disponivel: true, preferencias: [], pares: [{ servico_id: 10, profissional_id: 5 }, { servico_id: 10, profissional_id: 6 }],
+      visitas: [{ servico_id: 10, ultimo_profissional: { id: 5, nome: 'Gustavo' }, habitual: null }],
+    } },
+    servicos: [{ ...SERVICOS[0], nome: 'Corte' }],
+    profissionais: [{ id: 5, nome: 'Gustavo' }, { id: 6, nome: 'Helena' }],
+    ...extra,
+  });
+}
+
+teste('T149 voltar depois de uma visita sugere Gustavo; sim escolhe profissional, não reserva', () => {
+  const t1 = decidir(salao({ conteudo: 'Quero marcar um corte' }), interpretacao({
+    intent: 'preparar_agendamento', next_action: 'check_availability', entities: { service_query: 'Corte' },
+  }));
+  assert.equal(t1.motivo, 'sugerir_profissional');
+  const r1 = responder(t1);
+  assert.match(r1.texto, /última visita/);
+  assert.doesNotMatch(r1.texto, /sempre|costuma/);
+  assert.equal(r1.tem_pendente_novo, false);
+  const estado = r1.estado;
+  const raw = salao();
+  // Reidratação pelo nó real: sugerido e serviço precisam atravessar o Redis.
+  const ctx = executar('montar contexto', { entrada: { estado: JSON.stringify(estado) }, refs: {
+    'Redis - ler ação pendente': { pendente: null },
+    'normalizar entrada': { instance: INSTANCIA, remote_jid: JID, msg_id: 'VOLTA-SIM' },
+    'conteudo do cliente': { conteudo: 'sim', tipo: 'texto' },
+    'contexto da empresa': ok({ empresa: { ...raw.empresa, horarios: raw.horarios }, cliente: raw.cliente,
+      procedimentos: raw.servicos, profissionais: raw.profissionais }),
+  } })[0].json;
+  const t2 = decidir({ ...ctx, agora_iso: AGORA }, interpretacao({ intent: 'confirmar_acao', next_action: 'confirm_pending' }));
+  assert.equal(t2.rota, 'disponibilidade');
+  assert.equal(t2.busca.id_profissional, 5);
+  assert.equal(t2.escrita, undefined);
+  assert.equal(t2.contexto.estado.profissional_sugerido, null);
+});
+
+teste('T150 preferência declarada se aplica por serviço e cede à escolha atual', () => {
+  const ctx = salao();
+  ctx.cliente.memoria.preferencias = [{ tipo: 'profissional', servico_id: 10, profissional_id: 5 }];
+  const pedido = (professional_query) => interpretacao({ intent: 'preparar_agendamento', next_action: 'check_availability',
+    entities: { service_query: 'Corte', professional_query, date_text: 'sexta' } });
+  const d1 = decidir({ ...ctx, conteudo: 'quero corte sexta' }, pedido(null));
+  assert.equal(d1.busca.id_profissional, 5);
+  const d2 = decidir({ ...ctx, conteudo: 'desta vez com Helena' }, pedido('Helena'));
+  assert.equal(d2.busca.id_profissional, 6);
+  const outro = salao({ servicos: [{ ...SERVICOS[0], id: 11, nome: 'Coloração' }], conteudo: 'quero coloração' });
+  const d3 = decidir(outro, interpretacao({ intent: 'preparar_agendamento', next_action: 'check_availability', entities: { service_query: 'Coloração' } }));
+  assert.equal(d3.motivo, 'profissional_obrigatorio');
+});
+
+teste('T151 recusar Gustavo ou dizer tanto faz não repete a sugestão', () => {
+  const t1 = decidir(salao({ conteudo: 'quero corte' }), interpretacao({ intent: 'preparar_agendamento', next_action: 'check_availability', entities: { service_query: 'Corte' } }));
+  const r1 = responder(t1);
+  const recusou = decidir(salao({ conteudo: 'não', estado: structuredClone(r1.estado) }),
+    interpretacao({ intent: 'recusar_acao', next_action: 'discard_pending' }));
+  assert.equal(recusou.motivo, 'escolher_outro_profissional');
+  assert.equal(responder(recusou).estado.profissional_sugerido, null);
+  const livre = decidir(salao({ conteudo: 'tanto faz', estado: structuredClone(r1.estado) }),
+    interpretacao({ intent: 'preparar_agendamento', next_action: 'check_availability' }));
+  assert.equal(livre.rota, 'disponibilidade');
+  assert.equal(livre.busca.id_profissional, null);
+});
+
+teste('T152 uma falha de redação preserva o resultado e não repete a escrita', () => {
+  const base = { texto: 'Seu corte está marcado para sexta às 15h.', tipo_resposta: 'agendado',
+    estado: { historico: [{ r: 'assistente', t: 'resposta anterior' }] }, log: { consulta_id: 4321 } };
+  for (const entrada of [{ error: 'timeout' }, { ok: false }, { ok: true, data: { texto: '' } }]) {
+    const r = executar('aplicar redação', { entrada, refs: { 'montar resposta': base } })[0].json;
+    assert.equal(r.texto, base.texto);
+    assert.equal(r.log.consulta_id, 4321);
+  }
+  assert.equal(WORKFLOW.connections['montar resposta'].main[0][0].node, 'redigir resposta');
+  assert.equal(WORKFLOW.connections['redigir resposta'].main[0][0].node, 'aplicar redação');
+  assert.equal(NOS.get('redigir resposta').retryOnFail, false);
+});
+
+teste('T153 o histórico final preserva parágrafos e só é salvo depois do envio', () => {
+  const texto = 'Tudo certo, Alisson!\n\nSeu corte com Gustavo ficou marcado para sexta às 15h.';
+  const base = { texto: 'modelo fixo', estado: { historico: [{r: 'cliente', t: 'sim'}, {r: 'assistente', t: 'modelo fixo'}] }, log: {} };
+  const r = executar('aplicar redação', { entrada: ok({ texto, redacao: 'modelo' }), refs: { 'montar resposta': base } })[0].json;
+  assert.equal(r.estado.historico.at(-1).t, texto);
+  assert.equal(WORKFLOW.connections['enviar em ordem'].main[0][0].node, 'Redis - salvar estado');
+  assert.equal(WORKFLOW.connections['Redis - salvar estado'].main[0][0].node, 'registrar decisão');
+  assert.match(NOS.get('Redis - salvar estado').parameters.value, /aplicar redação/);
+  assert.equal(WORKFLOW.connections['contexto ok?'].main[0][0].node, 'registrar mensagem recebida');
+  assert.equal(WORKFLOW.connections['registrar mensagem recebida'].main[0][0].node, 'Redis - ler ação pendente');
+});
+
+teste('T154 preferências de dia e período cedem ao pedido atual', () => {
+  const criar = () => {
+    const ctx = salao({ conteudo: 'quero corte' });
+    ctx.cliente.memoria.preferencias = [
+      { tipo: 'profissional', servico_id: 10, profissional_id: 5 },
+      { tipo: 'periodo', servico_id: 10, valor: 'tarde' },
+      { tipo: 'dia', servico_id: 10, valor: 'sexta' },
+    ];
+    return ctx;
+  };
+  const pedido = entities => interpretacao({ intent: 'preparar_agendamento', next_action: 'check_availability',
+    entities: { service_query: 'Corte', ...entities } });
+  const preferido = decidir(criar(), pedido({}));
+  assert.equal(preferido.rota, 'disponibilidade');
+  assert.match(preferido.busca.inicio, /2026-08-21T12:00/);
+  const atual = decidir({ ...criar(), conteudo: 'desta vez sábado de manhã' }, pedido({ date_text: 'sábado', period: 'manha' }));
+  assert.equal(atual.rota, 'disponibilidade');
+  assert.match(atual.busca.inicio, /2026-08-22T/);
+  assert.doesNotMatch(atual.busca.inicio, /T12:00/);
+});
+
+teste('T155 worker de memória tem relógio e não envia mensagens', () => {
+  const worker = JSON.parse(readFileSync(join(AQUI, '..', 'AgendaMagnetica-memoria.n8n.json'), 'utf8'));
+  assert.equal(worker.active, false);
+  assert.ok(worker.nodes.some(n => n.type === 'n8n-nodes-base.scheduleTrigger'));
+  const http = worker.nodes.filter(n => n.type === 'n8n-nodes-base.httpRequest');
+  assert.equal(http.length, 1);
+  assert.match(http[0].parameters.url, /\/api\/ai\/memoria\/processar/);
+  assert.equal(http[0].retryOnFail, false);
+  assert.equal(http[0].parameters.options.timeout, 30000);
+  assert.equal(worker.connections[http[0].name].main[0][0].node, 'verificar processamento');
 });
 
 // ---------------------------------------------------------------- execução

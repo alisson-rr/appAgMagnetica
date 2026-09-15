@@ -1,20 +1,27 @@
 # Automação de atendimento — homologação
 
+> **Revisão de 14/09/2026:** corrigida a leitura da ação pendente e a execução
+> da confirmação de presença. Redação separada e memória duradoura implementadas
+> no repositório, com testes locais. Instalação e avaliação com modelos reais
+> continuam pendentes. Veja a
+> [revisão do atendimento com IA](../../docs/planning/REVISAO_ATENDIMENTO_IA_2026-09-14.md).
+
 > **Infraestrutura:** o n8n já está no ar, em queue mode, com o webhook em
 > processo separado. Antes de importar o fluxo ou configurar credencial, leia
 > [`docs/INFRA-VPS.md`](../../docs/INFRA-VPS.md) — em especial que a credencial
 > Redis precisa apontar para o **banco 1** (o banco 0 é a fila interna do n8n).
 
-Quatro arquivos convivem nesta pasta:
+Cinco arquivos convivem nesta pasta:
 
 | Arquivo | Papel |
 | --- | --- |
-| `AgendaMagnetica-v2.n8n.json` | **versão canônica** (Atendimento V2, 95 nós). Importe esta. |
+| `AgendaMagnetica-v2.n8n.json` | **versão canônica** (Atendimento V2, 97 nós). Importe esta. |
 | `AgendaMagnetica-erro.n8n.json` | workflow de erro (Error Trigger → alerta ao operador). Importe junto e cole o id dele em `settings.errorWorkflow` da V2. |
 | `AgendaMagnetica-lembrete.n8n.json` | lembrete de confirmação na véspera (Schedule Trigger, 9 nós). Importe só quando for usar o lembrete. |
+| `AgendaMagnetica-memoria.n8n.json` | consolidação de memória a cada 5 minutos (4 nós). Depende da migração e da chave OpenAI no backend. |
 | `AgendaMagnetica.n8n.json` | **histórico**. Não é rollback e não roda: usa `$env` (bloqueado na VPS) e credencial Supabase. Não reimporte. |
 
-Os quatro estão **inativos** (`active: false`) e continuam assim até a homologação
+Os cinco estão **inativos** (`active: false`) e continuam assim até a homologação
 terminar. Nenhum deles deve ser ativado sem autorização explícita. Para desligar
 o atendimento depois de ativo, veja "Rollback" mais abaixo — não é o JSON antigo.
 
@@ -67,8 +74,8 @@ Fluxo principal, sempre nesta ordem:
 8. `contexto da empresa` chama `POST /api/ai/contexto`: a empresa é derivada da
    instância **no servidor**, o cliente é localizado ou criado dentro dela e o
    catálogo agendável vem junto. Nada disso passa pela IA nem pelo banco.
-9. `IA interpretadora` é a **única** chamada de IA de conversa e devolve saída
-   estruturada.
+9. `IA interpretadora` usa um modelo econômico e devolve saída estruturada.
+   O contexto inclui preferências declaradas e visitas anteriores por serviço.
 10. `validar interpretação` valida fora da IA: enum fechado, tipos coeridos,
     `next_action` recalculado pelo sistema e `handoff_reason` preso a um enum de
     cinco valores. Erro de infraestrutura da OpenAI (timeout, 5xx, cota) sai
@@ -84,9 +91,10 @@ Fluxo principal, sempre nesta ordem:
     `falha_ia` pede a mensagem de novo apenas quando nenhuma das três guardas
     disparou.
 12. Os nós HTTP executam a operação em `/api/ai/*` com token de automação.
-13. `montar resposta` escreve a mensagem por modelo fixo, `evo enviar mensagem`
-    entrega pela Evolution e `Redis - marcar envio próprio` grava o id enviado
-    (é o que faz o passo 4 reconhecer o eco).
+13. `montar resposta` monta o texto de reserva; `redigir resposta` chama a API
+    com redação de qualidade e revisão semântica. `aplicar redação` conserva os
+    parágrafos e usa a reserva se houver falha. A Evolution envia, o Redis marca
+    o eco e o histórico final só é salvo depois de concluídos os envios.
 14. `registrar decisão` monta o registro e `Redis - registrar auditoria`
     persiste em `am:auditoria:{instancia}:{msg_id}` por 30 dias. Com
     `saveDataSuccessExecution: none`, essa chave é a **única** evidência do que
@@ -98,9 +106,40 @@ tem `continueErrorOutput`, a saída de erro pausa a IA por 30 min
 isso, um agendamento criado nesta execução ficava de pé com o cliente sem saber
 e sem rastro no histórico.
 
-Contagem de IA: **1 chamada** no atendimento normal. Áudio ou imagem somam 1
-chamada de transcrição/descrição. Saída estruturada inválida gasta 1 correção; se
-falhar de novo, a conversa vai para uma pessoa.
+Contagem de IA: **até 3 chamadas** no atendimento normal: interpretação,
+redação e revisão semântica. Redação/revisão compartilham limite de 24 s, sem
+repetição; falha usa a reserva, sem repetir a operação da agenda. Áudio ou imagem
+somam uma chamada. Correção do interpretador pode somar outra. A memória usa
+extração e revisão econômicas em segundo plano, até três clientes por rodada.
+
+## Instalar redação e memória
+
+1. Aplicar `scripts/memoria_atendimento.sql` depois de `chat_atendimento.sql` e
+   dos ajustes de onboarding (a coluna `automacao_ativa` precisa existir).
+2. Publicar o backend com `ai_language.py` e `ai_memory.py`. Configurar
+   `OPENAI_API_KEY` no ambiente do backend, além do token de automação já usado.
+   Não colar chaves no JSON do workflow. Os padrões estão em `.env.example`:
+   `AI_WRITER_MODEL=gpt-5.4`, `AI_MEMORY_MODEL=gpt-5-mini-2025-08-07` e
+   `AI_REVIEW_MODEL=gpt-5-mini-2025-08-07`. Sem chave, o texto de reserva funciona
+   e o worker sinaliza `modelo_nao_configurado`; a memória não é consolidada.
+3. Importar a V2 atualizada e `AgendaMagnetica-memoria.n8n.json`, selecionar a
+   credencial do token da automação e vincular o workflow de erro nos dois.
+   Confirmar a URL da API no nó `bases` do worker. Os JSONs saem inativos.
+4. Homologar a retomada do corte com Gustavo, a troca para outra pessoa, a
+   preferência de período e o agendamento visível no painel. Forçar falha do
+   redator depois da gravação e conferir uma única reserva. Avaliar a redação
+   real em português e acompanhar `redacao`/`motivo_redacao` na auditoria.
+5. Ativar os fluxos após a homologação e autorização de publicação.
+
+A fila é criada na transação da mensagem. Encerramento de uma operação ou
+preferência explícita antecipa a próxima rodada; o restante espera 30 minutos de
+inatividade. Preferências são consolidadas até a próxima rodada, não por uma
+escrita síncrona a cada mensagem. A fala atual continua tendo prioridade.
+
+`POST /api/ai/memoria/apagar` recebe `instance_name` e `telefone`, autenticados
+pelo token de automação. Apaga o perfil e impede reaprendizado do histórico já
+processável; preserva o histórico do chat e a agenda. Pedidos do titular no
+WhatsApp continuam encaminhados à recepção humana. Não há nova tela de memória.
 
 ## A automação não fala com o banco
 
@@ -116,6 +155,7 @@ empresa nem de cliente — nenhuma rota da API aceita esses parâmetros.
 | `criar consulta` | `POST /api/ai/agendamentos` |
 | `reagendar consulta` | `POST /api/ai/agendamentos/reagendar` |
 | `cancelar consulta` | `POST /api/ai/agendamentos/cancelar` |
+| `confirmar consulta` | `POST /api/ai/agendamentos/confirmar` |
 | `atualizar cadastro` | `POST /api/ai/cliente` |
 | `repetir escrita` | repete o pedido anterior, com o mesmo corpo |
 
@@ -288,6 +328,18 @@ A ação guarda tipo, horário, serviço, profissional, consulta e validade. O
 cliente confirma; o sistema executa exatamente aquela ação; a chave é apagada.
 Um "sim" sem ação pendente válida não cria, não altera e não cancela nada.
 
+`montar contexto` lê a pendência pela referência explícita ao nó
+`Redis - ler ação pendente`. O GET seguinte, `Redis - ler estado`, devolve
+somente `{ estado }`, sem preservar a pendência na entrada. Ler ambos de
+`$input` fazia a confirmação perder a ação antes de chegar à API. T147 reproduz
+as duas saídas separadas, incluindo pendência ausente ou corrompida.
+
+A confirmação de presença do lembrete tem saída própria em `tipo da ação`,
+ligada a `confirmar consulta`. Ela usa `/api/ai/agendamentos/confirmar` e o mesmo
+caminho de repetição e verificação das demais operações. T148 cobre as quatro
+rotas completas até URL e corpo HTTP. Ao importar, selecione nesse novo nó a
+credencial Header Auth `Agenda Magnetica - token da automacao`.
+
 No WhatsApp o cliente lê no ônibus e responde depois: com 10 min, quem voltava
 em 20 ouvia "esse horário já expirou" sobre um horário que ninguém tinha pegado.
 Alongar não duplica agendamento — a API revalida na escrita e devolve
@@ -421,7 +473,7 @@ const EVOLUTION_BASE = 'https://evo.fixwear.com.br';
 ```
 
 Elas saem no item como `api_base` e `evolution_base` (já sem barra no fim). Os
-12 nós HTTP montam a URL a partir de uma das duas: os 8 de agenda usam
+nós HTTP montam a URL a partir de uma das duas: os de `/api/ai/*` usam
 `$('normalizar entrada').first().json.api_base`, e `evo digitando`,
 `evo enviar mensagem`, `buscar áudio` e `buscar imagem` usam
 `...json.evolution_base`. Não são segredo: são origem pública de serviço — e o
@@ -436,13 +488,13 @@ Segredo só entra como **credencial** do n8n, cifrada no banco pela
 | Credencial | Tipo | Onde | Conteúdo |
 | --- | --- | --- | --- |
 | `Agenda Magnetica - webhook Evolution` | Header Auth | `Webhook` | o mesmo header configurado na Evolution API |
-| `Agenda Magnetica - token da automacao` | Header Auth | os 8 nós de `/api/ai/*` | nome `X-Automation-Token`, valor igual ao `AUTOMATION_API_TOKEN` do backend |
+| `Agenda Magnetica - token da automacao` | Header Auth | todos os nós de `/api/ai/*`, incluindo `confirmar consulta` | nome `X-Automation-Token`, valor igual ao `AUTOMATION_API_TOKEN` do backend |
 | `Agenda Magnetica - Evolution API` | Header Auth | `evo digitando`, `evo enviar mensagem`, `buscar áudio`, `buscar imagem` — e `avisar operador`, no workflow de erro | nome `apikey`, valor da chave da Evolution |
 | Redis | Redis | os **20** nós `Redis - ...` | **banco 1** (o 0 é a fila do n8n) |
 | OpenAI | OpenAI | `modelo interpretador`, `transcrever áudio`, `analisar imagem` | — |
 
-Uma credencial Header Auth serve os oito nós de agenda ao mesmo tempo: crie uma
-só e selecione nos oito. Não há mais credencial Supabase no workflow.
+Uma credencial Header Auth serve todos os nós de agenda ao mesmo tempo: crie uma
+só e selecione em todos eles. Não há mais credencial Supabase no workflow.
 
 Quatro nós novos entram nessa conta: `buscar áudio` e `buscar imagem` usam a
 credencial da Evolution; `Redis - envio próprio?`, `Redis - marcar envio
@@ -452,7 +504,7 @@ execução no meio, depois de a mensagem já ter sido enviada.
 
 ### `settings.errorWorkflow` precisa do id
 
-A V2 traz `"errorWorkflow": "CONFIGURAR_NO_N8N_ERRO"`. Isso é um marcador, não
+A V2 traz `"errorWorkflow": "RcPiPwpM0sNMKkhcERRO"`. Isso é um marcador, não
 um id: importe `AgendaMagnetica-erro.n8n.json`, copie o id que o n8n atribuir
 (está na URL do editor) e cole em *Settings → Error workflow* da V2. Com o
 marcador no lugar do id, o alerta simplesmente não dispara — e o n8n não
@@ -752,8 +804,8 @@ acesso direto ao banco de dentro do n8n. Não reimporte.
 
 | Tema | V1 | V2 |
 | --- | --- | --- |
-| Chamadas de IA por mensagem | 3 ou mais | 1 |
-| Agentes / modelos / memórias | 7 / 7 / 7 | 1 / 1 / 0 |
+| Chamadas de IA por mensagem | 3 ou mais | até 3, com funções separadas |
+| IA e memória | agentes e memórias misturados | interpretador n8n, redator/revisor backend, perfil no banco |
 | Saída do classificador | texto livre + `JSON.parse` | saída estruturada validada fora da IA |
 | Empresa | derivada do telefone do cliente | derivada da instância, **no servidor** |
 | Acesso a dados | PostgREST com `service_role` dentro do n8n | `/api/ai/*` com token de automação |
