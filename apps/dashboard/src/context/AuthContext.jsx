@@ -55,6 +55,12 @@ export const AuthProvider = ({ children }) => {
 
   useEffect(() => {
     refreshUser().finally(() => setLoading(false));
+    const id = setInterval(refreshUser, 60000);
+    window.addEventListener('focus', refreshUser);
+    return () => {
+      clearInterval(id);
+      window.removeEventListener('focus', refreshUser);
+    };
   }, [refreshUser]);
 
   const login = async (email, senha) => {

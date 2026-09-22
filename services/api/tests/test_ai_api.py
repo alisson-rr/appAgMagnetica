@@ -1386,14 +1386,14 @@ def test_conversa_nunca_devolvida_continua_pausada(monkeypatch):
     assert dados["pausado"] is True
 
 
-def test_sem_inicio_da_pausa_o_seguro_e_continuar_calado(monkeypatch):
+def test_sem_pausa_registrada_o_atendimento_pode_seguir(monkeypatch):
     """Nao da para saber se a devolucao veio antes ou depois.
 
     Continuar calado no maximo atrasa a IA ate a pausa expirar sozinha; o
     contrario faria a recepcao responder por cima de uma pessoa atendendo.
     """
     dados = _handoff(monkeypatch, liberada_em="2026-09-09T12:10:00+00:00", pausada_em=None)
-    assert dados["pausado"] is True
+    assert dados["pausado"] is False
 
 
 def test_devolucao_de_outra_empresa_nao_libera_esta(monkeypatch):
@@ -1425,7 +1425,7 @@ def test_lembretes_entrega_o_que_a_funcao_ja_marcou(monkeypatch):
     O corpo nao tem `instance_name` — quem chama e um relogio, e cada linha sai
     com a instancia da propria empresa.
     """
-    banco = banco_com(rpcs={"fn_claim_lembretes": [dict(LINHA_DE_LEMBRETE)]})
+    banco = banco_com(rpcs={"fn_claim_lembretes_v2": [dict(LINHA_DE_LEMBRETE)]})
 
     with http_com(monkeypatch, banco) as http:
         resposta = http.post("/api/ai/lembretes/pendentes", headers=CABECALHO, json={})
@@ -1449,7 +1449,7 @@ def test_lembrete_sem_telefone_ou_instancia_nao_e_entregue(monkeypatch):
     """
     sem_telefone = dict(LINHA_DE_LEMBRETE, id_consulta=1, telefone=None)
     sem_instancia = dict(LINHA_DE_LEMBRETE, id_consulta=2, instance_name=None)
-    banco = banco_com(rpcs={"fn_claim_lembretes": [sem_telefone, sem_instancia,
+    banco = banco_com(rpcs={"fn_claim_lembretes_v2": [sem_telefone, sem_instancia,
                                                    dict(LINHA_DE_LEMBRETE)]})
 
     with http_com(monkeypatch, banco) as http:
@@ -1461,7 +1461,7 @@ def test_lembrete_sem_telefone_ou_instancia_nao_e_entregue(monkeypatch):
 
 def test_lembretes_exige_o_token_da_automacao(monkeypatch):
     """A rota atravessa empresas: sem o token ela nao pode nem ser alcancada."""
-    banco = banco_com(rpcs={"fn_claim_lembretes": [dict(LINHA_DE_LEMBRETE)]})
+    banco = banco_com(rpcs={"fn_claim_lembretes_v2": [dict(LINHA_DE_LEMBRETE)]})
 
     with http_com(monkeypatch, banco) as http:
         resposta = http.post("/api/ai/lembretes/pendentes", json={})

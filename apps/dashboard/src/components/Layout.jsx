@@ -82,7 +82,7 @@ const Layout = ({ children }) => {
   usePageTitle();
 
   const isActive = (path) => location.pathname === path;
-  const emTeste = user?.status_assinatura === 'trial';
+  const emTeste = user?.status_assinatura === 'trial' && !user?.piloto_ativo;
 
   return (
     <div className="min-h-screen bg-background">
@@ -197,6 +197,11 @@ const Layout = ({ children }) => {
       </nav>
 
       <main className="pb-24 pt-16 md:pb-0 md:pl-64 md:pt-0">
+        {user?.piloto_ativo && (
+          <p className="border-b bg-accent/70 px-4 py-2.5 text-sm md:px-8">
+            Piloto liberado até {new Date(user.piloto_ate).toLocaleString('pt-BR')}.
+          </p>
+        )}
         {emTeste && (
           <div className="border-b border-border/70 bg-accent/70">
             <div className="mx-auto flex max-w-7xl flex-wrap items-center gap-x-3 gap-y-1 px-4 py-2.5 text-sm md:px-8">

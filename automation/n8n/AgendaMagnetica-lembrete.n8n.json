@@ -80,7 +80,7 @@
     },
     {
       "parameters": {
-        "jsCode": "// Monta uma mensagem de lembrete por consulta e a pendencia que o \"confirmo\"\n// do cliente vai fechar. Nada aqui passa por modelo: o texto e deterministico,\n// e a IA so entra quando o cliente responde.\n//\n// O relogio nao tem conversa, entao cada item carrega a propria instancia e o\n// proprio contato. Nenhuma chave e derivada de outro item.\n\nconst OFFSET_MIN = -180; // America/Sao_Paulo, sem horario de verao desde 2019\nconst DIAS = ['domingo', 'segunda-feira', 'terca-feira', 'quarta-feira',\n  'quinta-feira', 'sexta-feira', 'sabado'];\n// A pendencia precisa sobreviver da vespera ate a hora da consulta. am:estado\n// (6 h) nao serve de memoria aqui, e e por isso que a pendencia do lembrete\n// carrega `origem` e e isenta da guarda de \"o ultimo turno falou dela\".\nconst FOLGA_APOS_INICIO_MIN = 30;\n\nconst envelope = $('buscar lembretes').first().json || {};\nconst lembretes = (envelope.ok && envelope.data && Array.isArray(envelope.data.lembretes))\n  ? envelope.data.lembretes\n  : [];\n\nfunction texto(valor) {\n  return String(valor === null || valor === undefined ? '' : valor).trim();\n}\n\nfunction primeiroNome(nome) {\n  const limpo = texto(nome).split(/\\s+/)[0] || '';\n  if (limpo.length < 2 || /\\d/.test(limpo)) return '';\n  return limpo.charAt(0).toUpperCase() + limpo.slice(1).toLowerCase();\n}\n\nfunction quando(iso) {\n  const d = new Date(iso);\n  if (Number.isNaN(d.getTime())) return null;\n  const local = new Date(d.getTime() + OFFSET_MIN * 60000);\n  const dois = (n) => String(n).padStart(2, '0');\n  return {\n    dia: DIAS[local.getUTCDay()],\n    data: `${dois(local.getUTCDate())}/${dois(local.getUTCMonth() + 1)}`,\n    hora: `${dois(local.getUTCHours())}h${local.getUTCMinutes() ? dois(local.getUTCMinutes()) : ''}`,\n  };\n}\n\nconst itens = [];\n\nfor (const lembrete of lembretes) {\n  const telefone = texto(lembrete.telefone).replace(/\\D/g, '');\n  const instancia = texto(lembrete.instance_name);\n  const inicio = texto(lembrete.inicio);\n  const idConsulta = Number(lembrete.id_consulta);\n  const momento = quando(inicio);\n  // Sem qualquer uma destas quatro coisas nao ha lembrete possivel. A consulta\n  // ja ficou marcada como enviada na API, e assim fica: reenviar na proxima\n  // passada nao resolveria um cadastro incompleto.\n  if (!telefone || !instancia || !idConsulta || !momento) continue;\n\n  const nome = primeiroNome(lembrete.cliente_nome);\n  const saudacao = nome ? `Oi, ${nome}!` : 'Oi!';\n  const servico = texto(lembrete.servico);\n  const profissional = texto(lembrete.profissional);\n  const comQuem = profissional ? ` com ${profissional}` : '';\n  const oQue = servico ? `${servico}${comQuem}` : `seu atendimento${comQuem}`;\n\n  // O painel promete cinco variaveis ao dono. Se elas nao forem trocadas aqui, o\n  // cliente recebe \"{nome}\" com chaves e tudo. Todos os valores sao nossos e\n  // deterministicos - nenhum vem de modelo.\n  const VARIAVEIS = {\n    nome: nome || 'tudo bem',\n    data: `${momento.dia}, dia ${momento.data}`,\n    horario: momento.hora,\n    profissional: profissional,\n    procedimento: servico,\n  };\n  function preencher(modelo) {\n    return modelo.replace(/\\{(nome|data|horario|profissional|procedimento)\\}/g,\n      (_todo, chave) => VARIAVEIS[chave] || '');\n  }\n\n  const modelo = texto(lembrete.mensagem);\n  const temVariavel = /\\{(nome|data|horario|profissional|procedimento)\\}/.test(modelo);\n  // Com variavel, o texto do dono E a mensagem. Sem variavel, ele vira abertura\n  // e o horario continua vindo daqui - senao um lembrete anunciaria uma coisa e\n  // a pendencia confirmaria outra.\n  const padrao = `${saudacao} Passando para confirmar ${oQue} `\n    + `${momento.dia}, dia ${momento.data}, as ${momento.hora}.`;\n  const corpo = temVariavel\n    ? preencher(modelo)\n    : (modelo ? `${modelo}\\n\\n${padrao}` : padrao);\n\n  // A pergunta e sempre nossa, mesmo quando o dono escreveu a mensagem inteira:\n  // e ela que diz ao cliente o que responder para fechar a pendencia.\n  const partes = [corpo,\n    'Voce confirma? Responda *sim* para confirmar, ou me diga se precisar remarcar.'];\n\n  // `expira_em` vai um pouco alem do inicio: quem responde \"sim\" cinco minutos\n  // antes da consulta ainda esta confirmando presenca, nao reabrindo agenda.\n  const expira = new Date(new Date(inicio).getTime() + FOLGA_APOS_INICIO_MIN * 60000);\n\n  itens.push({\n    json: {\n      instance: instancia,\n      remote_jid: `${telefone}@s.whatsapp.net`,\n      texto: partes.join('\\n\\n'),\n      pendente: {\n        tipo: 'confirmar',\n        // Marca que esta pendencia nasceu FORA da conversa. `resolver e decidir`\n        // usa isso para nao descarta-la quando am:estado ja expirou.\n        origem: 'lembrete',\n        consulta_id: idConsulta,\n        inicio,\n        acao_id: `lembrete-${idConsulta}`,\n        expira_em: expira.toISOString(),\n      },\n      // TTL da chave: ate a consulta comecar, mais a folga. Nunca menos que um\n      // minuto, senao a chave morreria antes de a mensagem chegar.\n      ttl_pendente: Math.max(60, Math.round((expira.getTime() - Date.now()) / 1000)),\n    },\n  });\n}\n\nreturn itens;\n"
+        "jsCode": "// Monta uma mensagem de lembrete por consulta e a pendencia que o \"confirmo\"\n// do cliente vai fechar. Nada aqui passa por modelo: o texto e deterministico,\n// e a IA so entra quando o cliente responde.\n//\n// O relogio nao tem conversa, entao cada item carrega a propria instancia e o\n// proprio contato. Nenhuma chave e derivada de outro item.\n\nconst OFFSET_MIN = -180; // America/Sao_Paulo, sem horario de verao desde 2019\nconst DIAS = ['domingo', 'segunda-feira', 'terca-feira', 'quarta-feira',\n  'quinta-feira', 'sexta-feira', 'sabado'];\n// A pendencia precisa sobreviver da vespera ate a hora da consulta. am:estado\n// (6 h) nao serve de memoria aqui, e e por isso que a pendencia do lembrete\n// carrega `origem` e e isenta da guarda de \"o ultimo turno falou dela\".\nconst FOLGA_APOS_INICIO_MIN = 30;\n\nconst envelope = $('buscar lembretes').first().json || {};\nconst lembretes = (envelope.ok && envelope.data && Array.isArray(envelope.data.lembretes))\n  ? envelope.data.lembretes\n  : [];\n\nfunction texto(valor) {\n  return String(valor === null || valor === undefined ? '' : valor).trim();\n}\n\nfunction primeiroNome(nome) {\n  const limpo = texto(nome).split(/\\s+/)[0] || '';\n  if (limpo.length < 2 || /\\d/.test(limpo)) return '';\n  return limpo.charAt(0).toUpperCase() + limpo.slice(1).toLowerCase();\n}\n\nfunction quando(iso) {\n  const d = new Date(iso);\n  if (Number.isNaN(d.getTime())) return null;\n  const local = new Date(d.getTime() + OFFSET_MIN * 60000);\n  const dois = (n) => String(n).padStart(2, '0');\n  return {\n    dia: DIAS[local.getUTCDay()],\n    data: `${dois(local.getUTCDate())}/${dois(local.getUTCMonth() + 1)}`,\n    hora: `${dois(local.getUTCHours())}h${local.getUTCMinutes() ? dois(local.getUTCMinutes()) : ''}`,\n  };\n}\n\nconst itens = [];\n\nfor (const lembrete of lembretes) {\n  const telefone = texto(lembrete.telefone).replace(/\\D/g, '');\n  const instancia = texto(lembrete.instance_name);\n  const inicio = texto(lembrete.inicio);\n  const idConsulta = Number(lembrete.id_consulta);\n  const momento = quando(inicio);\n  // Sem qualquer uma destas quatro coisas nao ha lembrete possivel. A consulta\n  // ja ficou marcada como enviada na API, e assim fica: reenviar na proxima\n  // passada nao resolveria um cadastro incompleto.\n  if (!telefone || !instancia || !idConsulta || !momento) continue;\n\n  const nome = primeiroNome(lembrete.cliente_nome);\n  const saudacao = nome ? `Oi, ${nome}!` : 'Oi!';\n  const servico = texto(lembrete.servico);\n  const profissional = texto(lembrete.profissional);\n  const comQuem = profissional ? ` com ${profissional}` : '';\n  const oQue = servico ? `${servico}${comQuem}` : `seu atendimento${comQuem}`;\n\n  // O painel promete cinco variaveis ao dono. Se elas nao forem trocadas aqui, o\n  // cliente recebe \"{nome}\" com chaves e tudo. Todos os valores sao nossos e\n  // deterministicos - nenhum vem de modelo.\n  const VARIAVEIS = {\n    nome: nome || 'tudo bem',\n    data: `${momento.dia}, dia ${momento.data}`,\n    horario: momento.hora,\n    profissional: profissional,\n    procedimento: servico,\n  };\n  function preencher(modelo) {\n    return modelo.replace(/\\{(nome|data|horario|profissional|procedimento)\\}/g,\n      (_todo, chave) => VARIAVEIS[chave] || '');\n  }\n\n  const modelo = texto(lembrete.mensagem);\n  const temVariavel = /\\{(nome|data|horario|profissional|procedimento)\\}/.test(modelo);\n  // Com variavel, o texto do dono E a mensagem. Sem variavel, ele vira abertura\n  // e o horario continua vindo daqui - senao um lembrete anunciaria uma coisa e\n  // a pendencia confirmaria outra.\n  const padrao = `${saudacao} Passando para confirmar ${oQue} `\n    + `${momento.dia}, dia ${momento.data}, as ${momento.hora}.`;\n  const corpo = temVariavel\n    ? preencher(modelo)\n    : (modelo ? `${modelo}\\n\\n${padrao}` : padrao);\n\n  // A pergunta e sempre nossa, mesmo quando o dono escreveu a mensagem inteira:\n  // e ela que diz ao cliente o que responder para fechar a pendencia.\n  const jaPede = /confirm[ea][^.!?]*(?:presença|presenca|respond)|voc[eê] confirma\\?/i.test(corpo);\n  const partes = jaPede ? [corpo] : [corpo, 'Você confirma sua presença? Responda *sim*, ou me diga se precisar remarcar.'];\n\n  // `expira_em` vai um pouco alem do inicio: quem responde \"sim\" cinco minutos\n  // antes da consulta ainda esta confirmando presenca, nao reabrindo agenda.\n  const expira = new Date(new Date(inicio).getTime() + FOLGA_APOS_INICIO_MIN * 60000);\n\n  itens.push({\n    json: {\n      instance: instancia,\n      id_consulta: idConsulta,\n      tentativa_id: lembrete.tentativa_id,\n      remote_jid: `${telefone}@s.whatsapp.net`,\n      texto: partes.join('\\n\\n'),\n      pendente: {\n        enviado_em: new Date().toISOString(),\n        tipo: 'confirmar',\n        // Marca que esta pendencia nasceu FORA da conversa. `resolver e decidir`\n        // usa isso para nao descarta-la quando am:estado ja expirou.\n        origem: 'lembrete',\n        consulta_id: idConsulta,\n        inicio,\n        acao_id: `lembrete-${idConsulta}-${lembrete.tentativa_id || inicio}`,\n        expira_em: expira.toISOString(),\n      },\n      // TTL da chave: ate a consulta comecar, mais a folga. Nunca menos que um\n      // minuto, senao a chave morreria antes de a mensagem chegar.\n      ttl_pendente: Math.max(60, Math.round((expira.getTime() - Date.now()) / 1000)),\n    },\n  });\n}\n\nreturn itens;\n"
       },
       "id": "montar lembretes",
       "name": "montar lembretes",
@@ -95,15 +95,14 @@
       "parameters": {
         "method": "POST",
         "url": "={{ $('bases').first().json.evolution_base + '/message/sendText/' + $json.instance }}",
-        "sendHeaders": false,
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
         "sendBody": true,
         "specifyBody": "json",
         "jsonBody": "={{ JSON.stringify({ number: $json.remote_jid, text: $json.texto }) }}",
         "options": {
           "timeout": 15000
-        },
-        "authentication": "genericCredentialType",
-        "genericAuthType": "httpHeaderAuth"
+        }
       },
       "id": "evo enviar lembrete",
       "name": "evo enviar lembrete",
@@ -125,7 +124,7 @@
     {
       "parameters": {
         "operation": "set",
-        "key": "=am:enviada:{{ $('montar lembretes').item.json.instance }}:{{ $json.key ? $json.key.id : 'sem-id' }}",
+        "key": "=am:enviada:{{ $('montar lembretes').item.json.instance }}:{{ $('evo enviar lembrete').item.json.key.id }}",
         "value": "=1",
         "keyType": "string",
         "expire": true,
@@ -142,15 +141,15 @@
       "onError": "continueRegularOutput",
       "credentials": {
         "redis": {
-          "id": "MjHp9MBk7uo3htMTIS",
-          "name": "Agenda Magnetica - Redis"
+          "id": "MjHp9MBk7uo3htMT",
+          "name": "Redis account"
         }
       }
     },
     {
       "parameters": {
         "operation": "set",
-        "key": "=am:pendente:{{ $('montar lembretes').item.json.instance }}:{{ (() => { const k = $('evo enviar lembrete').item.json.key; return (k && k.remoteJid) || $('montar lembretes').item.json.remote_jid; })() }}",
+        "key": "=am:lembrete:{{ $('montar lembretes').item.json.instance }}:{{ (() => { const k = $('evo enviar lembrete').item.json.key; return (k && k.remoteJid) || $('montar lembretes').item.json.remote_jid; })() }}",
         "value": "={{ JSON.stringify($('montar lembretes').item.json.pendente) }}",
         "keyType": "string",
         "expire": true,
@@ -167,8 +166,8 @@
       "onError": "continueRegularOutput",
       "credentials": {
         "redis": {
-          "id": "MjHp9MBk7uo3htMTIS",
-          "name": "Agenda Magnetica - Redis"
+          "id": "MjHp9MBk7uo3htMT",
+          "name": "Redis account"
         }
       }
     },
@@ -193,6 +192,84 @@
         640,
         480
       ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $('bases').first().json.api_base + '/api/ai/lembretes/resultado' }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ instance_name: $('montar lembretes').item.json.instance, id_consulta: $('montar lembretes').item.json.id_consulta, tentativa_id: $('montar lembretes').item.json.tentativa_id, resultado: $json.key?.id && !$json.error ? 'aceito' : 'incerto', provider_id: $json.key?.id || null }) }}",
+        "options": {
+          "timeout": 20000,
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
+        },
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth"
+      },
+      "id": "registrar resultado do lembrete",
+      "name": "registrar resultado do lembrete",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        160,
+        460
+      ],
+      "onError": "continueRegularOutput",
+      "retryOnFail": true,
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "ThDetmjOr3Z7Tdhj",
+          "name": "Agenda Magnetica - token da automacao"
+        }
+      }
+    },
+    {
+      "name": "lembrete aceito?",
+      "id": "lembrete-aceito",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        950,
+        300
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "ack",
+              "leftValue": "={{ $json.ok === true && $('evo enviar lembrete').item.json.key?.id && !$('evo enviar lembrete').item.json.error ? true : false }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      }
     }
   ],
   "connections": {
@@ -244,14 +321,14 @@
       "main": [
         [
           {
-            "node": "Redis - marcar envio proprio",
+            "node": "registrar resultado do lembrete",
             "type": "main",
             "index": 0
           }
         ],
         [
           {
-            "node": "fim - envio recusado",
+            "node": "registrar resultado do lembrete",
             "type": "main",
             "index": 0
           }
@@ -274,6 +351,35 @@
         [
           {
             "node": "fim - lembrete enviado",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "registrar resultado do lembrete": {
+      "main": [
+        [
+          {
+            "node": "lembrete aceito?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "lembrete aceito?": {
+      "main": [
+        [
+          {
+            "node": "Redis - marcar envio proprio",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "fim - envio recusado",
             "type": "main",
             "index": 0
           }

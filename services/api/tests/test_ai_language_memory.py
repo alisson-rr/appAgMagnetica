@@ -63,6 +63,24 @@ def test_crise_e_ausencia_de_chave_nao_chamam_modelo(monkeypatch):
     assert chamadas == []
 
 
+def test_redator_nao_remove_pergunta_necessaria(monkeypatch):
+    base = {'resposta_base': 'Claro, te ajudo! Limpeza de pele na sexta às 16h40. Posso marcar?',
+            'tipo_resposta': 'pedir_confirmacao', 'operacao_verificada': False}
+    modelo_fake(monkeypatch, [{'texto':'Claro! Limpeza de pele na sexta às 16h40.'}])
+    r = asyncio.run(ai_language.redigir(base))
+    assert r['texto'] == base['resposta_base']
+    assert r['motivo'] == 'pergunta_ausente'
+
+
+def test_falha_do_redator_conserva_base_acolhedora_e_fatos(monkeypatch):
+    base = {'resposta_base': 'Prontinho, remarcado! Limpeza de pele na quarta às 16h40 com Paula. Se precisar, é só me chamar.',
+            'tipo_resposta':'reagendado','operacao_verificada':True}
+    modelo_fake(monkeypatch, [TimeoutError()])
+    r=asyncio.run(ai_language.redigir(base))
+    assert r['texto'] == base['resposta_base']
+    assert r['redacao'] == 'reserva'
+
+
 def pedido_redacao(**extra):
     return {"instance_name": "agm_1_studio", "telefone": TELEFONE,
             "resposta_base": BASE["resposta_base"], "tipo_resposta": "agendado", **extra}

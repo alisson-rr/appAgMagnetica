@@ -384,9 +384,9 @@
     "semantic_hash": ""
   },
   "apps/dashboard/src/pages/Configuracoes.jsx": {
-    "mtime": 1790024339.292983,
-    "seen": 1790024814.6082299,
-    "ast_hash": "8b9f5b2e5d7d5a0d1455dffecae5b0bc",
+    "mtime": 1790020881.6945994,
+    "seen": 1790022025.4998176,
+    "ast_hash": "dd889e33e1a7f95bb17121f5388f5fa1",
     "semantic_hash": ""
   },
   "apps/dashboard/src/pages/Dashboard.jsx": {
@@ -1419,12 +1419,6 @@
     "mtime": 1790018156.3528287,
     "seen": 1790022025.4998176,
     "ast_hash": "f8a1024431b00c395416dbd5c1aac22b",
-    "semantic_hash": ""
-  },
-  "scripts/demo_psicologia.sql": {
-    "mtime": 1790024475.6542585,
-    "seen": 1790024814.6082299,
-    "ast_hash": "8af73d256053649e60f850f7be0c8de5",
     "semantic_hash": ""
   }
 }

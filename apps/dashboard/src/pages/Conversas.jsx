@@ -28,6 +28,19 @@ function apelido(conversa) {
   return digitos || 'Contato';
 }
 
+function comHumano(c) {
+  return Math.max(Date.parse(c.humano_solicitado_em) || 0, Date.parse(c.humano_assumido_em) || 0)
+    > (Date.parse(c.ia_liberada_em) || 0);
+}
+
+const AVISOS = {
+  aceito: 'Aviso aceito pelo WhatsApp do responsável.',
+  sem_destinatario: 'Configure o WhatsApp do responsável em Configurações → Automação.',
+  destinatario_e_cliente: 'O número do responsável é o mesmo do cliente. Revise a configuração.',
+  incerto: 'Não foi possível confirmar o envio do aviso. Confira o WhatsApp.',
+  processando: 'O envio do aviso foi iniciado; o resultado ainda não foi registrado.',
+};
+
 const AUTORES = {
   ia: { rotulo: 'Recepção', Icone: Bot },
   painel: { rotulo: 'Você', Icone: User },
@@ -41,15 +54,19 @@ export default function Conversas() {
   const [carregando, setCarregando] = useState(true);
   const [enviando, setEnviando] = useState(false);
   const [devolvendo, setDevolvendo] = useState(false);
+  const [erro, setErro] = useState('');
   const fimDaLista = useRef(null);
 
   const carregarConversas = useCallback(async () => {
     try {
       const { data } = await api.get('/conversas');
-      setConversas(Array.isArray(data) ? data : []);
+      const lista = Array.isArray(data) ? data : [];
+      lista.sort((a, b) => Number(comHumano(b)) - Number(comHumano(a)));
+      setConversas(lista);
+      setAberta((atual) => atual ? lista.find((c) => c.id === atual.id) || atual : null);
+      setErro('');
     } catch {
-      // Silencioso de propósito: é uma volta de fundo a cada 8 s, e um toast a
-      // cada falha de rede transformaria a tela num carrossel de erro.
+      setErro('Não consegui atualizar as conversas. Vou tentar novamente.');
     } finally {
       setCarregando(false);
     }
@@ -118,6 +135,7 @@ export default function Conversas() {
     setDevolvendo(true);
     try {
       await api.post(`/conversas/${aberta.id}/devolver-ia`);
+      await carregarConversas();
       toast.success('A recepção volta a responder esta conversa.');
     } catch (error) {
       toast.error(error.response?.data?.detail || 'Não consegui devolver agora.');
@@ -126,14 +144,27 @@ export default function Conversas() {
     }
   };
 
+  const assumir = async () => {
+    if (!aberta || devolvendo) return;
+    setDevolvendo(true);
+    try {
+      await api.post(`/conversas/${aberta.id}/assumir`);
+      await carregarConversas();
+      toast.success('Conversa assumida. A recepção fica pausada até você devolver.');
+    } catch (error) {
+      toast.error(error.response?.data?.detail || 'Não consegui assumir agora.');
+    } finally { setDevolvendo(false); }
+  };
+
   if (carregando) return <Loading label="Carregando as conversas" />;
 
   return (
     <div>
       <PageHeader
         title="Conversas"
-        subtitle="O WhatsApp do negócio. Quando você responde aqui, a recepção automática se cala por 30 minutos nessa conversa — ou até você devolver."
+        subtitle="Assuma uma conversa para atender. A recepção fica pausada até você devolver."
       />
+      {erro && <p role="status" className="mb-3 text-sm text-destructive">{erro}</p>}
 
       {conversas.length === 0 ? (
         <EmptyState
@@ -166,6 +197,7 @@ export default function Conversas() {
                         </span>
                       )}
                     </div>
+                    {comHumano(conversa) && <p className="text-sm font-semibold text-primary">{conversa.humano_assumido_em && Date.parse(conversa.humano_assumido_em) > (Date.parse(conversa.ia_liberada_em) || 0) ? 'Em atendimento humano' : 'Precisa de você'}</p>}
                     <p className="truncate text-sm text-muted-foreground">
                       {conversa.ultima_mensagem || 'sem mensagens'}
                     </p>
@@ -185,6 +217,7 @@ export default function Conversas() {
               <>
                 <div className="flex flex-wrap items-center justify-between gap-2 border-b p-4">
                   <h2 className="font-display text-lg font-bold">{apelido(aberta)}</h2>
+                  <Button variant="outline" size="sm" onClick={assumir} disabled={devolvendo}>Assumir conversa</Button>
                   {/*
                     Responder aqui cala a recepção por 30 minutos. Este botão é a
                     saída para quem respondeu uma coisa rápida e quer a IA de
@@ -201,6 +234,8 @@ export default function Conversas() {
                     {devolvendo ? 'Devolvendo...' : 'Devolver para a recepção'}
                   </Button>
                 </div>
+
+                {comHumano(aberta) && <p role="status" className="border-b px-4 py-2 text-sm">Recepção pausada. {AVISOS[aberta.aviso_resultado] || 'Você pode responder por aqui.'}</p>}
 
                 <div className="flex-1 overflow-y-auto p-4">
                   <ul className="flex flex-col gap-3">

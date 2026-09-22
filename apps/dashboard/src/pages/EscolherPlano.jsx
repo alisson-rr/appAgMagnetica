@@ -21,7 +21,7 @@ const EscolherPlano = () => {
   const { user, logout } = useAuth();
 
   const fimDoTrial = dataDoTrial(user?.trial_fim);
-  const podeVoltarAoPainel = Boolean(user && !user.trial_expirado);
+  const podeVoltarAoPainel = Boolean(user && (!user.trial_expirado || user.piloto_ativo));
 
   // PONTO DE INTEGRAÇÃO DE COBRANÇA
   // Hoje este handler só anota a escolha e devolve o usuário ao painel.
@@ -64,6 +64,11 @@ const EscolherPlano = () => {
           <img src="/assets/logo.png" alt="Agenda Magnética" className="h-16" />
           {user && (
             <div className="flex flex-wrap items-center gap-2">
+              {user.role === 'admin' && (
+                <Button variant="outline" onClick={() => navigate('/configuracoes')}>
+                  Administrar pilotos
+                </Button>
+              )}
               {podeVoltarAoPainel && (
                 <Button variant="outline" onClick={() => navigate('/dashboard')}>
                   <ArrowLeft size={16} /> Voltar ao painel
@@ -76,7 +81,7 @@ const EscolherPlano = () => {
           )}
         </div>
 
-        {user?.trial_expirado && (
+        {user?.trial_expirado && !user?.piloto_ativo && (
           <p className="mt-6 rounded-2xl bg-coral-soft px-4 py-3 text-center text-sm font-semibold text-coral-deep">
             Seu período de teste terminou. Escolha um plano para continuar usando o painel.
           </p>

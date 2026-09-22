@@ -1,11 +1,11 @@
 # Graph Report - appAgMagnetica  (2026-09-21)
 
 ## Corpus Check
-- 209 files · ~371,018 words
+- 208 files · ~369,778 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 2198 nodes · 3790 edges · 232 communities (115 shown, 84 thin omitted)
+- 2196 nodes · 3787 edges · 234 communities (118 shown, 84 thin omitted)
 - Extraction: 100% EXTRACTED · 0% INFERRED · 0% AMBIGUOUS · INFERRED: 4 edges (avg confidence: 0.88)
 - Token cost: 0 input · 0 output
 
@@ -23,7 +23,7 @@
 - dashboard/package.json
 - Corte vertical seguro — Agenda Magnética
 - compilerOptions
-- ai_api.py
+- executar
 - Base oficial construída — Agenda Magnética
 - Index.tsx
 - scripts
@@ -60,7 +60,7 @@
 - Correções da automação — rodada de setembro de 2026
 - 10. O contexto da empresa: o que o dono escreve e a recepção responde
 - graphify
-- onboarding.js
+- dominio.py
 - axios
 - 8. Quinta rodada: catálogo de verdade e a guarda clínica pela raiz
 - test_erros_api.py
@@ -154,7 +154,7 @@
 - get_user_clinica_id
 - amanha_as
 - 2. Concluído
-- Diagnóstico do produto antigo
+- put
 - 3. Rotas (agente backend implementa; agente frontend consome)
 - Dashboard.jsx
 - post
@@ -169,7 +169,7 @@
 - typescript.md
 - extraction-spec.md
 - public.agenda_bloqueio
-- Posicionamento recomendado
+- AiError
 - date-fns
 - Fase 3 — Backend do onboarding: handoff
 - instancia_do_usuario
@@ -191,28 +191,31 @@
 - public.profissional_procedimento
 - public.consulta
 - breadcrumb.jsx
-- get_me
-- Plano de validação em 12 semanas
-- Experiência desejada
+- registrar_mensagem
+- garantir_instancia
+- ai_api.py
 - public.v_cliente_preferencias
 - ai_memory.py
 - memoria_atendimento.sql
 - tabs.jsx
 - public.usuarios
 - Revisão do atendimento com IA
-- Cliente ideal inicial
+- reagendar_agendamento
 - public.conversa
 - accordion.jsx
 - public.lancamento
-- Escopo do MVP vendável
-- Métricas que provam valor
-- Segurança e privacidade
+- Infraestrutura na VPS — o que já existe e o que este projeto ainda precisa
+- Decisões tomadas por causa deste projeto
+- Rollback
+- Configuração
 - Q: Revisar o atendimento no n8n: agendamentos, redacao acolhedora e preferencias entre visitas
 - settings.py
 - BancoIndisponivel
 - public.conversa
 - MVP para autônomos: implementação e validação
 - public.fn_solicitar_humano
+- ServicoForm.jsx
+- confirmar_agendamento
 - Q: Dá uma analisada no projeto, vê o que a gente precisa pra deixar ele com cara de MVP, pra eu poder prospectar clientes já e começar a usar ele na prática. Queria deixar as respostas mais humanas, simpáticas e calorosas.
 
 ## God Nodes (most connected - your core abstractions)
@@ -242,15 +245,15 @@
 ## Import Cycles
 - None detected.
 
-## Communities (232 total, 84 thin omitted)
+## Communities (234 total, 84 thin omitted)
 
 ### Community 0 - "server.py"
-Cohesion: 0.09
-Nodes (39): Ponte entre as funções serverless do Vercel e o backend em `services/api`. O…, field_validator, HTTPAuthorizationCredentials, put, ClienteCreate, ClienteUpdate, create_access_token(), create_cliente() (+31 more)
+Cohesion: 0.10
+Nodes (34): Ponte entre as funções serverless do Vercel e o backend em `services/api`. O…, HTTPAuthorizationCredentials, BloqueioCreate, ClienteCreate, ClienteUpdate, ConsultaCreate, create_access_token(), create_cliente() (+26 more)
 
 ### Community 1 - "utils.js"
-Cohesion: 0.20
-Nodes (21): ContasAPagarReceber(), emDia(), emReais(), VAZIO, EmptyState(), Loading(), PageHeader(), Button (+13 more)
+Cohesion: 0.21
+Nodes (19): ContasAPagarReceber(), emDia(), emReais(), VAZIO, EmptyState(), Loading(), PageHeader(), Button (+11 more)
 
 ### Community 2 - "App.jsx"
 Cohesion: 0.08
@@ -276,9 +279,9 @@ Nodes (26): 0. Resultado, 10. Encerramento, 1. Estado real verificado, 2. Errata
 Cohesion: 0.11
 Nodes (17): compilerOptions, allowImportingTsExtensions, isolatedModules, lib, module, moduleDetection, moduleResolution, noEmit (+9 more)
 
-### Community 8 - "ai_api.py"
-Cohesion: 0.05
-Nodes (113): Any, date, AiError, apagar_memoria(), atualizar_cliente(), AtualizarClienteRequest, autenticar_automacao(), BaseAutomacao (+105 more)
+### Community 8 - "executar"
+Cohesion: 0.14
+Nodes (29): apagar_memoria(), atualizar_cliente(), AtualizarClienteRequest, buscar_profissional_habitual(), cancelar_agendamento(), CancelarRequest, consulta_do_cliente(), consulta_por_chave() (+21 more)
 
 ### Community 9 - "Base oficial construída — Agenda Magnética"
 Cohesion: 0.11
@@ -361,8 +364,8 @@ Cohesion: 0.17
 Nodes (11): compilerOptions, allowJs, baseUrl, noImplicitAny, noUnusedLocals, noUnusedParameters, paths, skipLibCheck (+3 more)
 
 ### Community 30 - "Agenda Magnética — direção de produto 2026"
-Cohesion: 0.20
-Nodes (10): Agenda Magnética — direção de produto 2026, Automação: direção técnica, Critério para dizer “pronto para publicar”, Direção de comunicação e criativos, Modelo comercial para validar, O que foi analisado, Prioridade de atendimento registrada em 14/09/2026, Referências de mercado usadas (+2 more)
+Cohesion: 0.04
+Nodes (46): 1. A promessa era ampla demais, 2. O diferencial estava escondido, 3. O público parecia menor do que realmente é, 4. A comunicação criava desconfiança, 5. A base técnica não estava pronta para produção, Agenda Magnética — direção de produto 2026, Automação: direção técnica, Ações externas obrigatórias antes de qualquer publicação (+38 more)
 
 ### Community 31 - "compilerOptions"
 Cohesion: 0.33
@@ -381,8 +384,8 @@ Cohesion: 0.10
 Nodes (19): colunas(), cur(), fixture, parametrize, Detecta divergência entre o schema do banco e o que o backend espera. Roda…, Os literais que a API e o dashboard gravam têm de caber no CHECK., `date` descartaria a hora e duas ações do mesmo dia ficariam iguais., Sem preço congelado, reajustar o serviço reescreve o histórico emitido. (+11 more)
 
 ### Community 36 - "delete"
-Cohesion: 0.22
-Nodes (11): delete, apagar_lancamento(), delete_bloqueio(), delete_cliente(), delete_consulta(), delete_horario_clinica(), delete_procedimento(), delete_profissional() (+3 more)
+Cohesion: 0.20
+Nodes (12): delete, apagar_lancamento(), delete_bloqueio(), delete_cliente(), delete_consulta(), delete_disponibilidade(), delete_horario_clinica(), delete_procedimento() (+4 more)
 
 ### Community 37 - "toast.jsx"
 Cohesion: 0.39
@@ -412,9 +415,9 @@ Nodes (5): 11. Validação executada, 3. O que **não** foi corrigido e continua
 Cohesion: 0.20
 Nodes (10): 10.1 O campo já existia; o fio é que estava cortado, 10.2 A parte que quase passou em branco: o filtro engolia a resposta certa, 10.3 O texto entra no prompt, então é fronteira, 10.4 A sétima revisão adversarial: 20 achados, e o pior era meu, 10.5 A oitava revisão: parar de empilhar e separar as perguntas, 10.6 A nona revisão: o que cada simplificação da § 10.5 tinha levado junto, 10.7 A auditoria de estado: o agrupamento estava morto, e a fiação não tinha rede, 10.8 A verificação (+2 more)
 
-### Community 46 - "onboarding.js"
-Cohesion: 0.12
-Nodes (26): ConexaoWhatsApp(), ROTULOS_ESTADO, HorariosEditor(), atendenteSchema, DIAS_SEMANA, emailOpcional, formatarNumeroWa(), HORAS (+18 more)
+### Community 46 - "dominio.py"
+Cohesion: 0.16
+Nodes (17): date, exigir_inicio_valido(), exigir_nascimento_plausivel(), Data de nascimento que uma pessoa poderia ter. A data chega de uma conversa de…, Instante de início aceito para escrita: com fuso resolvido e no minuto. Segundo…, agora(), com_fuso_de_negocio(), _digitos() (+9 more)
 
 ### Community 48 - "8. Quinta rodada: catálogo de verdade e a guarda clínica pela raiz"
 Cohesion: 0.33
@@ -453,8 +456,8 @@ Cohesion: 0.25
 Nodes (7): public.fn_claim_lembretes(), public.cliente, public.consulta, public.info_clinica, public.procedimento, public.profissional, public.usuarios
 
 ### Community 113 - "Automação de atendimento — homologação"
-Cohesion: 0.05
-Nodes (41): 1. Por empresa — o botão do painel, 2. Por workflow — desativar no n8n, 3. Por token — rotacionar a credencial, A automação não fala com o banco, Ajustes rápidos, Antes de ativar, Automação de atendimento — homologação, Chaves do Redis (+33 more)
+Cohesion: 0.12
+Nodes (17): A automação não fala com o banco, Ajustes rápidos, Antes de ativar, Automação de atendimento — homologação, Chaves do Redis, Confirmação antes de qualquer escrita, `contexto da empresa` é o único que pode encerrar calado — e só às vezes, Devolver a conversa para a recepção (+9 more)
 
 ### Community 114 - "test_regras.mjs"
 Cohesion: 0.08
@@ -545,16 +548,16 @@ Cohesion: 0.06
 Nodes (87): banco_com(), conectada(), conversa(), dubles_da_evolution(), em(), empresa(), evolution_muda(), http_com() (+79 more)
 
 ### Community 141 - "Onboarding.jsx"
-Cohesion: 0.12
-Nodes (33): Configuracoes, CampoErro(), descricaoDoCampo(), ProfissionalForm(), vazio, ServicoForm(), vazio, Switch (+25 more)
+Cohesion: 0.08
+Nodes (53): Configuracoes, CampoErro(), descricaoDoCampo(), ConexaoWhatsApp(), ROTULOS_ESTADO, HorariosEditor(), ProfissionalForm(), vazio (+45 more)
 
 ### Community 142 - "Fase 3 — Onboarding: handoff do frontend"
 Cohesion: 0.07
 Nodes (27): 1. Sessão (§4.1), 2. Rotas e gate (§4.2), 3. Onboarding em 6 passos (§4.3), 4. Um único componente de conexão do WhatsApp (§4.3), 5. Dashboard (§4.4), 6. Correções da §4.5, 7. Verificação executável (§4.6), A API vai junto, como função do mesmo projeto (+19 more)
 
 ### Community 143 - "Conversas.jsx"
-Cohesion: 0.36
-Nodes (7): Conversas, apelido(), AUTORES, AVISOS, comHumano(), Conversas(), horaCurta()
+Cohesion: 0.29
+Nodes (8): Conversas, Textarea, apelido(), AUTORES, AVISOS, comHumano(), Conversas(), horaCurta()
 
 ### Community 144 - "test_ai_api.py"
 Cohesion: 0.03
@@ -577,8 +580,8 @@ Cohesion: 0.12
 Nodes (12): BancoFake, ErroDeBanco, Exception, `corridas`: fila por tabela de `(sqlstate, linha_concorrente)`. Cada escrita…, Os joins embutidos que o PostgREST devolve no select da consulta., Erro do PostgREST com SQLSTATE, na forma que `codigo_postgres` lê., RespostaFake, test_consulta_de_outra_empresa_nao_e_encontrada() (+4 more)
 
 ### Community 153 - "get_user_clinica_id"
-Cohesion: 0.16
-Nodes (20): get, get_bloqueios(), get_cliente(), get_clientes(), get_consultas(), get_disponibilidade_profissional(), get_horarios_clinica(), get_procedimentos() (+12 more)
+Cohesion: 0.14
+Nodes (23): get, get_areas_atuacao(), get_bloqueios(), get_cliente(), get_clientes(), get_consultas(), get_dashboard_stats(), get_disponibilidade_profissional() (+15 more)
 
 ### Community 154 - "amanha_as"
 Cohesion: 0.09
@@ -588,41 +591,41 @@ Nodes (28): amanha_as(), A chave da criação não pode ser sobrescrita pela rem
 Cohesion: 0.12
 Nodes (16): 1. Objetivo, 2.1 Contexto em uma chamada, 2.2 Disponibilidade, 2.3 Escritas, 2.4 Leitura do resultado, 2.5 O que saiu do JSON, 2.6 Variáveis novas, 2.7 Texto honesto na transferência (+8 more)
 
-### Community 156 - "Diagnóstico do produto antigo"
-Cohesion: 0.33
-Nodes (6): 1. A promessa era ampla demais, 2. O diferencial estava escondido, 3. O público parecia menor do que realmente é, 4. A comunicação criava desconfiança, 5. A base técnica não estava pronta para produção, Diagnóstico do produto antigo
+### Community 156 - "put"
+Cohesion: 0.17
+Nodes (11): field_validator, put, create_horario_clinica(), HorarioClinicaCreate, InfoClinicaUpdate, LiberacaoPiloto, liberar_piloto(), ProcedimentoUpdate (+3 more)
 
 ### Community 157 - "3. Rotas (agente backend implementa; agente frontend consome)"
 Cohesion: 0.09
 Nodes (22): 1. Objetivo e decisões de produto, 2. Banco (agente backend), 3.1 `GET /auth/me` — novo, 3.2 `POST /auth/register` — alterado, 3.3 `GET /config/implantacao` — novo, 3.4 `PUT /config/info-clinica/{id}` — alterado, 3.5 `PUT /config/automacao` — novo, 3.6 `POST /whatsapp/instancia` — novo, idempotente (+14 more)
 
 ### Community 158 - "Dashboard.jsx"
-Cohesion: 0.22
-Nodes (8): Dashboard, ErrorState(), appointmentTime(), Dashboard(), money, statusLabel(), todayLabel, toneStyles
+Cohesion: 0.19
+Nodes (10): Dashboard, ErrorState(), resumoImplantacao(), appointmentTime(), Dashboard(), FaixaImplantacao(), money, statusLabel() (+2 more)
 
 ### Community 159 - "post"
-Cohesion: 0.12
-Nodes (22): add_procedimentos_profissional(), assert_owned_record(), assumir_conversa(), BloqueioCreate, ConsultaCreate, ConsultaUpdate, create_bloqueio(), create_consulta() (+14 more)
+Cohesion: 0.18
+Nodes (15): add_procedimentos_profissional(), assert_owned_record(), assumir_conversa(), create_bloqueio(), create_consulta(), devolver_para_ia(), enviar_pelo_painel(), EnvioDoPainel (+7 more)
 
-### Community 177 - "Posicionamento recomendado"
-Cohesion: 0.33
-Nodes (6): Categoria, Explicação curta, Frase principal, Inimigo da marca, Mecanismo memorável, Posicionamento recomendado
+### Community 177 - "AiError"
+Cohesion: 0.17
+Nodes (15): AiError, autenticar_automacao(), chave_do_tenant(), codigo_postgres(), criar_agendamento(), disponibilidade(), obter_procedimento(), obter_profissional() (+7 more)
 
 ### Community 181 - "Fase 3 — Backend do onboarding: handoff"
 Cohesion: 0.14
 Nodes (13): Arquivos, Arquivos e comandos, Banco: aplicação e idempotência, Concluído, Decisões e motivos, Escopo do `git status`, Fase 3 — Backend do onboarding: handoff, O que virou função compartilhada (uma fonte de verdade) (+5 more)
 
 ### Community 182 - "instancia_do_usuario"
-Cohesion: 0.10
-Nodes (22): criar_instancia_whatsapp(), disconnect_whatsapp(), estado_da_conexao(), garantir_instancia(), get_whatsapp_qrcode(), get_whatsapp_status(), instancia_do_usuario(), montar_nome_instancia() (+14 more)
+Cohesion: 0.15
+Nodes (14): disconnect_whatsapp(), estado_da_conexao(), get_whatsapp_status(), instancia_do_usuario(), numero_conectado(), Instância da Evolution deste usuário, ou None se ainda não existe., Estado da instância na Evolution. Nunca levanta. O painel precisa responder…, Número conectado, só dígitos, sem o sufixo `@s.whatsapp.net`. É o que o painel… (+6 more)
 
 ### Community 183 - "vercel.json"
 Cohesion: 0.20
 Nodes (9): includeFiles, buildCommand, framework, functions, api/index.py, installCommand, outputDirectory, rewrites (+1 more)
 
 ### Community 185 - "dinheiro_para_banco"
-Cohesion: 0.21
-Nodes (12): Decimal, dinheiro(), dinheiro_para_banco(), dinheiro_para_json(), Texto para o corpo JSON do PostgREST. `Decimal` não é serializável em JSON e…, Número JSON para a resposta HTTP. O contrato com o painel e com a automação já…, Normaliza qualquer entrada monetária em `Decimal` com dois dígitos. `float`…, create_procedimento() (+4 more)
+Cohesion: 0.17
+Nodes (13): Decimal, dinheiro(), dinheiro_para_banco(), Texto para o corpo JSON do PostgREST. `Decimal` não é serializável em JSON e…, Normaliza qualquer entrada monetária em `Decimal` com dois dígitos. `float`…, ConsultaUpdate, create_procedimento(), criar_lancamento() (+5 more)
 
 ### Community 187 - "context-menu.jsx"
 Cohesion: 0.20
@@ -632,17 +635,17 @@ Nodes (9): ContextMenuCheckboxItem, ContextMenuContent, ContextMenuItem, Context
 Cohesion: 0.25
 Nodes (7): Breadcrumb, BreadcrumbEllipsis(), BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator()
 
-### Community 203 - "get_me"
-Cohesion: 0.33
-Nodes (6): estado_do_trial(), get_me(), onboarding_da_empresa(), Situação da assinatura recalculada no servidor. Única fonte de verdade de…, Onboarding concluído, ou `None` enquanto o usuário não tem empresa. `None` não…, Sessão recalculada no servidor, com trial e onboarding do banco. O painel usava…
+### Community 203 - "registrar_mensagem"
+Cohesion: 0.29
+Nodes (8): buscar_cliente(), localizar_ou_criar_cliente(), Grava a mensagem no historico do chat, de forma idempotente. Quem garante a…, registrar_mensagem(), Formas do mesmo contato que podem estar gravadas em `cliente.whats`. O painel…, Higieniza texto vindo de fora antes de gravar. Nome de perfil do WhatsApp é…, telefones_equivalentes(), texto_seguro()
 
-### Community 204 - "Plano de validação em 12 semanas"
-Cohesion: 0.40
-Nodes (5): Plano de validação em 12 semanas, Semanas 1–2 — problema e linguagem, Semanas 3–5 — operação assistida, Semanas 6–8 — proteção da agenda, Semanas 9–12 — piloto pago
+### Community 204 - "garantir_instancia"
+Cohesion: 0.25
+Nodes (8): criar_instancia_whatsapp(), garantir_instancia(), get_whatsapp_qrcode(), montar_nome_instancia(), `agm_{id}_{nome sanitizado}` — mesma regra que o cadastro usava. O id na frente…, Instância existente na Evolution, com webhook registrado. Idempotente. Devolve…, Prepara a instância do WhatsApp do usuário. Pode ser chamada de novo., Gera QR Code para conectar WhatsApp
 
-### Community 205 - "Experiência desejada"
-Cohesion: 0.50
-Nodes (4): Centro de Atendimento — recurso essencial ainda ausente, Experiência desejada, Primeira tela do aplicativo: Central do Dia, Site
+### Community 205 - "ai_api.py"
+Cohesion: 0.14
+Nodes (22): BaseAutomacao, buscar_agendamentos(), BuscarAgendamentosRequest, CriarAgendamentoRequest, DisponibilidadeRequest, HandoffValidoRequest, LembretesRequest, MensagemContexto (+14 more)
 
 ### Community 206 - "public.v_cliente_preferencias"
 Cohesion: 0.50
@@ -664,9 +667,9 @@ Nodes (3): TabsContent, TabsList, TabsTrigger
 Cohesion: 0.20
 Nodes (8): Consolidação e correção, Defeitos de agendamento corrigidos, Evidência local, Instalação e homologação pendentes, Memória implementada, Redação implementada, Requisitos registrados, Revisão do atendimento com IA
 
-### Community 214 - "Cliente ideal inicial"
-Cohesion: 0.50
-Nodes (4): Cliente ideal inicial, Perfil principal, Segmentos para o piloto, Trabalho que o cliente contrata
+### Community 214 - "reagendar_agendamento"
+Cohesion: 0.16
+Nodes (18): Any, buscar_slots(), _comeca_em(), falha(), horario_esta_livre(), datetime, Move um agendamento do próprio cliente para outro horário. Idempotente por…, Confere se o registro achado pela chave é mesmo a repetição deste pedido.… (+10 more)
 
 ### Community 215 - "public.conversa"
 Cohesion: 0.53
@@ -676,17 +679,21 @@ Nodes (5): public.conversa, public.fn_registrar_mensagem(), public.mensagem, pub
 Cohesion: 0.50
 Nodes (3): AccordionContent, AccordionItem, AccordionTrigger
 
-### Community 219 - "Escopo do MVP vendável"
-Cohesion: 0.50
-Nodes (4): Depois de validar o núcleo, Deve existir no primeiro piloto, Escopo do MVP vendável, Não construir agora
+### Community 219 - "Infraestrutura na VPS — o que já existe e o que este projeto ainda precisa"
+Cohesion: 0.25
+Nodes (6): Antes de ativar o workflow, Infraestrutura na VPS — o que já existe e o que este projeto ainda precisa, O backend FastAPI não roda aqui — ele está na Vercel, O fluxo não usa variável de ambiente do n8n, O que este projeto NÃO usa da VPS, O que já está no ar
 
-### Community 221 - "Métricas que provam valor"
-Cohesion: 0.50
-Nodes (4): Métrica principal, Métricas de produto, Métricas de venda, Métricas que provam valor
+### Community 221 - "Decisões tomadas por causa deste projeto"
+Cohesion: 0.25
+Nodes (8): 1. O `redis-n8n` tem dois bancos, e o `db1` é seu, 2. A Evolution API é compartilhada, e isso é uma decisão em aberto, 3. O n8n roda em queue mode — o webhook tem processo próprio, 4. Retenção de execuções: a execução com erro guarda a conversa inteira, Decisões tomadas por causa deste projeto, Duas chaves novas no `db1` (rodada de correções de 2026-09), Pré-requisito: a instância precisa gravar as mensagens recebidas, Risco aceito: o alerta de erro depende da Evolution que ele deveria vigiar
 
-### Community 222 - "Segurança e privacidade"
-Cohesion: 0.67
-Nodes (3): Ações externas obrigatórias antes de qualquer publicação, Correções já aplicadas no código local, Segurança e privacidade
+### Community 222 - "Rollback"
+Cohesion: 0.40
+Nodes (5): 1. Por empresa — o botão do painel, 2. Por workflow — desativar no n8n, 3. Por token — rotacionar a credencial, O JSON da V1 não é rollback, Rollback
+
+### Community 223 - "Configuração"
+Cohesion: 0.40
+Nodes (5): Configuração, Credenciais a religar após importar, O fluxo não lê variável de ambiente, `settings.errorWorkflow` precisa do id, Webhook
 
 ### Community 224 - "Q: Revisar o atendimento no n8n: agendamentos, redacao acolhedora e preferencias entre visitas"
 Cohesion: 0.40
@@ -700,29 +707,37 @@ Nodes (10): 1. Remarcação e continuidade, 2. Linguagem e fidelidade, 3. Lembre
 Cohesion: 0.20
 Nodes (9): public.fn_resultado_lembrete(), public.fn_solicitar_humano(), public.cliente, public.consulta, public.conversa, public.info_clinica, public.procedimento, public.profissional (+1 more)
 
+### Community 231 - "ServicoForm.jsx"
+Cohesion: 0.47
+Nodes (4): vazio, Label, labelVariants, servicoSchema
+
+### Community 232 - "confirmar_agendamento"
+Cohesion: 0.33
+Nodes (6): confirmar_agendamento(), confirmar_efeito(), ConfirmarRequest, Marca presenca confirmada pelo proprio cliente. Idempotente por estado:…, Relê o registro e só devolve o resultado se o efeito estiver no banco. Uma…, reler_consulta()
+
 ### Community 233 - "Q: Dá uma analisada no projeto, vê o que a gente precisa pra deixar ele com cara de MVP, pra eu poder prospectar clientes já e começar a usar ele na prática. Queria deixar as respostas mais humanas, simpáticas e calorosas."
 Cohesion: 0.40
 Nodes (4): Answer, Outcome, Q: Dá uma analisada no projeto, vê o que a gente precisa pra deixar ele com cara de MVP, pra eu poder prospectar clientes já e começar a usar ele na prática. Queria deixar as respostas mais humanas, simpáticas e calorosas., Source Nodes
 
 ## Knowledge Gaps
-- **675 isolated node(s):** `python`, `$schema`, `style`, `rsc`, `tsx` (+670 more)
-  These have ≤1 connection - possible missing edges or undocumented components. (Counts symbols only; 1095 node(s) total have ≤1 connection when file, concept and rationale nodes are included.)
+- **674 isolated node(s):** `python`, `$schema`, `style`, `rsc`, `tsx` (+669 more)
+  These have ≤1 connection - possible missing edges or undocumented components. (Counts symbols only; 1093 node(s) total have ≤1 connection when file, concept and rationale nodes are included.)
 - **84 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
-- **Why does `cn()` connect `cn` to `utils.js`, `Onboarding.jsx`, `command.jsx`, `dropdown-menu.jsx`, `form.jsx`, `alert-dialog.jsx`, `table.jsx`, `carousel.jsx`, `Cadastro.jsx`, `navigation-menu.jsx`, `sheet.jsx`, `alert.jsx`, `input-otp.jsx`, `toast.jsx`, `toggle-group.jsx`, `badge.jsx`, `context-menu.jsx`, `breadcrumb.jsx`, `tabs.jsx`, `accordion.jsx`?**
+- **Why does `cn()` connect `cn` to `utils.js`, `Onboarding.jsx`, `Conversas.jsx`, `command.jsx`, `dropdown-menu.jsx`, `form.jsx`, `alert-dialog.jsx`, `table.jsx`, `carousel.jsx`, `Cadastro.jsx`, `navigation-menu.jsx`, `sheet.jsx`, `alert.jsx`, `input-otp.jsx`, `toast.jsx`, `toggle-group.jsx`, `badge.jsx`, `context-menu.jsx`, `breadcrumb.jsx`, `tabs.jsx`, `accordion.jsx`, `ServicoForm.jsx`?**
   _High betweenness centrality (0.028) - this node is a cross-community bridge._
+- **Why does `cur()` connect `test_schema_compatibilidade.py` to `test_ai_api_integracao.py`?**
+  _High betweenness centrality (0.004) - this node is a cross-community bridge._
+- **Why does `test_reagendar_recusa_chave_de_idempotencia_no_corpo()` connect `amanha_as` to `test_ai_api.py`?**
+  _High betweenness centrality (0.004) - this node is a cross-community bridge._
 - **What connects `python`, `$schema`, `style` to the rest of the system?**
-  _675 weakly-connected nodes found - possible documentation gaps or missing edges._
+  _674 weakly-connected nodes found - possible documentation gaps or missing edges._
 - **Should `server.py` be split into smaller, more focused modules?**
-  _Cohesion score 0.08637873754152824 - nodes in this community are weakly interconnected._
+  _Cohesion score 0.09682539682539683 - nodes in this community are weakly interconnected._
 - **Should `App.jsx` be split into smaller, more focused modules?**
   _Cohesion score 0.07948717948717948 - nodes in this community are weakly interconnected._
 - **Should `devDependencies` be split into smaller, more focused modules?**
   _Cohesion score 0.041666666666666664 - nodes in this community are weakly interconnected._
-- **Should `compilerOptions` be split into smaller, more focused modules?**
-  _Cohesion score 0.08 - nodes in this community are weakly interconnected._
-- **Should `dashboard/package.json` be split into smaller, more focused modules?**
-  _Cohesion score 0.09090909090909091 - nodes in this community are weakly interconnected._

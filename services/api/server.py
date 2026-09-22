@@ -29,6 +29,7 @@ from dominio import (
     dinheiro_para_banco,
     dinheiro_para_json,
     montar_intervalo,
+    normalizar_telefone,
 )
 from supabase_client import supabase
 
@@ -201,6 +202,17 @@ class InfoClinicaUpdate(BaseModel):
     assistente_nome: Optional[str] = None
     assistente_tom: Optional[Literal[TONS_ASSISTENTE]] = None
     exige_profissional: Optional[bool] = None
+    whatsapp_responsavel: Optional[str] = Field(default=None, max_length=40)
+
+    @field_validator('whatsapp_responsavel')
+    @classmethod
+    def validar_responsavel(cls, valor):
+        if not valor or not valor.strip():
+            return None
+        numero = normalizar_telefone(valor)
+        if not regex_module.fullmatch(r'55\d{10,11}', numero or ''):
+            raise ValueError('Informe o WhatsApp do responsável com DDD')
+        return numero
 
     _validar_assistente_nome = field_validator('assistente_nome')(validar_nome_assistente)
 
@@ -256,14 +268,14 @@ def estado_do_trial(user: dict) -> dict:
     """
     status_assinatura = user.get('status_assinatura', 'trial')
     trial_fim = user.get('trial_fim')
-    trial_expirado = False
+    trial_expirado = status_assinatura == 'expirado'
     dias_restantes = 0
 
     if status_assinatura == 'trial' and trial_fim:
         try:
             trial_fim_dt = datetime.fromisoformat(str(trial_fim).replace('Z', '+00:00'))
             agora = (
-                datetime.utcnow().replace(tzinfo=trial_fim_dt.tzinfo)
+                datetime.now(timezone.utc)
                 if trial_fim_dt.tzinfo
                 else datetime.utcnow()
             )
@@ -280,11 +292,24 @@ def estado_do_trial(user: dict) -> dict:
             # estado gravado, que é o conservador.
             logging.warning("trial_fim ilegível para o usuário %s", user.get('id'))
 
+    config = (supabase.table('info_clinica').select('piloto_ate')
+              .eq('id', user['id_info_clinica']).limit(1).execute().data
+              if user.get('id_info_clinica') else [])
+    piloto_ate = (config[0] if config else {}).get('piloto_ate')
+    piloto_ativo = False
+    if piloto_ate:
+        try:
+            prazo = datetime.fromisoformat(str(piloto_ate).replace('Z', '+00:00'))
+            piloto_ativo = prazo.tzinfo is not None and prazo > datetime.now(timezone.utc)
+        except ValueError:
+            pass
     return {
         "status_assinatura": status_assinatura,
         "trial_expirado": trial_expirado,
         "dias_restantes": dias_restantes,
         "trial_fim": trial_fim,
+        "piloto_ativo": piloto_ativo,
+        "piloto_ate": piloto_ate,
     }
 
 
@@ -365,6 +390,34 @@ def raise_if_in_use(erro: Exception, label: str) -> None:
         )
 
 # ===== AUTH ROUTES =====
+class LiberacaoPiloto(BaseModel):
+    piloto_ate: Optional[datetime] = None
+
+    @field_validator('piloto_ate')
+    @classmethod
+    def prazo_explicito(cls, prazo):
+        if prazo is not None and (prazo.tzinfo is None or prazo <= datetime.now(timezone.utc)):
+            raise ValueError('Informe um prazo futuro com fuso horário, ou null para revogar')
+        return prazo
+
+
+@api_router.put('/admin/empresas/{empresa_id}/piloto')
+async def liberar_piloto(empresa_id: int, corpo: LiberacaoPiloto, current_user: dict = Depends(verify_token)):
+    # O papel vem do banco a cada liberação; um JWT antigo não conserva privilégios.
+    usuarios = supabase.table('usuarios').select('id, role').eq('id', current_user.get('user_id')).limit(1).execute().data
+    if not usuarios or usuarios[0].get('role') != 'admin':
+        raise HTTPException(status_code=403, detail='Somente administradores podem liberar o piloto')
+    resultado = supabase.table('info_clinica').update({
+        'piloto_ate': corpo.piloto_ate.isoformat() if corpo.piloto_ate else None,
+        'piloto_liberado_por': usuarios[0]['id'],
+        'piloto_liberado_em': datetime.now(timezone.utc).isoformat(),
+    }).eq('id', empresa_id).execute()
+    if not resultado.data:
+        raise HTTPException(status_code=404, detail='Empresa não encontrada')
+    linha = resultado.data[0]
+    return {campo: linha.get(campo) for campo in ('id', 'piloto_ate', 'piloto_liberado_por', 'piloto_liberado_em')}
+
+
 @api_router.post("/auth/login", response_model=LoginResponse)
 async def login(request: LoginRequest):
     try:
@@ -624,7 +677,7 @@ async def listar_conversas(current_user: dict = Depends(verify_token)):
         clinica_id = get_user_clinica_id(current_user)
         resultado = (
             supabase.table('conversa')
-            .select('id, remote_jid, contato_nome, ultima_mensagem, ultima_em, nao_lidas')
+            .select('id, remote_jid, contato_nome, ultima_mensagem, ultima_em, nao_lidas, humano_solicitado_em, humano_assumido_em, ia_liberada_em, aviso_resultado')
             .eq('id_info_clinica', clinica_id)
             .order('ultima_em', desc=True)
             .limit(LIMITE_CONVERSAS)
@@ -690,7 +743,7 @@ async def marcar_conversa_lida(conversa_id: int, current_user: dict = Depends(ve
 
 @api_router.post("/conversas/{conversa_id}/devolver-ia")
 async def devolver_para_ia(conversa_id: int, current_user: dict = Depends(verify_token)):
-    """Devolve a conversa para a recepção automática antes dos 30 minutos.
+    """Encerra o atendimento humano e devolve a conversa à recepção automática.
 
     Não apaga a pausa no Redis — o backend não alcança aquele Redis, que fica
     na rede interna da VPS. Grava o instante da devolução, e é o fluxo que
@@ -715,6 +768,17 @@ async def devolver_para_ia(conversa_id: int, current_user: dict = Depends(verify
         raise HTTPException(status_code=500, detail="Erro interno")
 
 
+@api_router.post('/conversas/{conversa_id}/assumir')
+async def assumir_conversa(conversa_id: int, current_user: dict = Depends(verify_token)):
+    empresa = get_user_clinica_id(current_user)
+    resultado = supabase.table('conversa').update({
+        'humano_assumido_em': datetime.now(timezone.utc).isoformat(),
+    }).eq('id', conversa_id).eq('id_info_clinica', empresa).execute()
+    if not resultado.data:
+        raise HTTPException(status_code=404, detail='Conversa não encontrada')
+    return {'ok': True, 'assumida': True}
+
+
 @api_router.post("/conversas/{conversa_id}/enviar")
 async def enviar_pelo_painel(
     conversa_id: int,
@@ -723,10 +787,8 @@ async def enviar_pelo_painel(
 ):
     """Manda uma mensagem escrita por uma pessoa, pela instancia da empresa.
 
-    A recepcao automatica se cala sozinha depois disto: o eco desta mensagem
-    volta pelo webhook como `fromMe` e, por NAO existir a chave `am:enviada`
-    dela, o fluxo a le como "o negocio respondeu" e pausa a IA por 30 minutos.
-    E o comportamento desejado, e e por isso que este envio nao passa pelo n8n.
+    O atendimento é assumido no banco antes do envio, pausando a IA até a
+    devolução explícita. O eco `fromMe` também aciona a pausa existente no Redis.
 
     A gravacao no historico usa o id devolvido pela Evolution: e ele que impede
     a mensagem de aparecer duas vezes quando o eco chegar.
@@ -753,21 +815,25 @@ async def enviar_pelo_painel(
         if not texto:
             raise HTTPException(status_code=422, detail="A mensagem não pode ser vazia")
 
+        # A pausa existe ANTES do envio, mesmo quando o webhook de eco atrasar.
+        await assumir_conversa(conversa_id, current_user)
         try:
             resposta = await evolution_api.send_text(
                 conversa['instance_name'], conversa['remote_jid'], texto
             )
         except Exception:
-            logging.exception("Evolution recusou o envio do painel")
+            logging.error("Resultado desconhecido do envio do painel")
             raise HTTPException(
                 status_code=502,
-                detail="Não foi possível enviar agora. A mensagem não foi entregue.",
+                detail="Não consegui confirmar o envio. Confira a conversa antes de tentar novamente.",
             )
 
         # Sem id do provedor a mensagem entra assim mesmo: ela FOI enviada, e
         # esconder do historico seria pior. O custo e poder duplicar quando o
         # eco chegar — a chave unica nao pega nulo.
         chave = ((resposta or {}).get('key') or {}).get('id')
+        if not chave or resposta.get('error'):
+            raise HTTPException(status_code=502, detail='O provedor não confirmou o envio. Confira a conversa antes de tentar novamente.')
 
         supabase.rpc('fn_registrar_mensagem', {
             'p_id_info_clinica': clinica_id,
@@ -1579,7 +1645,7 @@ async def update_info_clinica(info_id: int, info: InfoClinicaUpdate, current_use
         # inclusive.
         # `lembrete_horas` entra pela mesma razao: nula E o valor que DESLIGA o
         # lembrete. Sem esta linha o dono liga uma vez e nunca mais desliga.
-        for campo in ('assistente_nome', 'assistente_tom', 'descricao', 'lembrete_horas'):
+        for campo in ('assistente_nome', 'assistente_tom', 'descricao', 'lembrete_horas', 'whatsapp_responsavel'):
             if campo in info.model_fields_set:
                 data[campo] = getattr(info, campo)
         # `automacao_ativa` não entra aqui de propósito: ligar o atendimento

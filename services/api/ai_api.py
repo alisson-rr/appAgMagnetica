@@ -15,6 +15,7 @@ import logging
 import re
 from datetime import date, datetime, timedelta
 from typing import Any, Callable, Dict, List, Literal, Optional
+from uuid import UUID
 
 from fastapi import APIRouter, Depends, Header, Request
 from fastapi.exception_handlers import request_validation_exception_handler
@@ -590,6 +591,10 @@ class DisponibilidadeRequest(BaseAutomacao):
     fim: datetime
     passo_minutos: int = Field(default=30, ge=5, le=240)
     limite: int = Field(default=20, ge=1, le=50)
+    horario_desejado: Optional[datetime] = None
+    # Só se ignora uma reserva após verificar empresa, titular e serviço.
+    telefone: Optional[str] = Field(default=None, min_length=8, max_length=40)
+    id_consulta: Optional[int] = Field(default=None, gt=0)
 
 
 class BuscarAgendamentosRequest(BaseAutomacao):
@@ -625,6 +630,7 @@ class CancelarRequest(BaseAutomacao):
 class ConfirmarRequest(BaseAutomacao):
     telefone: str = Field(min_length=8, max_length=40)
     id_consulta: int = Field(gt=0)
+    inicio_esperado: Optional[datetime] = None
 
 
 class RegistrarMensagemRequest(BaseAutomacao):
@@ -654,6 +660,18 @@ class HandoffValidoRequest(BaseAutomacao):
     pausada_em: Optional[str] = Field(default=None, max_length=40)
 
 
+class SolicitarHumanoRequest(BaseAutomacao):
+    remote_jid: str = Field(pattern=r"^\d{10,15}@s\.whatsapp\.net$")
+    motivo: Literal["pedido_do_cliente", "assunto_sensivel", "crise", "nao_entendi", "falha_operacao", "pedido_do_titular"] = "pedido_do_cliente"
+
+
+class ResultadoLembreteRequest(BaseAutomacao):
+    id_consulta: int = Field(gt=0)
+    tentativa_id: UUID
+    resultado: Literal["aceito", "falha", "incerto"]
+    provider_id: Optional[str] = Field(default=None, max_length=200)
+
+
 class LembretesRequest(BaseModel):
     """Requisição de manutenção sem `instance_name`, como a fila de memória.
 
@@ -663,6 +681,7 @@ class LembretesRequest(BaseModel):
     """
 
     limite: int = Field(default=50, ge=1, le=200)
+    instance_name: Optional[str] = Field(default=None, min_length=1, max_length=120)
 
 
 class AtualizarClienteRequest(BaseAutomacao):
@@ -779,6 +798,8 @@ async def contexto(requisicao: ContextoRequest):
     )
     cliente_json["memoria"] = ai_memory.contexto(supabase, clinica_id, cliente["id"])
 
+    configuracao = _primeira(executar("configuracao_lembrete", lambda: supabase.table("info_clinica")
+        .select("lembrete_horas").eq("id", clinica_id).limit(1).execute()))
     return sucesso(
         {
             # `id_info_clinica` fica de fora de propósito: nenhuma rota aceita
@@ -799,6 +820,8 @@ async def contexto(requisicao: ContextoRequest):
                 "exige_profissional": bool(detalhes.get("exige_profissional")),
                 "fuso": FUSO_NEGOCIO,
                 "horarios": detalhes.get("horarios") or [],
+                "lembrete_horas": (configuracao or {}).get("lembrete_horas"),
+                "lembrete_configurado": configuracao is not None,
             },
             "cliente": cliente_json,
             "procedimentos": procedimentos,
@@ -829,6 +852,15 @@ async def disponibilidade(requisicao: DisponibilidadeRequest):
         )
 
     duracao = int(procedimento["duracao_minutos"])
+    ignorar_consulta = None
+    if requisicao.id_consulta:
+        if not requisicao.telefone:
+            raise AiError("ENTRADA_INVALIDA", "Informe o titular do agendamento.", status=422)
+        cliente = exigir_cliente(clinica_id, requisicao.telefone)
+        atual = consulta_do_cliente(clinica_id, cliente["id"], requisicao.id_consulta)
+        if atual.get("status") not in STATUS_VIVOS or atual.get("id_procedimento") != requisicao.id_procedimento:
+            raise AiError("CONSULTA_NAO_REAGENDAVEL", "Consulte o agendamento novamente.", status=409)
+        ignorar_consulta = atual["id"]
     slots = buscar_slots(
         clinica_id,
         requisicao.id_procedimento,
@@ -836,7 +868,24 @@ async def disponibilidade(requisicao: DisponibilidadeRequest):
         fim,
         profissional_id=requisicao.id_profissional,
         passo_minutos=requisicao.passo_minutos,
+        ignorar_consulta_id=ignorar_consulta,
     )
+    if requisicao.horario_desejado:
+        alvo = com_fuso_de_negocio(requisicao.horario_desejado)
+        if not inicio <= alvo < fim or alvo.second or alvo.microsecond:
+            raise AiError("ENTRADA_INVALIDA", "Horário solicitado fora da janela de busca.", status=422)
+        # Busca pontual, sem aumentar a grade nem perder o alvo no limite de 50.
+        # É a mesma RPC usada por horario_esta_livre antes de criar/remarcar.
+        exatos = buscar_slots(clinica_id, requisicao.id_procedimento, alvo,
+                             alvo + timedelta(minutes=duracao),
+                             profissional_id=requisicao.id_profissional,
+                             passo_minutos=1, duracao_minutos=duracao,
+                             ignorar_consulta_id=ignorar_consulta)
+        unicos = {(iso_no_fuso_de_negocio(s["inicio"]), s["id_profissional"]): s
+                  for s in slots + exatos}
+        slots = sorted(unicos.values(), key=lambda s: (
+            abs((datetime.fromisoformat(iso_no_fuso_de_negocio(s["inicio"])) - alvo).total_seconds()),
+            str(s["inicio"]), s["id_profissional"]))
     valor = dinheiro_para_json(procedimento.get("valor"))
 
     return sucesso(
@@ -1068,13 +1117,18 @@ async def reagendar_agendamento(requisicao: ReagendarRequest):
     atualizacao = {
         "intervalo": montar_intervalo(novo_inicio, duracao),
         "id_profissional": profissional_id,
+        "status": "agendado", "confirmado_em": None,
+        "lembrete_enviado_em": None, "lembrete_tentativa_id": None,
+        "lembrete_tentativa_em": None, "lembrete_inicio": None,
+        "lembrete_resultado": None, "lembrete_provider_id": None,
+        "lembrete_resultado_em": None,
     }
     try:
         # `valor_cobrado`, `id_cliente` e `id_procedimento` ficam de fora: remarcar
         # muda o horário, não o preço acertado nem o vínculo.
         supabase.table("consulta").update(atualizacao).eq("id", requisicao.id_consulta).eq(
             "id_info_clinica", clinica_id
-        ).eq("id_cliente", cliente["id"]).execute()
+        ).eq("id_cliente", cliente["id"]).eq("intervalo", consulta["intervalo"]).in_("status", STATUS_VIVOS).execute()
     except Exception as erro:  # noqa: BLE001
         sqlstate = codigo_postgres(erro)
         if sqlstate == "23P01":
@@ -1155,6 +1209,10 @@ async def confirmar_agendamento(requisicao: ConfirmarRequest):
     cliente = exigir_cliente(clinica_id, requisicao.telefone)
     consulta = consulta_do_cliente(clinica_id, cliente["id"], requisicao.id_consulta)
 
+    intervalo = ler_intervalo(consulta.get("intervalo"))
+    if requisicao.inicio_esperado and (not intervalo or intervalo[0] != com_fuso_de_negocio(requisicao.inicio_esperado)):
+        raise AiError("CONSULTA_NAO_CONFIRMAVEL", "O horário mudou desde o lembrete. Consulte a agenda novamente.", status=409)
+
     if consulta.get("status") == STATUS_CONFIRMADO:
         return sucesso({"agendamento": serializar_consulta(consulta), "repetida": True})
     if consulta.get("status") not in STATUS_CONFIRMAVEIS:
@@ -1174,6 +1232,8 @@ async def confirmar_agendamento(requisicao: ConfirmarRequest):
         .eq("id", requisicao.id_consulta)
         .eq("id_info_clinica", clinica_id)
         .eq("id_cliente", cliente["id"])
+        .eq("intervalo", consulta["intervalo"])
+        .in_("status", STATUS_CONFIRMAVEIS)
         .execute(),
     )
 
@@ -1181,7 +1241,7 @@ async def confirmar_agendamento(requisicao: ConfirmarRequest):
         clinica_id,
         requisicao.id_consulta,
         lambda registro: registro.get("status") == STATUS_CONFIRMADO
-        and bool(registro.get("confirmado_em")),
+        and bool(registro.get("confirmado_em")) and registro.get("intervalo") == consulta.get("intervalo"),
     )
     return sucesso({"agendamento": serializar_consulta(linha), "repetida": False})
 
@@ -1195,19 +1255,15 @@ async def handoff_valido(requisicao: HandoffValidoRequest):
 
         ainda pausado  <=>  nao existe R posterior a T
 
-    Sem `pausada_em` a resposta e "pausado": nao da para saber se a devolucao
-    veio antes ou depois, e continuar calado e o lado seguro — no maximo a
-    pausa expira sozinha em 30 minutos.
+    Pedidos e atendimentos assumidos no painel permanecem pausados até a
+    devolução explícita. Sem pausa no banco ou no Redis, a IA pode responder.
     """
     clinica_id = resolver_empresa(requisicao.instance_name)
-
-    if not requisicao.pausada_em:
-        return sucesso({"pausado": True, "motivo": "sem_inicio_da_pausa"})
 
     resultado = executar(
         "handoff_valido",
         lambda: supabase.table("conversa")
-        .select("ia_liberada_em")
+        .select("ia_liberada_em, humano_solicitado_em, humano_assumido_em")
         .eq("id_info_clinica", clinica_id)
         .eq("remote_jid", requisicao.remote_jid)
         .limit(1)
@@ -1215,6 +1271,17 @@ async def handoff_valido(requisicao: HandoffValidoRequest):
     )
     linha = _primeira(resultado)
     liberada = (linha or {}).get("ia_liberada_em")
+    solicitada = (linha or {}).get("humano_solicitado_em")
+    assumida = (linha or {}).get("humano_assumido_em")
+    def instante(v):
+        return datetime.fromisoformat(str(v).replace('Z', '+00:00')).timestamp() if v else 0
+    ultima_pausa = max(instante(solicitada), instante(assumida))
+    if ultima_pausa > instante(liberada):
+        return sucesso({"pausado": True, "motivo": "atendimento_humano_aberto",
+                        "assumido": instante(assumida) > instante(liberada)
+                        or instante(requisicao.pausada_em) > instante(solicitada)})
+    if not requisicao.pausada_em:
+        return sucesso({"pausado": False, "motivo": "sem_pausa"})
     if not liberada:
         return sucesso({"pausado": True, "motivo": "nunca_devolvida"})
 
@@ -1228,6 +1295,58 @@ async def handoff_valido(requisicao: HandoffValidoRequest):
     voltou = devolvida > comecou
     return sucesso({"pausado": not voltou,
                     "motivo": "devolvida_pelo_painel" if voltou else "pausa_mais_nova"})
+
+
+@router.post("/handoff/solicitar", dependencies=PROTEGIDO)
+async def solicitar_humano(requisicao: SolicitarHumanoRequest):
+    import evolution_api
+    empresa = resolver_empresa(requisicao.instance_name)
+    registro = _primeira(executar("solicitar_humano", lambda: supabase.rpc("fn_solicitar_humano", {
+        "p_empresa": empresa, "p_instancia": requisicao.instance_name,
+        "p_jid": requisicao.remote_jid, "p_motivo": requisicao.motivo,
+    }).execute()))
+    if not registro:
+        raise AiError("FALHA_TEMPORARIA", "Não foi possível registrar o encaminhamento.", status=503)
+    if not registro["nova"]:
+        return sucesso({"registrado": True, "novo": False, "id_conversa": registro["conversa_id"]})
+    config = _primeira(executar("destino_aviso", lambda: supabase.table("info_clinica")
+        .select("whatsapp_responsavel").eq("id", empresa).limit(1).execute())) or {}
+    destino = config.get("whatsapp_responsavel")
+    resultado, provider = "sem_destinatario", None
+    if destino:
+        try:
+            destino = normalizar_telefone(destino)
+            if destino == requisicao.remote_jid.split("@")[0]:
+                resultado = "destinatario_e_cliente"
+            else:
+                resposta = await evolution_api.send_text(requisicao.instance_name, destino,
+                    "Uma conversa precisa de você na Agenda Magnética. Abra Conversas no painel para assumir o atendimento.")
+                provider = ((resposta or {}).get("key") or {}).get("id")
+                resultado = "aceito" if provider and not resposta.get("error") else "incerto"
+        except Exception:
+            # Timeout não prova que o provedor recusou a mensagem; não repetir.
+            resultado = "incerto"
+    executar("resultado_aviso", lambda: supabase.table("conversa").update({
+        "aviso_resultado": resultado, "aviso_provider_id": provider,
+    }).eq("id", registro["conversa_id"]).eq("id_info_clinica", empresa)
+      .eq("humano_solicitado_em", registro["solicitado_em"]).execute())
+    return sucesso({"registrado": True, "novo": True, "aviso": resultado,
+                    "id_conversa": registro["conversa_id"]})
+
+
+@router.post("/lembretes/resultado", dependencies=PROTEGIDO)
+async def resultado_lembrete(requisicao: ResultadoLembreteRequest):
+    empresa = resolver_empresa(requisicao.instance_name)
+    if requisicao.resultado == "aceito" and not (requisicao.provider_id or "").strip():
+        raise AiError("ENTRADA_INVALIDA", "Aceitação exige identificador do provedor.", status=422)
+    retorno = executar("resultado_lembrete", lambda: supabase.rpc("fn_resultado_lembrete", {
+        "p_empresa": empresa, "p_consulta": requisicao.id_consulta,
+        "p_tentativa": str(requisicao.tentativa_id), "p_resultado": requisicao.resultado,
+        "p_provider_id": requisicao.provider_id,
+    }).execute())
+    if retorno.data is not True:
+        raise AiError("ENTRADA_INVALIDA", "Tentativa não encontrada ou resultado divergente.", status=409)
+    return sucesso({"registrado": True, "resultado": requisicao.resultado})
 
 
 @router.post("/conversas/registrar", dependencies=PROTEGIDO)
@@ -1352,8 +1471,9 @@ async def lembretes_pendentes(requisicao: LembretesRequest):
     chamadas seguintes voltam a derivar a empresa dele.
     """
     resultado = executar(
-        "fn_claim_lembretes",
-        lambda: supabase.rpc("fn_claim_lembretes", {"p_limite": requisicao.limite}).execute(),
+        "fn_claim_lembretes_v2",
+        lambda: supabase.rpc("fn_claim_lembretes_v2", {"p_limite": requisicao.limite,
+            "p_empresa": resolver_empresa(requisicao.instance_name) if requisicao.instance_name else None}).execute(),
     )
     linhas = getattr(resultado, "data", None) or []
 
@@ -1367,10 +1487,9 @@ async def lembretes_pendentes(requisicao: LembretesRequest):
             "servico": linha.get("servico_nome"),
             "profissional": linha.get("profissional_nome"),
             "mensagem": linha.get("mensagem_lembrete"),
+            "tentativa_id": linha.get("tentativa_id"),
         }
         for linha in linhas
-        # Sem telefone nao ha para onde enviar. A consulta ja ficou marcada, e
-        # isso e o certo: reenviar depois seria pior que nao enviar.
         if linha.get("telefone") and linha.get("instance_name")
     ]
     return sucesso({"lembretes": lembretes, "quantidade": len(lembretes)})

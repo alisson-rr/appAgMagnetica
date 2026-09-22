@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import api from '../services/api';
+import { useAuth } from '../context/AuthContext';
 import { toast } from 'sonner';
 import { Building2, MessageSquare, Clock, History, Save } from 'lucide-react';
 import { Card } from '../components/ui/card';
@@ -13,7 +14,7 @@ import { EmptyState, Loading, PageHeader } from '../components/PageChrome';
 import { CampoErro, descricaoDoCampo } from '../components/CampoErro';
 import HorariosEditor from '../components/HorariosEditor';
 import ConexaoWhatsApp from '../components/ConexaoWhatsApp';
-import { agruparHorarios, idsRemovidos, negocioSchema, turnosPreenchidos, validarHorarios } from '../lib/onboarding';
+import { agruparHorarios, atendenteSchema, idsRemovidos, negocioSchema, TONS, turnosPreenchidos, validarHorarios } from '../lib/onboarding';
 import { formatPhone, unformatPhone } from '../utils/formatters';
 
 // Desligado e o padrao: um lembrete que o dono nao pediu chega como mensagem
@@ -27,7 +28,7 @@ const ANTECEDENCIAS = [
 ];
 
 const MENSAGEM_LEMBRETE_PADRAO =
-  'Olá {nome}! Lembramos que você tem uma consulta agendada para {data} às {horario}. Confirme sua presença respondendo esta mensagem.';
+  'Olá {nome}! Passando para lembrar do seu horário em {data} às {horario}.';
 
 const ABAS = [
   { id: 'dados', label: 'Dados do negócio', icon: Building2 },
@@ -36,7 +37,13 @@ const ABAS = [
   { id: 'historico', label: 'Minha assinatura', icon: History },
 ];
 
+const identidadeSchema = atendenteSchema.pick({ assistente_nome: true, assistente_tom: true });
+
 const Configuracoes = () => {
+  const { user, refreshUser } = useAuth();
+  const [responsavel, setResponsavel] = useState('');
+  const [pilotoEmpresa, setPilotoEmpresa] = useState('');
+  const [pilotoAte, setPilotoAte] = useState('');
   const [abaAtiva, setAbaAtiva] = useState('dados');
   const [loading, setLoading] = useState(true);
   const [salvando, setSalvando] = useState(false);
@@ -58,6 +65,16 @@ const Configuracoes = () => {
     watch,
     formState: { errors },
   } = useForm({ resolver: zodResolver(negocioSchema) });
+
+  const {
+    register: registerAtendente,
+    handleSubmit: submitAtendente,
+    reset: resetAtendente,
+    formState: { errors: errosAtendente },
+  } = useForm({
+    resolver: zodResolver(identidadeSchema),
+    defaultValues: { assistente_nome: '', assistente_tom: 'acolhedor' },
+  });
 
   const telefone = watch('telefone');
 
@@ -82,8 +99,13 @@ const Configuracoes = () => {
         const [clinicaRes] = await Promise.all([api.get('/config/info-clinica'), carregarHorarios()]);
         const dados = clinicaRes.data || {};
         setClinica(dados);
+        setResponsavel(dados.whatsapp_responsavel || '');
         setMensagemLembrete(dados.mensagem_lembrete || MENSAGEM_LEMBRETE_PADRAO);
         setLembreteHoras(dados.lembrete_horas ? String(dados.lembrete_horas) : '');
+        resetAtendente({
+          assistente_nome: dados.assistente_nome || '',
+          assistente_tom: dados.assistente_tom || 'acolhedor',
+        });
         reset({
           nome: dados.nome || '',
           telefone: formatPhone(dados.telefone || ''),
@@ -98,7 +120,7 @@ const Configuracoes = () => {
       }
       carregarImplantacao();
     })();
-  }, [carregarHorarios, carregarImplantacao, reset]);
+  }, [carregarHorarios, carregarImplantacao, reset, resetAtendente]);
 
   /**
    * Só campos editáveis vão no `PUT`. Antes o objeto inteiro do `GET` voltava
@@ -125,12 +147,30 @@ const Configuracoes = () => {
     }
   });
 
+  const salvarAtendente = submitAtendente(async (valores) => {
+    if (!clinica?.id) return;
+    setSalvando(true);
+    try {
+      const { data } = await api.put(`/config/info-clinica/${clinica.id}`, valores);
+      setClinica(data);
+      resetAtendente({ assistente_nome: data.assistente_nome, assistente_tom: data.assistente_tom });
+      carregarImplantacao();
+      toast.success('Identidade da assistente salva.');
+    } catch (error) {
+      toast.error(typeof error.response?.data?.detail === 'string'
+        ? error.response.data.detail : 'Não foi possível salvar a assistente.');
+    } finally {
+      setSalvando(false);
+    }
+  });
+
   const salvarMensagem = async () => {
     if (!clinica?.id) return;
     setSalvando(true);
     try {
       const { data } = await api.put(`/config/info-clinica/${clinica.id}`, {
         mensagem_lembrete: mensagemLembrete,
+        whatsapp_responsavel: responsavel.trim() || null,
         // Vazio vira `null`, que e o valor que desliga o lembrete no banco.
         lembrete_horas: lembreteHoras ? Number(lembreteHoras) : null,
       });
@@ -170,6 +210,20 @@ const Configuracoes = () => {
     } finally {
       setSalvando(false);
     }
+  };
+
+  const liberarPiloto = async (evento) => {
+    evento.preventDefault();
+    setSalvando(true);
+    try {
+      const { data } = await api.put(`/admin/empresas/${Number(pilotoEmpresa)}/piloto`, {
+        piloto_ate: pilotoAte ? new Date(pilotoAte).toISOString() : null,
+      });
+      await refreshUser();
+      toast.success(data.piloto_ate ? `Piloto liberado até ${new Date(data.piloto_ate).toLocaleString('pt-BR')}` : 'Liberação de piloto revogada.');
+    } catch (error) {
+      toast.error(typeof error.response?.data?.detail === 'string' ? error.response.data.detail : 'Confira a empresa e o prazo futuro.');
+    } finally { setSalvando(false); }
   };
 
   if (loading) {
@@ -306,6 +360,38 @@ const Configuracoes = () => {
         {abaAtiva === 'automacao' && (
           <div role="tabpanel" id={idPainel('automacao')} aria-labelledby={idAba('automacao')} className="space-y-6">
             <Card className="p-6 sm:p-8">
+              <h2 className="font-display text-lg font-bold text-ink">Sua assistente virtual</h2>
+              <p className="mb-6 mt-1 text-sm text-muted-foreground">
+                Escolha como ela se apresenta e o jeito de conversar no WhatsApp.
+              </p>
+              <form onSubmit={salvarAtendente} noValidate className="space-y-5">
+                <div className="grid gap-6 md:grid-cols-2">
+                  <div>
+                    <Label htmlFor="config-assistente-nome">Nome da assistente *</Label>
+                    <Input id="config-assistente-nome" maxLength={40} placeholder="Ex.: Clara" className="mt-1"
+                      {...descricaoDoCampo('config-assistente-nome', errosAtendente.assistente_nome?.message)}
+                      {...registerAtendente('assistente_nome')} />
+                    <CampoErro id="config-assistente-nome-erro" mensagem={errosAtendente.assistente_nome?.message} />
+                    <p className="field-hint">Use apenas o nome, com 2 a 40 letras e espaços. Ela se identifica como assistente virtual.</p>
+                  </div>
+                  <div>
+                    <Label htmlFor="config-assistente-tom">Jeito de conversar *</Label>
+                    <select id="config-assistente-tom" className="mt-1 h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+                      {...descricaoDoCampo('config-assistente-tom', errosAtendente.assistente_tom?.message)}
+                      {...registerAtendente('assistente_tom')}>
+                      {TONS.map((tom) => <option key={tom.valor} value={tom.valor}>{tom.rotulo}</option>)}
+                    </select>
+                    <CampoErro id="config-assistente-tom-erro" mensagem={errosAtendente.assistente_tom?.message} />
+                  </div>
+                </div>
+                <div className="flex justify-end">
+                  <Button type="submit" disabled={salvando} className="flex items-center gap-2">
+                    <Save size={18} />{salvando ? 'Salvando...' : 'Salvar assistente'}
+                  </Button>
+                </div>
+              </form>
+            </Card>
+            <Card className="p-6 sm:p-8">
               {/* Mesmo componente do passo 6 do onboarding (contrato §4.3). */}
               <ConexaoWhatsApp
                 automacaoAtiva={Boolean(implantacao?.automacao_ativa)}
@@ -320,6 +406,9 @@ const Configuracoes = () => {
               <h2 className="mb-6 font-display text-lg font-bold text-ink">Mensagens modelo</h2>
 
               <div className="mb-6">
+                <Label htmlFor="config-responsavel">WhatsApp do responsável</Label>
+                <Input id="config-responsavel" type="tel" value={responsavel} onChange={(e) => setResponsavel(e.target.value)} placeholder="DDD + número" />
+                <p className="field-hint">Recebe um aviso quando alguém pede atendimento humano. Use um número diferente do WhatsApp conectado.</p>
                 <Label htmlFor="config-antecedencia">Quando enviar o lembrete</Label>
                 <select
                   id="config-antecedencia"
@@ -389,6 +478,18 @@ const Configuracoes = () => {
           <div role="tabpanel" id={idPainel('historico')} aria-labelledby={idAba('historico')}>
             <Card className="p-6 sm:p-8">
               <h2 className="font-display text-lg font-bold text-ink">Minha assinatura</h2>
+              {user?.piloto_ate && <p className="my-3 text-sm">Piloto {user.piloto_ativo ? 'válido' : 'encerrado'} até {new Date(user.piloto_ate).toLocaleString('pt-BR')}.</p>}
+              {user?.role === 'admin' && (
+                <form onSubmit={liberarPiloto} className="my-5 grid gap-3 rounded border p-4">
+                  <h3 className="font-semibold">Liberação administrativa de piloto</h3>
+                  <Label htmlFor="piloto-empresa">ID da empresa</Label>
+                  <Input id="piloto-empresa" type="number" min="1" required value={pilotoEmpresa} onChange={(e) => setPilotoEmpresa(e.target.value)} />
+                  <Label htmlFor="piloto-prazo">Prazo no seu fuso horário</Label>
+                  <Input id="piloto-prazo" type="datetime-local" value={pilotoAte} onChange={(e) => setPilotoAte(e.target.value)} />
+                  <p className="field-hint">Deixe o prazo vazio para revogar a liberação. Não altera pagamentos ou planos.</p>
+                  <Button type="submit" disabled={salvando}>{salvando ? 'Salvando...' : 'Salvar liberação'}</Button>
+                </form>
+              )}
               <p className="mb-6 mt-1 text-sm text-muted-foreground">
                 Cobranças da Agenda Magnética. Os pagamentos dos seus atendimentos ficam em Financeiro.
               </p>

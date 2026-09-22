@@ -8,8 +8,8 @@ com a assinatura nova e o índice único de idempotência colidindo.
 Roda somente quando o `.env` do monorepo tem as credenciais. Sem elas a suíte é
 ignorada, para não travar CI.
 
-Os dados criados aqui são de teste e são REMOVIDOS no fim do módulo, em ordem
-inversa das chaves estrangeiras, mesmo quando um teste falha.
+Os dados são identificados por pytest-UUID e preservados. No fim, somente a
+automação das empresas criadas nesta execução é desligada, evitando envios.
 """
 
 import os
@@ -172,19 +172,12 @@ def cenario(conexao, dia_alvo):
             dados.b = _montar_empresa(cur, "empresaB", dia_semana, 30, Decimal("50.00"))
         yield dados
     finally:
+        # Base compartilhada: conserva a evidência e desliga só as empresas criadas
+        # por esta execução. Nunca há limpeza/reset, nem envio a telefone fictício.
         with conexao.cursor() as cur:
             clinicas = [e.get("clinica") for e in (dados.a, dados.b) if e.get("clinica")]
             if clinicas:
-                # Ordem inversa das FKs; as tabelas de ligação caem por CASCADE.
-                cur.execute("delete from consulta where id_info_clinica = any(%s)", (clinicas,))
-                cur.execute("delete from cliente where id_info_clinica = any(%s)", (clinicas,))
-                cur.execute(
-                    "delete from horario_clinica where id_info_clinica = any(%s)", (clinicas,)
-                )
-                cur.execute("delete from profissional where id_info_clinica = any(%s)", (clinicas,))
-                cur.execute("delete from procedimento where id_info_clinica = any(%s)", (clinicas,))
-                cur.execute("delete from usuarios where id_info_clinica = any(%s)", (clinicas,))
-                cur.execute("delete from info_clinica where id = any(%s)", (clinicas,))
+                cur.execute("update info_clinica set automacao_ativa=false,lembrete_horas=null where id=any(%s)", (clinicas,))
 
 
 @pytest.fixture(scope="module")
@@ -645,3 +638,107 @@ def test_repetir_a_chave_de_um_agendamento_cancelado_nao_e_sucesso(http, cenario
 
     assert resposta.status_code == 409
     assert resposta.json()["error"]["code"] == "AGENDAMENTO_NAO_ESTA_ATIVO"
+
+
+def test_piloto_1640_remarcacao_lembrete_e_cancelamento(http, cenario, conexao, dia_alvo):
+    """Oferta pontual, escrita real, conflito, mudança e presença na MESMA consulta."""
+    e = cenario.a
+    # Outra semana evita os horários ocupados pelos cenários anteriores.
+    dia = dia_alvo + timedelta(days=7)
+    alvo = as_horas(dia, 16, 40)
+    base = {"instance_name": e["instance"], "telefone": TELEFONE}
+    busca = {"instance_name": e["instance"], "id_procedimento": e["procedimento"],
+             "id_profissional": e["profissional"], "inicio": as_horas(dia, 8).isoformat(),
+             "fim": as_horas(dia, 20).isoformat(), "horario_desejado": alvo.isoformat(), "limite": 2}
+    resposta = chamar(http, 'disponibilidade', busca)
+    assert resposta.status_code == 200, resposta.text
+    assert resposta.json()['data']['slots'][0]['inicio'] == alvo.isoformat()
+    corpo = {**base, 'id_procedimento': e['procedimento'], 'id_profissional': e['profissional'],
+             'inicio': alvo.isoformat(), 'chave_idempotencia': f'{MARCA}-1640'}
+    criado = chamar(http, 'agendamentos', corpo)
+    assert criado.status_code == 200, criado.text
+    cid = criado.json()['data']['agendamento']['id']
+    assert chamar(http, 'agendamentos', corpo).json()['data']['repetida']
+    assert chamar(http, 'agendamentos', {**corpo, 'chave_idempotencia': f'{MARCA}-conflito'}).status_code == 409
+    assert all(s['inicio'] != alvo.isoformat() for s in chamar(http, 'disponibilidade', busca).json()['data']['slots'])
+    # Ignorar só a própria reserva permite remarcação sobreposta às 17h10.
+    novo = as_horas(dia, 17, 10)
+    oferta = chamar(http, 'disponibilidade', {**busca, **base, 'id_consulta': cid, 'horario_desejado': novo.isoformat()})
+    assert oferta.json()['data']['slots'][0]['inicio'] == novo.isoformat()
+    moved = chamar(http, 'agendamentos/reagendar', {**base, 'id_consulta': cid, 'novo_inicio': novo.isoformat()})
+    assert moved.status_code == 200, moved.text
+    assert moved.json()['data']['agendamento']['id'] == cid
+    assert chamar(http, 'agendamentos/confirmar', {**base, 'id_consulta': cid, 'inicio_esperado': alvo.isoformat()}).status_code == 409
+    confirmacao = {**base, 'id_consulta': cid, 'inicio_esperado': novo.isoformat()}
+    assert chamar(http, 'agendamentos/confirmar', confirmacao).status_code == 200
+    assert chamar(http, 'agendamentos/confirmar', confirmacao).json()['data']['repetida']
+    with conexao.cursor() as cur:
+        cur.execute('select count(*),min(status) from consulta where id_info_clinica=%s and chave_idempotencia=%s',
+                    (e['clinica'], f"emp{e['clinica']}:{MARCA}-1640"))
+        assert cur.fetchone() == (1, 'confirmado')
+    cancelado = chamar(http, 'agendamentos/cancelar', {**base, 'id_consulta': cid})
+    assert cancelado.status_code == 200, cancelado.text
+    assert linha_da_consulta(conexao, cid)[0] == 'cancelado'
+
+
+def test_lembrete_claim_resultado_e_reexecucao_reais(http, cenario, conexao):
+    e = cenario.b
+    inicio = (dominio.agora() + timedelta(hours=4)).replace(second=0, microsecond=0)
+    with conexao.cursor() as cur:
+        cur.execute('update info_clinica set lembrete_horas=12 where id=%s', (e['clinica'],))
+        cur.execute('select id from cliente where id_info_clinica=%s limit 1', (e['clinica'],));cliente = cur.fetchone()[0]
+        cur.execute("insert into consulta(id_info_clinica,id_cliente,id_procedimento,id_profissional,intervalo,status,valor_cobrado) values(%s,%s,%s,%s,%s::tstzrange,'agendado',50) returning id",
+                    (e['clinica'], cliente, e['procedimento'], e['profissional'], dominio.montar_intervalo(inicio,30)))
+        cid = cur.fetchone()[0]
+    lote = chamar(http, 'lembretes/pendentes', {'instance_name':e['instance']}).json()['data']['lembretes']
+    item = next(l for l in lote if l['id_consulta'] == cid)
+    with conexao.cursor() as cur:
+        cur.execute('select lembrete_enviado_em,lembrete_resultado from consulta where id=%s',(cid,))
+        assert cur.fetchone() == (None,'processando')
+    assert chamar(http,'lembretes/pendentes',{'instance_name':e['instance']}).json()['data']['quantidade'] == 0
+    corpo={'instance_name':e['instance'],'id_consulta':cid,'tentativa_id':item['tentativa_id'],'resultado':'aceito'}
+    assert chamar(http,'lembretes/resultado',corpo).status_code == 422
+    corpo['provider_id']='provider-simulado-identificado-teste'
+    assert chamar(http,'lembretes/resultado',corpo).status_code == 200
+    assert chamar(http,'lembretes/resultado',corpo).status_code == 200
+    assert chamar(http,'lembretes/resultado',{**corpo,'instance_name':cenario.a['instance']}).status_code == 409
+    with conexao.cursor() as cur:
+        cur.execute('select lembrete_enviado_em is not null,lembrete_resultado from consulta where id=%s',(cid,))
+        assert cur.fetchone() == (True,'aceito')
+
+
+def test_handoff_real_deduplicado_e_piloto_por_empresa(http, cenario, conexao, monkeypatch):
+    import evolution_api
+    e=cenario.a
+    chamadas=[]
+    async def enviar(*args):
+        chamadas.append(args)
+        return {'key':{'id':'aviso-simulado-de-teste'}}
+    monkeypatch.setattr(evolution_api,'send_text',enviar)
+    with conexao.cursor() as cur:
+        cur.execute('update info_clinica set whatsapp_responsavel=%s where id=%s',('5551999991111',e['clinica']))
+    pedido={'instance_name':e['instance'],'remote_jid':f'{TELEFONE}@s.whatsapp.net'}
+    assert chamar(http,'handoff/solicitar',pedido).json()['data']['novo']
+    repetido=chamar(http,'handoff/solicitar',pedido).json()['data']
+    assert not repetido['novo'] and len(chamadas)==1
+    cid=repetido['id_conversa']
+    token=server.create_access_token({'user_id':e['usuario'],'id_info_clinica':e['clinica'],'role':'admin'})
+    cab={'Authorization':f'Bearer {token}'}
+    assert http.post(f'/api/conversas/{cid}/assumir',headers=cab).status_code==200
+    assert chamar(http,'handoff/valido',pedido).json()['data']['pausado']
+    assert http.post(f'/api/conversas/{cid}/devolver-ia',headers=cab).status_code==200
+    assert not chamar(http,'handoff/valido',pedido).json()['data']['pausado']
+    prazo=(dominio.agora()+timedelta(days=30)).isoformat()
+    rota=f"/api/admin/empresas/{e['clinica']}/piloto"
+    # Mesmo JWT alegando admin, o papel atualizado no banco é obrigatório.
+    assert http.put(rota,headers=cab,json={'piloto_ate':prazo}).status_code==403
+    with conexao.cursor() as cur:
+        cur.execute("update usuarios set role='admin',status_assinatura='expirado' where id=%s",(e['usuario'],))
+    assert http.put(rota,headers=cab,json={'piloto_ate':prazo}).status_code==200
+    sessao=http.get('/api/auth/me',headers=cab).json()
+    assert sessao['piloto_ativo'] and sessao['trial_expirado'] and sessao['status_assinatura']=='expirado'
+    with conexao.cursor() as cur:
+        cur.execute('select piloto_ate from info_clinica where id=%s',(cenario.b['clinica'],))
+        assert cur.fetchone()[0] is None
+    assert http.put(rota,headers=cab,json={'piloto_ate':None}).status_code==200
+    assert not http.get('/api/auth/me',headers=cab).json()['piloto_ativo']

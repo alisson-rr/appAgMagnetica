@@ -670,10 +670,12 @@ def falhas_do_lembrete(caminho):
     if erros:
         return erros
 
-    if saida(envio) != marca:
+    if (saida(envio) != 'registrar resultado do lembrete'
+        or saida(envio, 1) != 'registrar resultado do lembrete'
+        or saida('registrar resultado do lembrete') != 'lembrete aceito?'
+        or saida('lembrete aceito?') != marca):
         erros.append(
-            f"a saida de sucesso de '{envio}' precisa ir para '{marca}': sem a marca de "
-            "envio proprio, o lembrete pausa a IA e o 'confirmo' do cliente e engolido"
+            'O lembrete precisa registrar o resultado e exigir aceite com id antes de salvar a confirmação'
         )
     if saida(marca) != pendente:
         erros.append(f"'{marca}' precisa ligar em '{pendente}'")

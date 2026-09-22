@@ -1,0 +1,38 @@
+{
+  "generated_at": "2026-09-21T19:08:39.228900+00:00",
+  "nodes": {
+    "automation_n8n_readme_confirmação_antes_de_qualquer_escrita": {
+      "code_fingerprint": "1c7925922dafc553213d88d6ac21832e34a1af263dc7d81e1c4beed7b57c244c",
+      "label": "Confirmação antes de qualquer escrita",
+      "last": "2026-09-14T17:25:17.972704+00:00",
+      "provenance": [
+        {
+          "date": "2026-09-14T17:25:17.972704+00:00",
+          "outcome": "useful",
+          "q": "Revisar o atendimento no n8n: agendamentos, redacao acolhedora e preferencias entre visitas"
+        }
+      ],
+      "score": 0.849257646,
+      "source_file": "automation/n8n/README.md",
+      "status": "tentative",
+      "uses": 1
+    },
+    "scripts_v_cliente_preferencias_public_v_cliente_preferencias": {
+      "code_fingerprint": "4978243fc052095c4729483259ec579a0f19327ef3eb531cc6566896d69a09ea",
+      "label": "public.v_cliente_preferencias",
+      "last": "2026-09-14T17:25:17.972704+00:00",
+      "provenance": [
+        {
+          "date": "2026-09-14T17:25:17.972704+00:00",
+          "outcome": "useful",
+          "q": "Revisar o atendimento no n8n: agendamentos, redacao acolhedora e preferencias entre visitas"
+        }
+      ],
+      "score": 0.849257646,
+      "source_file": "scripts/v_cliente_preferencias.sql",
+      "status": "tentative",
+      "uses": 1
+    }
+  },
+  "version": 1
+}

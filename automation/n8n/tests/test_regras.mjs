@@ -42,6 +42,7 @@ function executar(nome, { entrada = {}, refs = {}, agora = AGORA } = {}) {
     const valores = Array.isArray(refs[alvo]) ? refs[alvo] : [refs[alvo]];
     return {
       first: () => ({ json: valores[0] }),
+      itemMatching: () => ({ json: valores[0] }),
       last: () => ({ json: valores[valores.length - 1] }),
       all: () => valores.map((json) => ({ json })),
       item: { json: valores[0] },
@@ -437,7 +438,7 @@ teste('T15 falha da ferramenta não anuncia sucesso e chama uma pessoa', () => {
   assert.equal(v.sucesso, false);
   assert.equal(v.precisa_humano, true);
   const texto = responder(dExec, v).texto;
-  assert.match(texto, /nada foi alterado/i);
+  assert.match(texto, /não consegui confirmar/i);
   assert.equal(WORKFLOW.connections['pode seguir sem pessoa?'].main[1][0].node, 'Redis - pausar IA (falha na operação)');
 });
 
@@ -448,7 +449,7 @@ teste('T16 pedido de atendimento humano responde ao cliente e pausa a IA', () =>
   const texto = responder(d).texto;
   // Nenhum nó avisa o negócio: o texto não pode afirmar que avisou. Também não
   // pode falar em "equipe": a maior parte dos assinantes atende sozinha.
-  assert.match(texto, /deixar com quem atende/i);
+  assert.match(texto, /respostas automáticas ficam pausadas/i);
   assert.doesNotMatch(texto, /avisei|pedi para|já chamei/i);
   assert.doesNotMatch(texto, /\bequipe\b/i);
   const destino = WORKFLOW.connections['rota'].main[6][0].node;
@@ -637,7 +638,7 @@ teste('T27 FALHA_TEMPORARIA repete uma vez com o mesmo pedido e depois transfere
   assert.equal(v.tipo_resposta, 'falha_ferramenta');
   assert.equal(v.sucesso, false);
   assert.equal(v.precisa_humano, true);
-  assert.match(responder(d, v).texto, /nada foi alterado na sua agenda/i);
+  assert.match(responder(d, v).texto, /não consegui confirmar/i);
 });
 
 teste('T28 resposta sem envelope vai para uma pessoa', () => {
@@ -667,7 +668,7 @@ teste('T29 serviço sem profissional ativo (agendavel:false) é dito, não trans
   assert.equal(d.motivo, 'servico_sem_agenda');
   const texto = responder(d).texto;
   assert.doesNotMatch(texto, /não achei horário/i, 'não pode soar como "sem vaga hoje"');
-  assert.doesNotMatch(texto, /deixar com quem atende/i, 'não pode pausar a IA por configuração do negócio');
+  assert.doesNotMatch(texto, /respostas automáticas ficam pausadas/i, 'não pode pausar a IA por configuração do negócio');
   assert.match(texto, /Massagem relaxante/, 'o que dá para marcar precisa aparecer');
 
   // O serviço não agendável também sai das listas de oferta.
@@ -1848,7 +1849,7 @@ teste('T76 pedido do titular recebe o texto escrito para ele', () => {
   assert.equal(d.handoff_motivo, 'pedido_do_titular');
   assert.equal(d.resposta.tipo, 'pedido_do_titular', `saiu ${d.resposta.tipo}`);
   const texto = responder(d).texto;
-  assert.match(texto, /Entendi seu pedido e ele vai ser tratado/);
+  assert.match(texto, /Entendi. Esse pedido precisa ser acompanhado/);
   assert.doesNotMatch(texto, /melhor uma pessoa te responder com calma/i);
   assert.doesNotMatch(texto, /já apaguei/i);
 });
@@ -1862,7 +1863,7 @@ teste('T77 handoff_motivo é determinístico e não carrega texto do modelo', ()
       interpretacao({ intent: 'falar_com_humano', next_action: 'handoff', requires_human: true, confidence: 0.95, handoff_reason: razao }));
     assert.equal(d.rota, 'humano', String(razao));
     assert.equal(d.handoff_motivo, 'pedido_do_cliente', `handoff_reason=${razao}`);
-    assert.match(responder(d).texto, /Claro\. Vou parar por aqui/, `handoff_reason=${razao}`);
+    assert.match(responder(d).texto, /Claro\. Minhas respostas automáticas ficam pausadas/, `handoff_reason=${razao}`);
   }
   // Assunto sensível continua com motivo próprio.
   assert.equal(faq('essa mancha na pele é normal?').handoff_motivo, 'assunto_sensivel');
@@ -2289,7 +2290,7 @@ teste('E16 o prompt não manda oferecer "a equipe"', () => {
   // o reply passa direto pela rota livre sem filtro de vocabulário.
   const prompt = NOS.get('IA interpretadora').parameters.options.systemMessage;
   assert.doesNotMatch(prompt, /quer que a equipe/i, 'o prompt volta a prometer uma equipe');
-  assert.match(prompt, /nunca diga "a equipe"/i, 'a proibição precisa estar escrita no prompt');
+  assert.match(prompt, /Não ofereça a equipe/i, 'a proibição precisa estar escrita no prompt');
 });
 // -------------------------------------- rodada 6: o que a conversa ainda perdia
 const SEG_SEX = [1, 2, 3, 4, 5].map((d) => ({ dia_semana: d, hora_inicio: '09:00', hora_fim: '18:00' }));
@@ -2436,7 +2437,7 @@ teste('T127 o preço só é anunciado quando é o do serviço perguntado', () =>
     return responder(d, av.json).texto;
   };
   assert.match(ofertar('quanto custa a limpeza de pele? tem sexta?', { service_query: 'limpeza de pele' }),
-    /Limpeza de pele: R\$ 180, 60 minutos\./, 'a pergunta de preço sumiu da resposta');
+    /Limpeza de pele: R\$ 180,00, 60 minutos\./, 'a pergunta de preço sumiu da resposta');
   // Dois serviços nomeados: quem protege é o portão de ambiguidade — a resposta
   // nem chega a ser oferta, então nenhum preço sai e a pergunta continua aberta.
   // (O filtro `outroCitado` em `montar resposta` é segunda linha e hoje inerte;
@@ -2917,34 +2918,17 @@ teste('T104 dia fechado e faixa fora do expediente não viram promessa de agenda
   });
   const texto = responder(dezenove, av.json).texto;
   assert.match(texto, /não atende/i);
-  assert.doesNotMatch(texto, /não está livre/i, 'afirma ocupação sobre hora em que a empresa nem abre');
+  assert.doesNotMatch(texto, /não encontrei disponibilidade/i, 'afirma ocupação sobre hora em que a empresa nem abre');
 });
 
-teste('T105 nenhum texto promete uma pessoa com pergunta que a rota não honra', () => {
-  // "Quer que eu chame quem atende?" era a frase mais repetida do fluxo e a menos
-  // honrada: o "sim" a ela ia parar na disponibilidade, mudando de assunto depois
-  // da promessa. A frase-gatilho cai em `falar_com_humano`, que transfere.
-  const textos = [
-    responder(faq('e o pagamento?', {}, 'Pague o pix 51999998888.')).texto,
-    responder(faq('quanto custa?', {}, 'Fica 90 reais.')).texto,
-    responder(faq('vocês têm sauna?', {}, '')).texto,
-  ];
-  for (const texto of textos) {
-    assert.doesNotMatch(texto, /quer que eu chame/i, `promessa sem rota: ${texto}`);
-    assert.match(texto, /falar com uma pessoa/i, `sem saída oferecida: ${texto}`);
-  }
-  // A frase oferecida precisa mesmo chegar em humano.
-  const pedido = decidir(contexto({ conteudo: 'quero falar com uma pessoa' }),
-    interpretacao({ intent: 'falar_com_humano', next_action: 'handoff', requires_human: true, confidence: 0.95 }));
-  assert.equal(pedido.rota, 'humano');
-  // E o prompt não pode mandar o modelo fazer a pergunta de volta. A asserção é
-  // positiva de propósito: a redação negativa que estava aqui nunca existiu no
-  // systemMessage, então não podia falhar.
-  const prompt = NOS.get('IA interpretadora').parameters.options.systemMessage;
-  assert.match(prompt, /peça que a pessoa escreva "quero falar com uma pessoa"/,
-    'o prompt parou de apontar a saída que funciona');
-  assert.match(prompt, /Nunca pergunte "quer que eu chame quem atende\?"/,
-    'a proibição saiu do prompt');
+teste('T105 oferta de pessoa aceita por sim chega ao encaminhamento', () => {
+  const t1 = faq('vocês têm sauna?', {}, '');
+  const r = responder(t1);
+  assert.match(r.texto, /posso encaminhar para uma pessoa/i);
+  assert.equal(r.estado.proxima_acao, 'humano');
+  const d = decidir(contexto({conteudo:'sim', estado:r.estado}), interpretacao({intent:'confirmar_acao', next_action:'confirm_pending'}));
+  assert.equal(d.rota, 'humano');
+  assert.equal(d.escrita, undefined);
 });
 
 teste('T106 horário, lugar e ano na mesma frase do preço não viram preço inventado', () => {
@@ -3158,7 +3142,7 @@ teste('T95 horário cedo demais é dito como cedo demais, não como ocupado', ()
   assert.equal(a.dados.em_cima_da_hora, true);
   const texto = responder(d, a).texto;
   assert.match(texto, /em cima da hora/i);
-  assert.doesNotMatch(texto, /não está livre/i, 'afirma ocupação sobre horário nunca consultado');
+  assert.doesNotMatch(texto, /não encontrei disponibilidade/i, 'afirma ocupação sobre horário nunca consultado');
   // Horário realmente cheio continua com o texto de sempre.
   const longe = agendar('quero limpeza de pele amanhã às 16h',
     { service_query: 'limpeza de pele', date_text: 'amanhã', time_text: '16h' });
@@ -3167,7 +3151,7 @@ teste('T95 horário cedo demais é dito como cedo demais, não como ocupado', ()
     refs: { 'resolver e decidir': longe },
   });
   assert.equal(outro.json.dados.em_cima_da_hora, false);
-  assert.match(responder(longe, outro.json).texto, /não está livre/i);
+  assert.match(responder(longe, outro.json).texto, /não encontrei disponibilidade/i);
 });
 
 // ------------------------------------------------- rodada 3: texto e estado
@@ -3796,7 +3780,7 @@ teste('T133 sem nada cadastrado, a recepção ainda tem uma porta', () => {
     'a IA anunciou um agendamento que o sistema não fez');
   // E o que entra no lugar mantém a porta aberta: oferecer horário aqui troca de
   // assunto e tira a única saída que o cliente tinha.
-  assert.match(efeito, /quero falar com uma pessoa/,
+  assert.match(efeito, /posso encaminhar para uma pessoa/,
     'a substituição tirou a saída para uma pessoa');
   assert.doesNotMatch(efeito, /horários disponíveis/,
     'a substituição voltou a oferecer horário no lugar de responder');
@@ -4241,7 +4225,7 @@ teste('T144 o "sim" do lembrete confirma presenca, e nao marca horario novo', ()
 teste('T147 a ação pendente atravessa duas leituras Redis e chega à escrita', () => {
   // Redis GET emite apenas { [propertyName]: valor }, sem os campos da entrada.
   // O segundo GET entrega { estado }; a pendência precisa vir do primeiro nó.
-  assert.equal(WORKFLOW.connections['Redis - ler ação pendente'].main[0][0].node, 'Redis - ler estado');
+  assert.equal(WORKFLOW.connections['Redis - ler ação pendente'].main[0][0].node, 'Redis - ler lembrete');
   assert.equal(WORKFLOW.connections['Redis - ler estado'].main[0][0].node, 'montar contexto');
   for (const tipo of ['agendar', 'reagendar', 'cancelar', 'confirmar']) {
     const pendente = pendenteAgendar({ tipo, consulta_id: 4321 });
@@ -4296,7 +4280,7 @@ teste('T148 todas as ações confirmadas têm rota HTTP antes da verificação',
     assert.equal(http.type, 'n8n-nodes-base.httpRequest');
     const d = decidir(contexto({ conteudo: 'sim', pendente: pendenteAgendar({ tipo, consulta_id: 4321 }) }),
       interpretacao({ intent: 'confirmar_acao', next_action: 'confirm_pending' }));
-    const refs = (nome) => ({ first: () => ({ json: nome === 'resolver e decidir' ? d : { api_base: 'https://api.exemplo.test' } }) });
+    const refs = (nome) => ({ first: () => ({ json: nome === 'resolver e decidir' ? d : { api_base: 'https://api.exemplo.test' } }), itemMatching: () => ({json: d}) });
     const avaliar = (expr) => new Function('$', `return (${expr.slice(3, -2).trim()});`)(refs);
     assert.equal(avaliar(http.parameters.url), `https://api.exemplo.test${caminho}`);
     assert.deepEqual(JSON.parse(avaliar(http.parameters.jsonBody)), d.escrita.corpo);
@@ -4428,6 +4412,121 @@ teste('T155 worker de memória tem relógio e não envia mensagens', () => {
   assert.equal(worker.connections[http[0].name].main[0][0].node, 'verificar processamento');
 });
 
+// ------------------------------------------------ piloto comercial acompanhado
+function reidratar(estado) {
+  return { ...estado, slots_oferecidos: estado.slots_oferecidos || [],
+    consultas_candidatas: estado.consultas_candidatas || [] };
+}
+
+teste('T156 remarcar para sexta 16h40 segue direto para a busca pontual', () => {
+  const d = decidir(contexto({conteudo:'quero mudar meu horário para sexta às 16h40'}), interpretacao({
+    intent:'preparar_reagendamento', next_action:'list_appointments',
+    entities:{date_text:'sexta',time_text:'16h40',customer_updates:{}},
+  }));
+  const escolhido = executar('decidir sobre consultas', {entrada:respostaDeAgendamentos([agendamentoApi({id:555})]),refs:{'resolver e decidir':d}})[0].json;
+  assert.equal(escolhido.retomar,true);
+  const retomado=executar('resolver e decidir',{entrada:escolhido,refs:{'montar contexto':d.contexto}})[0].json;
+  assert.equal(retomado.rota,'disponibilidade');
+  assert.equal(retomado.busca.horario_desejado,'2026-08-21T16:40:00-03:00');
+  assert.equal(retomado.busca.id_consulta,555);
+  assert.equal(retomado.busca.telefone,TELEFONE);
+  const oferta=executar('avaliar horários',{entrada:respostaDeSlots(['2026-08-21T16:40:00-03:00']),refs:{'resolver e decidir':retomado}})[0].json;
+  assert.equal(oferta.pendente_novo.tipo,'reagendar');
+  const r=responder(retomado,oferta);
+  assert.match(r.texto,/16h40/);
+  assert.doesNotMatch(r.texto,/para quando/i);
+  const mudou=decidir(contexto({conteudo:'na verdade quarta que vem',pendente:oferta.pendente_novo,estado:reidratar(r.estado)}),interpretacao({
+    intent:'preparar_reagendamento',next_action:'list_appointments',entities:{date_text:'quarta que vem',customer_updates:{}},
+  }));
+  assert.equal(mudou.rota,'disponibilidade');
+  assert.equal(mudou.busca.horario_desejado,'2026-08-26T16:40:00-03:00');
+  assert.equal(mudou.busca.id_consulta,555);
+  const novaOferta=executar('avaliar horários',{entrada:respostaDeSlots(['2026-08-26T16:40:00-03:00']),refs:{'resolver e decidir':mudou}})[0].json;
+  const r2=responder(mudou,novaOferta);
+  const sim=decidir(contexto({conteudo:'sim',pendente:novaOferta.pendente_novo,estado:reidratar(r2.estado)}),interpretacao({intent:'confirmar_acao',next_action:'confirm_pending'}));
+  assert.equal(sim.escrita.corpo.id_consulta,555);
+  assert.equal(sim.escrita.corpo.novo_inicio,'2026-08-26T16:40:00-03:00');
+});
+
+teste('T157 duas reservas: escolher a antiga preserva sexta às 16h', () => {
+  const d=decidir(contexto({conteudo:'quero remarcar para sexta às 16h'}),interpretacao({intent:'preparar_reagendamento',next_action:'list_appointments',entities:{date_text:'sexta',time_text:'16h',customer_updates:{}}}));
+  const reservas=[agendamentoApi({id:555}),agendamentoApi({id:556,inicio:'2026-08-24T10:00:00-03:00'})];
+  const escolha=executar('decidir sobre consultas',{entrada:respostaDeAgendamentos(reservas),refs:{'resolver e decidir':d}})[0].json;
+  assert.equal(escolha.tipo_resposta,'escolher_consulta');
+  const r=responder(d,escolha);
+  const d2=decidir(contexto({conteudo:'a segunda',estado:reidratar(r.estado)}),interpretacao({intent:'confirmar_acao',next_action:'confirm_pending',entities:{appointment_hint:'a segunda',customer_updates:{}}}));
+  const selecionada=executar('decidir sobre consultas',{entrada:respostaDeAgendamentos(reservas),refs:{'resolver e decidir':d2}})[0].json;
+  assert.equal(selecionada.retomar,true);
+  const busca=executar('resolver e decidir',{entrada:selecionada,refs:{'montar contexto':d2.contexto}})[0].json;
+  assert.equal(busca.busca.id_consulta,556);
+  assert.equal(busca.busca.horario_desejado,'2026-08-21T16:00:00-03:00');
+});
+
+teste('T158 um sim isolado após conversa sem pergunta não cria reserva', () => {
+  const d=decidir(contexto({conteudo:'sim',estado:{...contexto().estado,historico:[{r:'assistente',t:'Funcionamos de segunda a sexta.'}]}}),interpretacao({intent:'confirmar_acao',next_action:'confirm_pending'}));
+  assert.equal(d.rota,'responder');
+  assert.equal(d.escrita,undefined);
+});
+
+teste('T159 sim após lembrete recente confirma somente a consulta lembrada', () => {
+  const lembrete={tipo:'confirmar',origem:'lembrete',consulta_id:77,inicio:'2026-08-21T16:40:00-03:00',expira_em:'2026-08-21T20:10:00Z',acao_id:'lembrete-77-tentativa',enviado_em:AGORA};
+  const ctx=contexto({conteudo:'sim',pendente:pendenteAgendar(),lembrete,estado:{...contexto().estado,atualizado_em:'2026-08-20T16:50:00Z'}});
+  const d=decidir(ctx,interpretacao({intent:'confirmar_acao',next_action:'confirm_pending'}));
+  assert.equal(d.escrita.caminho,'/api/ai/agendamentos/confirmar');
+  assert.equal(d.escrita.corpo.id_consulta,77);
+  assert.equal(d.escrita.corpo.inicio_esperado,lembrete.inicio);
+});
+
+teste('T160 configuração real do lembrete chega à resposta-base', () => {
+  for (const horas of [24,null]) {
+    const ctx=contexto({conteudo:'você me avisa antes?',empresa:{...contexto().empresa,lembrete_configurado:true,lembrete_horas:horas}});
+    const d=decidir(ctx,interpretacao());
+    const r=responder(d);
+    assert.equal(r.tipo_resposta,'sobre_lembrete');
+    assert.match(r.texto,horas ? /24/ : /desligad|não.*ativ|não.*configur/i);
+    assert.doesNotMatch(r.texto,/não consegui confirmar/i);
+  }
+});
+
+teste('T161 confirmação de encaminhamento depende do registro efetivo', () => {
+  const d=decidir(contexto({conteudo:'quero falar com alguém'}),interpretacao({intent:'falar_com_humano',next_action:'handoff'}));
+  const gravado=responder(d,{...d,encaminhamento:ok({registrado:true})});
+  assert.match(gravado.texto,/pedido ficou registrado/);
+  const falhou=responder(d,{...d,encaminhamento:falha('FALHA_TEMPORARIA')});
+  assert.match(falhou.texto,/não consegui registrar/i);
+  assert.doesNotMatch(falhou.texto,/já.*atendendo|avisei/i);
+});
+
+teste('T162 data ISO da interpretação não reutiliza a oferta antiga pela hora', () => {
+  const anterior = slotOfertado('2026-08-21T16:00:00-03:00');
+  for (const date_text of ['2026-08-26', null]) {
+    const d = decidir(contexto({ conteudo: 'na verdade pode ser na quarta que vem',
+      pendente: pendenteAgendar({ tipo: 'reagendar', consulta_id: 555, inicio: anterior.inicio }),
+      estado: { ...contexto().estado, slots_oferecidos: [anterior], reagendar_consulta_id: 555,
+        pendente_falada: anterior.inicio, data_ultima: { date_text: 'sexta', time_text: '16h' } },
+    }), interpretacao({ intent: 'preparar_reagendamento', next_action: 'list_appointments',
+      entities: { date_text, time_text: '16:00', customer_updates: {} } }));
+    assert.equal(d.rota, 'disponibilidade');
+    assert.equal(d.busca.horario_desejado, '2026-08-26T16:00:00-03:00');
+    assert.equal(d.busca.id_consulta, 555);
+    assert.equal(d.contexto.pendente, null);
+  }
+});
+
+teste('T163 aceite de cancelar ignora data repetida pelo modelo a partir do histórico', () => {
+  const pendente = pendenteAgendar({tipo:'cancelar',consulta_id:555});
+  const d = decidir(contexto({conteudo:'sim, pode cancelar',pendente,
+    estado: {...contexto().estado,pendente_falada:pendente.inicio,
+      historico:[{r:'assistente',t:'Confirma o cancelamento?'}]},
+  }),interpretacao({intent:'confirmar_acao',next_action:'confirm_pending',confidence:0.95,
+    entities:{service_query:'Limpeza de pele',professional_query:'Paula Almeida',
+      date_text:'2026-08-21',time_text:'14:00',period:'tarde',customer_updates:{}},
+  }));
+  assert.equal(d.rota,'executar_pendente');
+  assert.equal(d.escrita.caminho,'/api/ai/agendamentos/cancelar');
+  assert.equal(d.escrita.corpo.id_consulta,555);
+});
+
 // ---------------------------------------------------------------- execução
 let falhas = 0;
 for (const [nome, fn] of testes) {
@@ -4437,7 +4536,7 @@ for (const [nome, fn] of testes) {
   } catch (erro) {
     falhas += 1;
     console.log(`FALHA ${nome}`);
-    console.log(`      ${erro.message.split('\n')[0]}`);
+    console.log(`      ${erro.stack}`);
   }
 }
 console.log(`\n${testes.length - falhas}/${testes.length} testes passaram`);

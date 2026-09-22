@@ -37,7 +37,7 @@ const PrivateRoute = ({ children, skipOnboardingCheck = false, skipTrialCheck = 
   }
 
   // Se trial expirou e não tem assinatura ativa, redireciona para planos
-  if (!skipTrialCheck && user.trial_expirado && user.status_assinatura !== 'ativo') {
+  if (!skipTrialCheck && user.trial_expirado && user.status_assinatura !== 'ativo' && !user.piloto_ativo) {
     return <Navigate to="/planos" />;
   }
 
@@ -85,7 +85,7 @@ function AppContent() {
           <Route path="/profissionais" element={<PrivateRoute><Layout><Profissionais /></Layout></PrivateRoute>} />
           <Route path="/servicos" element={<PrivateRoute><Layout><Servicos /></Layout></PrivateRoute>} />
           <Route path="/pagamentos" element={<PrivateRoute><Layout><Pagamentos /></Layout></PrivateRoute>} />
-          <Route path="/configuracoes" element={<PrivateRoute><Layout><Configuracoes /></Layout></PrivateRoute>} />
+          <Route path="/configuracoes" element={<PrivateRoute skipTrialCheck={user?.role === 'admin'}><Layout><Configuracoes /></Layout></PrivateRoute>} />
         </Routes>
       </Suspense>
       <Toaster position="top-right" richColors theme="light" />
